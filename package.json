@@ -1,0 +1,17 @@
+{
+  "name": "nova-bidlens",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm --filter @bidlens/desktop dev",
+    "build": "pnpm --filter @bidlens/shared build && pnpm --filter @bidlens/desktop build && cargo build --manifest-path bidlens-engine/Cargo.toml",
+    "test": "pnpm test:ts && pnpm test:rust",
+    "test:ts": "pnpm --filter @bidlens/shared test && pnpm --filter @bidlens/desktop test",
+    "test:rust": "cargo test --manifest-path bidlens-engine/Cargo.toml"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2"
+  }
+}
