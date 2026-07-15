@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="架构设计图">
+    <mxGraphModel dx="1422" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="&lt;b&gt;AI 文档智能比对平台 — 系统架构图&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=20;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="410" y="20" width="380" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ========== Layer 1: UI Layer (y=80) ========== -->
+        <mxCell id="layer1" value="&lt;b&gt;交互层 — Electron + React&lt;/b&gt;" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="100" y="80" width="1000" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="electron" value="&lt;b&gt;Electron 主进程&lt;/b&gt;&#xa;AutoUpdate | 窗口管理&#xa;IPC | 文件管理 | 权限管理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="layer1">
+          <mxGeometry x="30" y="40" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="react" value="&lt;b&gt;React Renderer&lt;/b&gt;&#xa;React 19 | TypeScript&#xa;Zustand | TanStack Query&#xa;TailwindCSS | shadcn/ui&#xa;Virtual List" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="layer1">
+          <mxGeometry x="270" y="40" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="pages" value="&lt;b&gt;页面&lt;/b&gt;&#xa;首页 | 比对页&#xa;设置 | 插件市场" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="layer1">
+          <mxGeometry x="510" y="40" width="170" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="diffview" value="&lt;b&gt;Diff 展示&lt;/b&gt;&#xa;基准文档 | 双栏对比&#xa;时间线" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="layer1">
+          <mxGeometry x="720" y="40" width="170" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 1 internal connections -->
+        <mxCell id="e_ipc" value="IPC" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#666666;" edge="1" parent="layer1" source="electron" target="react">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_react_pages" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer1" source="react" target="pages">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_pages_diff" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer1" source="pages" target="diffview">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== Layer 2: Node Parser Layer (y=300) ========== -->
+        <mxCell id="layer2" value="&lt;b&gt;文档解析层 — Node.js (Electron Main Process)&lt;/b&gt;" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="100" y="300" width="1000" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="parser" value="&lt;b&gt;Parser 适配器&lt;/b&gt;&#xa;Word | PDF | Markdown&#xa;HTML | Image(OCR) | Excel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="layer2">
+          <mxGeometry x="30" y="40" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="json_ast" value="&lt;b&gt;Document AST&lt;/b&gt;&#xa;JSON AST (L5 全保真)&#xa;Section / Paragraph /&#xa;Table / Comment / ..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="layer2">
+          <mxGeometry x="300" y="40" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="chunk" value="&lt;b&gt;Chunk 分块&lt;/b&gt;&#xa;256-512 token&#xa;自然边界切分&#xa;10% overlap" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="layer2">
+          <mxGeometry x="550" y="40" width="170" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="cache_check" value="&lt;b&gt;SHA256&#xa;缓存查询&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="layer2">
+          <mxGeometry x="770" y="50" width="140" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 2 internal connections -->
+        <mxCell id="e_parser_ast" value="parse" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#666666;" edge="1" parent="layer2" source="parser" target="json_ast">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ast_chunk" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer2" source="json_ast" target="chunk">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_chunk_cache" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer2" source="chunk" target="cache_check">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== Layer 3: Rust Core Engine (y=520) ========== -->
+        <mxCell id="layer3" value="&lt;b&gt;计算引擎层 — Rust Core Engine&lt;/b&gt;" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="100" y="520" width="1000" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="bridge" value="&lt;b&gt;Bridge&lt;/b&gt;&#xa;stdio&#xa;JSON-RPC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="layer3">
+          <mxGeometry x="30" y="50" width="120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="doc_ast_mod" value="&lt;b&gt;document-ast&lt;/b&gt;&#xa;类型定义" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="layer3">
+          <mxGeometry x="190" y="50" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="diff_engine" value="&lt;b&gt;diff-engine&lt;/b&gt;&#xa;Diff 算法" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="layer3">
+          <mxGeometry x="190" y="115" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="embedding" value="&lt;b&gt;embedding&lt;/b&gt;&#xa;Embedding 引擎" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="layer3">
+          <mxGeometry x="360" y="50" width="140" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="vector" value="&lt;b&gt;vector&lt;/b&gt;&#xa;HNSW 向量索引" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="layer3">
+          <mxGeometry x="360" y="115" width="140" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="chunk_engine" value="&lt;b&gt;chunk&lt;/b&gt;&#xa;分块引擎" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="layer3">
+          <mxGeometry x="540" y="50" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="common" value="&lt;b&gt;common&lt;/b&gt;&#xa;公共工具" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="layer3">
+          <mxGeometry x="540" y="115" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="rerank" value="&lt;b&gt;Rerank 精排&lt;/b&gt;&#xa;[精确模式]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1;" vertex="1" parent="layer3">
+          <mxGeometry x="720" y="50" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="llm_confirm" value="&lt;b&gt;LLM 确认&lt;/b&gt;&#xa;[精确模式]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1;" vertex="1" parent="layer3">
+          <mxGeometry x="720" y="115" width="130" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 3 internal connections -->
+        <mxCell id="e_bridge_docast" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer3" source="bridge" target="doc_ast_mod">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_bridge_diff" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer3" source="bridge" target="diff_engine">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_bridge_embed" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer3" source="bridge" target="embedding">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_bridge_chunk" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer3" source="bridge" target="chunk_engine">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_embed_vec" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer3" source="embedding" target="vector">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_diff_rerank" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" edge="1" parent="layer3" source="diff_engine" target="rerank">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rerank_llm" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;" edge="1" parent="layer3" source="rerank" target="llm_confirm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== Layer 4: Runtime + Storage (y=760) ========== -->
+        <mxCell id="layer4" value="&lt;b&gt;运行时 &amp; 存储层&lt;/b&gt;" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="100" y="760" width="1000" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="sqlite" value="&lt;b&gt;SQLite&lt;/b&gt;&#xa;document_cache&#xa;embedding_cache&#xa;compare_history&#xa;model_registry&#xa;settings" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;size=12;" vertex="1" parent="layer4">
+          <mxGeometry x="30" y="40" width="160" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="onnx" value="&lt;b&gt;ONNX Runtime&lt;/b&gt;&#xa;Embedding 模型&#xa;(BGE-M3 / GTE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="layer4">
+          <mxGeometry x="240" y="40" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="paddleocr" value="&lt;b&gt;PaddleOCR&lt;/b&gt;&#xa;OCR 插件" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="layer4">
+          <mxGeometry x="460" y="40" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="llamacpp" value="&lt;b&gt;llama.cpp&lt;/b&gt;&#xa;本地 LLM&#xa;(Qwen / DeepSeek)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="layer4">
+          <mxGeometry x="660" y="40" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="model_mgmt" value="&lt;b&gt;模型管理&lt;/b&gt;&#xa;下载 | 断点续传&#xa;SHA256 校验&#xa;版本管理 | LRU 缓存" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="layer4">
+          <mxGeometry x="240" y="110" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="openai_api" value="&lt;b&gt;OpenAI 兼容 API&lt;/b&gt;&#xa;LLM / Embedding / OCR&#xa;Ollama | vLLM | DeepSeek&#xa;阿里云 | 百度云 | 腾讯云" style="rounded=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontColor=#333333;" vertex="1" parent="layer4">
+          <mxGeometry x="500" y="110" width="250" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 4 internal connections -->
+        <mxCell id="e_onnx_model" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer4" source="onnx" target="model_mgmt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_llama_model" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="layer4" source="llamacpp" target="model_mgmt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== Layer 5: Output (y=980) ========== -->
+        <mxCell id="output" value="&lt;b&gt;输出&lt;/b&gt;&#xa;Diff AST → 渲染展示&#xa;基准文档 | 双栏对比 | 时间线&#xa;导出报告 (PDF / Word / HTML)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="450" y="980" width="300" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ========== Cross-layer connections ========== -->
+
+        <!-- UI Layer → Parser Layer -->
+        <mxCell id="e_electron_parser" value="文件" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#666666;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="electron" target="parser">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Parser Layer → Rust Layer (stdio JSON-RPC) -->
+        <mxCell id="e_ast_bridge" value="stdio&#xa;JSON-RPC" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#d79b00;fontStyle=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="json_ast" target="bridge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Rust Layer → Storage -->
+        <mxCell id="e_bridge_sqlite" value="rusqlite" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#666666;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="bridge" target="sqlite">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Rust Layer → Runtime -->
+        <mxCell id="e_embed_onnx" value="推理" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#666666;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="embedding" target="onnx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_llm_llama" value="推理" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#666666;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="llm_confirm" target="llamacpp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Core → External API -->
+        <mxCell id="e_core_api" value="外部模型调用" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#666666;dashed=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="llm_confirm" target="openai_api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Runtime → Storage -->
+        <mxCell id="e_onnx_sqlite" value="缓存向量" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#666666;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="onnx" target="sqlite">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Rust → Output -->
+        <mxCell id="e_core_output" value="Diff AST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=10;fontColor=#82b366;fontStyle=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="layer3" target="output">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
