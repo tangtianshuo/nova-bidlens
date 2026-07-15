@@ -1,2 +1,11 @@
 .superpowers/
 .worktrees/
+
+node_modules/
+apps/*/dist/
+packages/*/dist/
+bidlens-engine/target/
+
+# TypeScript sidecar output from app-level config type checks.
+apps/*/vite.config.js
+apps/*/vitest.config.js
