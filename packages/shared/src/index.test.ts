@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
 import { BIDLENS_VERSION } from './index';
 
@@ -10,11 +10,16 @@ describe('BIDLENS_VERSION', () => {
 });
 
 describe('shared package barrel', () => {
-  it('uses runtime-resolvable ESM specifiers', () => {
-    const source = readFileSync(new URL('./index.ts', import.meta.url), 'utf8');
-    const exportSpecifiers = [...source.matchAll(/export \* from '(\.\/[^']+)'/g)].map((match) => match[1]);
+  it('uses runtime-resolvable ESM specifiers in source imports and exports', () => {
+    const sourceFiles = readdirSync(new URL('.', import.meta.url))
+      .filter((filename) => filename.endsWith('.ts') && !filename.endsWith('.test.ts'));
+    const specifiers = sourceFiles.flatMap((filename) => {
+      const source = readFileSync(new URL(filename, import.meta.url), 'utf8');
+      return [...source.matchAll(/(?:import|export)(?: type)?(?: \{[^}]*\})?[^'"]* from ['"](\.\/[^'"]+)['"]/g)]
+        .map((match) => match[1]);
+    });
 
-    expect(exportSpecifiers).not.toHaveLength(0);
-    expect(exportSpecifiers.every((specifier) => specifier.endsWith('.js'))).toBe(true);
+    expect(specifiers).not.toHaveLength(0);
+    expect(specifiers.every((specifier) => specifier.endsWith('.js'))).toBe(true);
   });
 });

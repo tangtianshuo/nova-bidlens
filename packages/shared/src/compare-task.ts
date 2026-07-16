@@ -1,5 +1,5 @@
-import type { DiffAst } from './diff-ast';
-import type { DocumentAst } from './document-ast';
+import type { DiffAst } from './diff-ast.js';
+import type { DocumentAst } from './document-ast.js';
 
 export type CompareMode = 'fast' | 'standard' | 'precise';
 export type ComparePhase = 'queued' | 'parsing_a' | 'parsing_b' | 'chunking' | 'embedding' | 'matching' | 'diffing' | 'complete' | 'failed' | 'cancelled';

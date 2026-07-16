@@ -1,6 +1,6 @@
-import type { CompareOptions, ReviewAnnotation } from './compare-task';
-import type { DiffAst } from './diff-ast';
-import type { DocumentAst } from './document-ast';
+import type { CompareOptions, ReviewAnnotation } from './compare-task.js';
+import type { DiffAst } from './diff-ast.js';
+import type { DocumentAst } from './document-ast.js';
 
 export interface ExportModel {
   taskId: string;

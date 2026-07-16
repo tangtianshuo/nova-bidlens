@@ -1,4 +1,4 @@
-import type { CompareOptions, CompareProgress, CompareResult, ReviewAnnotation } from './compare-task';
+import type { CompareOptions, CompareProgress, CompareResult, ReviewAnnotation } from './compare-task.js';
 
 export interface StartCompareRequest {
   fileAPath: string;
