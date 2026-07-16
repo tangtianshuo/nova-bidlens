@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = []
+members = ["crates/*"]
 
 [workspace.package]
 version = "0.1.0"
@@ -20,6 +20,8 @@ edition.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+diff-engine = { path = "crates/diff-engine" }
+document-ast = { path = "crates/document-ast" }
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

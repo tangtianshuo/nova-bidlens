@@ -1,0 +1,9 @@
+[package]
+name = "diff-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+document-ast = { path = "../document-ast" }
+serde.workspace = true
+uuid.workspace = true
