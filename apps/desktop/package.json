@@ -2,10 +2,11 @@
   "name": "@bidlens/desktop",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "main": "dist/main/index.js",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "tsc -p tsconfig.json && vite build",
+    "dev": "tsc -p tsconfig.main.json && concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "dev:renderer": "vite --host 127.0.0.1",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.main.json && vite build",
     "test": "vitest run",
     "lint": "tsc -p tsconfig.json --noEmit"
   },

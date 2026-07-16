@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BidLens — UI Design Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   CSS VARIABLES — Light Theme (Swiss Minimalism)
+   ============================================ */
+:root {
+  /* Surface */
+  --bg-app:         #f8fafc;
+  --bg-card:        #ffffff;
+  --bg-sidebar:     #ffffff;
+  --bg-elevated:    #f1f5f9;
+  --bg-hover:       #f1f5f9;
+  --bg-active:      #0f172a;
+  --bg-input:       #ffffff;
+
+  /* Border */
+  --border-primary: #e2e8f0;
+  --border-subtle:  #f1f5f9;
+
+  /* Text */
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary:  #94a3b8;
+  --text-inverse:   #ffffff;
+  --text-link:      #1e40af;
+
+  /* Accent */
+  --accent:         #1e40af;
+  --accent-hover:   #1e3a8a;
+  --accent-light:   #dbeafe;
+  --accent-soft:    #eff6ff;
+
+  /* Semantic — Diff highlights */
+  --diff-modified:  #fef3c7;
+  --diff-modified-border: #fde68a;
+  --diff-modified-text: #92400e;
+  --diff-added:     #d1fae5;
+  --diff-added-border: #a7f3d0;
+  --diff-added-text:#065f46;
+  --diff-deleted:   #fee2e2;
+  --diff-deleted-border: #fecaca;
+  --diff-deleted-text:#991b1b;
+
+  /* Status */
+  --status-pending: #dbeafe;
+  --status-pending-text: #1e40af;
+  --status-done:    #d1fae5;
+  --status-done-text:#065f46;
+
+  /* Stat cards */
+  --stat-bg:        #ffffff;
+  --stat-border:    #e2e8f0;
+
+  /* Shadow */
+  --shadow-sm:      0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:      0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg:      0 8px 24px rgba(0,0,0,0.08);
+
+  /* Misc */
+  --radius-sm:      6px;
+  --radius-md:      10px;
+  --radius-lg:      14px;
+  --font-sans:      'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono:      'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --transition:     0.15s ease;
+}
+
+/* ============================================
+   CSS VARIABLES — Dark Theme (Dark Professional)
+   ============================================ */
+[data-theme="dark"] {
+  --bg-app:         #0b0d14;
+  --bg-card:        #12141e;
+  --bg-sidebar:     #0f111a;
+  --bg-elevated:    #181b27;
+  --bg-hover:       #1e2130;
+  --bg-active:      #312e81;
+  --bg-input:       #181b27;
+
+  --border-primary: #1e2130;
+  --border-subtle:  #181b27;
+
+  --text-primary:   #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-tertiary:  #64748b;
+  --text-inverse:   #0f172a;
+  --text-link:      #818cf8;
+
+  --accent:         #6366f1;
+  --accent-hover:   #818cf8;
+  --accent-light:   #312e81;
+  --accent-soft:    #1e1b4b;
+
+  --diff-modified:  #854d0e33;
+  --diff-modified-border: #854d0e;
+  --diff-modified-text: #fbbf24;
+  --diff-added:     #065f4633;
+  --diff-added-border: #065f46;
+  --diff-added-text:#34d399;
+  --diff-deleted:   #991b1b33;
+  --diff-deleted-border: #991b1b;
+  --diff-deleted-text:#f87171;
+
+  --status-pending: #312e81;
+  --status-pending-text: #a5b4fc;
+  --status-done:    #065f4633;
+  --status-done-text:#34d399;
+
+  --stat-bg:        #12141e;
+  --stat-border:    #1e2130;
+
+  --shadow-sm:      0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md:      0 4px 12px rgba(0,0,0,0.3);
+  --shadow-lg:      0 8px 24px rgba(0,0,0,0.4);
+}
+
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 14px; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ============================================
+   APP SHELL
+   ============================================ */
+.app {
+  display: grid;
+  grid-template-columns: 220px 1fr 300px;
+  grid-template-rows: 1fr;
+  height: 100vh;
+}
+
+/* ============================================
+   SIDEBAR
+   ============================================ */
+.sidebar {
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-header {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.sidebar-logo {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sidebar-logo .logo-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--accent);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+.sidebar-nav {
+  padding: 12px 8px;
+  flex: 1;
+  overflow-y: auto;
+}
+.nav-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 12px 12px 6px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  user-select: none;
+}
+.nav-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.nav-item.active {
+  background: var(--bg-active);
+  color: var(--text-inverse);
+}
+.nav-item svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.nav-item.active svg { opacity: 1; }
+.nav-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.nav-item.active .nav-badge {
+  background: rgba(255,255,255,0.2);
+  color: var(--text-inverse);
+}
+
+/* Sidebar footer */
+.sidebar-footer {
+  padding: 12px 8px;
+  border-top: 1px solid var(--border-primary);
+}
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  border: none;
+  background: none;
+  width: 100%;
+  font-family: inherit;
+}
+.theme-toggle:hover { background: var(--bg-hover); color: var(--text-primary); }
+.theme-toggle svg { width: 18px; height: 18px; opacity: 0.7; }
+
+/* ============================================
+   MAIN CONTENT
+   ============================================ */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+
+/* Top Bar */
+.topbar {
+  padding: 16px 24px 0;
+  flex-shrink: 0;
+}
+.topbar-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.topbar h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+}
+.btn svg { width: 16px; height: 16px; }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #fff;
+}
+
+/* Stat Cards (from Style B) */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat-card {
+  background: var(--stat-bg);
+  border: 1px solid var(--stat-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  transition: all var(--transition);
+}
+.stat-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.stat-value {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-top: 2px;
+  color: var(--text-primary);
+}
+.stat-value.amber { color: #d97706; }
+.stat-value.green { color: #059669; }
+.stat-value.red   { color: #dc2626; }
+[data-theme="dark"] .stat-value.amber { color: #fbbf24; }
+[data-theme="dark"] .stat-value.green { color: #34d399; }
+[data-theme="dark"] .stat-value.red   { color: #f87171; }
+.stat-sub {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* Filter Bar */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+}
+.filter-pill:hover {
+  border-color: var(--text-tertiary);
+  color: var(--text-primary);
+}
+.filter-pill.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.filter-pill .count {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.filter-spacer { flex: 1; }
+.filter-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  min-width: 180px;
+}
+.filter-search svg { width: 14px; height: 14px; opacity: 0.5; }
+.filter-search span { font-family: var(--font-mono); font-size: 11px; }
+
+/* Content Area */
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 24px 24px;
+}
+
+/* Diff Card */
+.diff-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: all var(--transition);
+}
+.diff-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+.diff-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.diff-card-header .match-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge-modified { background: var(--diff-modified); color: var(--diff-modified-text); border: 1px solid var(--diff-modified-border); }
+.badge-added    { background: var(--diff-added);    color: var(--diff-added-text);    border: 1px solid var(--diff-added-border); }
+.badge-deleted  { background: var(--diff-deleted);  color: var(--diff-deleted-text);  border: 1px solid var(--diff-deleted-border); }
+.diff-card-header .section-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.diff-card-header .confidence {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+.diff-card-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.diff-pane {
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+.diff-pane + .diff-pane {
+  border-left: 1px solid var(--border-primary);
+}
+.diff-pane-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.diff-text .hl-modified {
+  background: var(--diff-modified);
+  color: var(--diff-modified-text);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+.diff-text .hl-added {
+  background: var(--diff-added);
+  color: var(--diff-added-text);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+.diff-text .hl-removed {
+  background: var(--diff-deleted);
+  color: var(--diff-deleted-text);
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-decoration: line-through;
+  font-weight: 500;
+}
+
+/* Table Diff Card */
+.diff-table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.diff-table-card .table-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.diff-table-card .table-header h3 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.diff-table-wrapper {
+  overflow-x: auto;
+}
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.diff-table th {
+  text-align: left;
+  padding: 9px 14px;
+  background: var(--bg-elevated);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-primary);
+  white-space: nowrap;
+}
+.diff-table td {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.diff-table tr:last-child td { border-bottom: none; }
+.diff-table tr:hover td { background: var(--bg-hover); }
+.diff-table .cell-modified { background: var(--diff-modified); color: var(--diff-modified-text); font-weight: 500; }
+.diff-table .cell-added    { background: var(--diff-added);    color: var(--diff-added-text);    font-weight: 500; }
+.diff-table .cell-deleted   { background: var(--diff-deleted);  color: var(--diff-deleted-text);  font-weight: 500; text-decoration: line-through; }
+.diff-table .row-added      { background: var(--diff-added); }
+.diff-table .row-deleted    { background: var(--diff-deleted); }
+.diff-table .cell-index {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-align: center;
+  width: 40px;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-primary);
+  font-family: var(--font-mono);
+}
+.diff-table .cell-empty {
+  color: var(--text-tertiary);
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* ============================================
+   DETAIL PANEL (RIGHT)
+   ============================================ */
+.detail-panel {
+  background: var(--bg-sidebar);
+  border-left: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.detail-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+.detail-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+.detail-section {
+  margin-bottom: 20px;
+}
+.detail-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.detail-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.detail-value.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* Confidence Bar */
+.confidence-bar {
+  height: 4px;
+  background: var(--border-primary);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.confidence-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+.confidence-bar-fill.amber { background: #f59e0b; }
+.confidence-bar-fill.green { background: #10b981; }
+
+/* Summary Card */
+.summary-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+/* Action Buttons */
+.detail-actions {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.detail-actions .btn { justify-content: center; width: 100%; }
+
+/* Structural Changes */
+.structural-changes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.struct-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent-light);
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ============================================
+   RESPONSIVE (minimal — this is a desktop app)
+   ============================================ */
+@media (max-width: 1100px) {
+  .app { grid-template-columns: 180px 1fr 260px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ==========================================
+       SIDEBAR
+       ========================================== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="logo-icon">B</div>
+        BidLens
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">工作区</div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
+        文档比对
+        <span class="nav-badge">47</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        仪表盘
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        历史记录
+      </div>
+
+      <div class="nav-section-label">系统</div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        导出报告
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        设置
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <svg id="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg id="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <span id="theme-label">切换暗色模式</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ==========================================
+       MAIN CONTENT
+       ========================================== -->
+  <main class="main">
+    <!-- Top Bar -->
+    <div class="topbar">
+      <div class="topbar-title-row">
+        <h1>差异概览</h1>
+        <div class="topbar-actions">
+          <button class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            导出报告
+          </button>
+          <button class="btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            筛选
+          </button>
+          <button class="btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            全部展开
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Cards (from Style B) -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">总差异数</div>
+          <div class="stat-value">47</div>
+          <div class="stat-sub">较上次 +12</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">已修改</div>
+          <div class="stat-value amber">23</div>
+          <div class="stat-sub">48.9%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">新增</div>
+          <div class="stat-value green">15</div>
+          <div class="stat-sub">31.9%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">删除</div>
+          <div class="stat-value red">9</div>
+          <div class="stat-sub">19.1%</div>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <button class="filter-pill active">全部 <span class="count">47</span></button>
+        <button class="filter-pill">已修改 <span class="count">23</span></button>
+        <button class="filter-pill">新增 <span class="count">15</span></button>
+        <button class="filter-pill">删除 <span class="count">9</span></button>
+        <button class="filter-pill">表格 <span class="count">8</span></button>
+        <div class="filter-spacer"></div>
+        <div class="filter-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span>⌘K 搜索差异...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="content-area">
+
+      <!-- Diff 1: Text modification -->
+      <div class="diff-card">
+        <div class="diff-card-header">
+          <span class="match-badge badge-modified">已修改</span>
+          <span class="section-name">3.1 资质要求</span>
+          <span class="confidence">conf 0.92</span>
+        </div>
+        <div class="diff-card-body">
+          <div class="diff-pane">
+            <div class="diff-pane-label">基准版.docx</div>
+            <div class="diff-text">
+              供应商须具备 <span class="hl-removed">ISO 9001</span> 认证，且近三年内无重大安全事故记录。投标保证金为合同金额的 <span class="hl-removed">3%</span>。
+            </div>
+          </div>
+          <div class="diff-pane">
+            <div class="diff-pane-label">比较版.docx</div>
+            <div class="diff-text">
+              供应商须具备 <span class="hl-added">ISO 9001 与 ISO 14001</span> 认证，且近三年内无重大安全事故记录。投标保证金为合同金额的 <span class="hl-modified">5%</span>。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diff 2: Added content -->
+      <div class="diff-card">
+        <div class="diff-card-header">
+          <span class="match-badge badge-added">新增</span>
+          <span class="section-name">4.2 报价明细 — 防水材料</span>
+          <span class="confidence">conf 0.95</span>
+        </div>
+        <div class="diff-card-body">
+          <div class="diff-pane">
+            <div class="diff-pane-label">基准版.docx</div>
+            <div class="diff-text cell-empty" style="color:var(--text-tertiary);font-style:italic;">（无对应内容）</div>
+          </div>
+          <div class="diff-pane">
+            <div class="diff-pane-label">比较版.docx</div>
+            <div class="diff-text">
+              <span class="hl-added">新增防水卷材 SBS 规格要求：厚度≥4mm，拉力≥800N/50mm，延伸率≥40%。单价 85 元/m²。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diff 3: Deleted content -->
+      <div class="diff-card">
+        <div class="diff-card-header">
+          <span class="match-badge badge-deleted">删除</span>
+          <span class="section-name">5.1 付款条件 — 预付款条款</span>
+          <span class="confidence">conf 0.88</span>
+        </div>
+        <div class="diff-card-body">
+          <div class="diff-pane">
+            <div class="diff-pane-label">基准版.docx</div>
+            <div class="diff-text">
+              <span class="hl-removed">合同签订后 7 个工作日内，甲方支付合同总价的 20% 作为预付款。</span>
+            </div>
+          </div>
+          <div class="diff-pane">
+            <div class="diff-pane-label">比较版.docx</div>
+            <div class="diff-text cell-empty" style="color:var(--text-tertiary);font-style:italic;">（已删除此条款）</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diff 4: Table diff -->
+      <div class="diff-table-card">
+        <div class="table-header">
+          <span class="match-badge badge-modified">表格差异</span>
+          <h3>附表A 材料报价清单</h3>
+          <span class="confidence" style="margin-left:auto;font-size:12px;color:var(--text-tertiary);font-family:var(--font-mono);">conf 0.91</span>
+        </div>
+        <div class="diff-table-wrapper">
+          <table class="diff-table">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>材料名称</th>
+                <th>规格型号</th>
+                <th>单位</th>
+                <th>基准单价</th>
+                <th>比较单价</th>
+                <th>变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="cell-index">1</td>
+                <td>钢材 HRB400</td>
+                <td>Φ12-25mm</td>
+                <td>吨</td>
+                <td class="cell-deleted">4,200</td>
+                <td class="cell-modified">4,500</td>
+                <td><span class="match-badge badge-modified" style="font-size:10px">+7.1%</span></td>
+              </tr>
+              <tr>
+                <td class="cell-index">2</td>
+                <td>水泥 P.O 42.5</td>
+                <td>散装</td>
+                <td>吨</td>
+                <td>480</td>
+                <td>480</td>
+                <td><span style="color:var(--text-tertiary);font-size:12px;">—</span></td>
+              </tr>
+              <tr class="row-added">
+                <td class="cell-index">3</td>
+                <td class="cell-added">防水卷材 SBS</td>
+                <td class="cell-added">4mm</td>
+                <td class="cell-added">m²</td>
+                <td class="cell-empty">—</td>
+                <td class="cell-added">85</td>
+                <td><span class="match-badge badge-added" style="font-size:10px">新增</span></td>
+              </tr>
+              <tr>
+                <td class="cell-index">4</td>
+                <td>商品混凝土 C30</td>
+                <td>泵送</td>
+                <td>m³</td>
+                <td>380</td>
+                <td>395</td>
+                <td><span class="match-badge badge-modified" style="font-size:10px">+3.9%</span></td>
+              </tr>
+              <tr class="row-deleted">
+                <td class="cell-index">5</td>
+                <td class="cell-deleted">铝合金型材</td>
+                <td class="cell-deleted">6063-T5</td>
+                <td class="cell-deleted">吨</td>
+                <td class="cell-deleted">18,500</td>
+                <td class="cell-empty">—</td>
+                <td><span class="match-badge badge-deleted" style="font-size:10px">删除</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ==========================================
+       DETAIL PANEL (RIGHT)
+       ========================================== -->
+  <aside class="detail-panel">
+    <div class="detail-header">
+      <h2>差异详情</h2>
+    </div>
+    <div class="detail-body">
+      <div class="detail-section">
+        <div class="detail-section-title">匹配信息</div>
+        <div class="detail-row">
+          <span class="detail-label">匹配类型</span>
+          <span class="match-badge badge-modified" style="font-size:12px">已修改</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">置信度</span>
+          <span class="detail-value mono">0.92</span>
+        </div>
+        <div class="confidence-bar"><div class="confidence-bar-fill" style="width:92%"></div></div>
+        <div class="detail-row" style="margin-top:8px">
+          <span class="detail-label">相似度</span>
+          <span class="detail-value mono">0.87</span>
+        </div>
+        <div class="confidence-bar"><div class="confidence-bar-fill amber" style="width:87%"></div></div>
+        <div class="detail-row" style="margin-top:8px">
+          <span class="detail-label">评审状态</span>
+          <span class="detail-value" style="padding:2px 10px;border-radius:999px;background:var(--status-pending);color:var(--status-pending-text);font-size:12px;">待审</span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">差异摘要</div>
+        <div class="summary-card">
+          ISO 认证要求从单一 9001 扩展为双认证体系（9001 + 14001）；保证金比例由 3% 上调至 5%，增幅 66.7%。属于实质性条款变更，建议重点关注。
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">涉及段落</div>
+        <div class="detail-row">
+          <span class="detail-label">基准版</span>
+          <span class="detail-value mono">§3.1 p.12</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">比较版</span>
+          <span class="detail-value mono">§3.1 p.11</span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">结构变化</div>
+        <div class="structural-changes">
+          <span class="struct-pill">新增 1 行</span>
+          <span class="struct-pill">修改 2 单元格</span>
+        </div>
+      </div>
+    </div>
+    <div class="detail-actions">
+      <button class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        标记为重要
+      </button>
+      <button class="btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        添加批注
+      </button>
+      <button class="btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="9 18 15 12 9 6"/></svg>
+        下一项
+      </button>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  document.getElementById('theme-icon-light').style.display = next === 'light' ? 'block' : 'none';
+  document.getElementById('theme-icon-dark').style.display = next === 'dark' ? 'block' : 'none';
+  document.getElementById('theme-label').textContent = next === 'light' ? '切换暗色模式' : '切换亮色模式';
+}
+
+// Filter pill toggle
+document.querySelectorAll('.filter-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>

@@ -1,9 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { registerCompareHandlers } from './ipc/compare-handlers';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = !app.isPackaged;
 
 function createWindow() {

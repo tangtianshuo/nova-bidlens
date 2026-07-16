@@ -82,7 +82,9 @@ describe('parseDocxTable', () => {
 
     const result = parseDocxTable(table);
     expect(result.rows[0].cells[0].colSpan).toBe(2);
-    expect(result.rows[0].cells).toHaveLength(2); // 合并后只有2个单元格
+    // 合并单元格本身就是一个单元格，不需要额外的占位符
+    expect(result.rows[0].cells).toHaveLength(2);
+    expect(result.rows[1].cells).toHaveLength(3);
   });
 
   it('should handle vertical merged cells (rowSpan)', () => {
@@ -103,7 +105,46 @@ describe('parseDocxTable', () => {
     const result = parseDocxTable(table);
     expect(result.rows[0].cells[0].rowSpan).toBe(2);
     expect(result.rows[0].cells).toHaveLength(3);
-    expect(result.rows[1].cells).toHaveLength(2);
+    // 第二行应该有占位符（因为第一行的rowSpan=2）
+    expect(result.rows[1].cells).toHaveLength(3);
+    expect(result.rows[1].cells[0].isPlaceholder).toBe(true);
+    expect(result.rows[1].cells[1].content).toBe('Cell 4');
+    expect(result.rows[1].cells[2].content).toBe('Cell 5');
+  });
+
+  it('should handle complex merged cells (rowSpan and colSpan)', () => {
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', { rowspan: '2', colspan: '2' }, [], 'Complex Merged'),
+          createHtmlElement('td', {}, [], 'Cell 13')
+        ]),
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Cell 23')
+        ]),
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Cell 31'),
+          createHtmlElement('td', {}, [], 'Cell 32'),
+          createHtmlElement('td', {}, [], 'Cell 33')
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    expect(result.rows[0].cells[0].rowSpan).toBe(2);
+    expect(result.rows[0].cells[0].colSpan).toBe(2);
+    // 第一行：合并单元格(占2列) + 普通单元格 = 2个单元格
+    expect(result.rows[0].cells).toHaveLength(2);
+    // 第二行：2个占位符(因为rowSpan=2, colSpan=2) + 普通单元格 = 3个单元格
+    expect(result.rows[1].cells).toHaveLength(3);
+    expect(result.rows[1].cells[0].isPlaceholder).toBe(true);
+    expect(result.rows[1].cells[1].isPlaceholder).toBe(true);
+    expect(result.rows[1].cells[2].content).toBe('Cell 23');
+    // 第三行：3个普通单元格
+    expect(result.rows[2].cells).toHaveLength(3);
+    expect(result.rows[2].cells[0].content).toBe('Cell 31');
+    expect(result.rows[2].cells[1].content).toBe('Cell 32');
+    expect(result.rows[2].cells[2].content).toBe('Cell 33');
   });
 
   it('should extract table properties', () => {
@@ -152,6 +193,43 @@ describe('parseDocxTable', () => {
     expect(result.rows[0].cells[0].id).toBeDefined();
     expect(result.rows[0].cells[0].id).not.toBe(result.rows[0].cells[1].id);
   });
+
+  it('should correctly process merged cells with placeholders', () => {
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', { rowspan: '2', colspan: '2' }, [], 'Merged'),
+          createHtmlElement('td', {}, [], 'A')
+        ]),
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'B')
+        ]),
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'C'),
+          createHtmlElement('td', {}, [], 'D'),
+          createHtmlElement('td', {}, [], 'E')
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    
+    // 验证第一行
+    expect(result.rows[0].cells[0].content).toBe('Merged');
+    expect(result.rows[0].cells[0].rowSpan).toBe(2);
+    expect(result.rows[0].cells[0].colSpan).toBe(2);
+    expect(result.rows[0].cells[1].content).toBe('A');
+    
+    // 验证第二行（应有占位符）
+    expect(result.rows[1].cells[0].isPlaceholder).toBe(true);
+    expect(result.rows[1].cells[1].isPlaceholder).toBe(true);
+    expect(result.rows[1].cells[2].content).toBe('B');
+    
+    // 验证第三行（普通行）
+    expect(result.rows[2].cells[0].content).toBe('C');
+    expect(result.rows[2].cells[1].content).toBe('D');
+    expect(result.rows[2].cells[2].content).toBe('E');
+  });
 });
 
 describe('convertToTableNode', () => {
@@ -184,5 +262,34 @@ describe('convertToTableNode', () => {
     expect(result.rows).toHaveLength(2);
     expect(result.rows[0]).toEqual(['Cell 1', 'Cell 2']);
     expect(result.rows[1]).toEqual(['Cell 3', 'Cell 4']);
+  });
+
+  it('should skip placeholder cells when converting', () => {
+    const parsedTable = {
+      id: 'table1',
+      rows: [
+        {
+          id: 'row1',
+          cells: [
+            { id: 'cell1', content: 'Merged', rowSpan: 2, colSpan: 2 },
+            { id: 'cell2', content: 'A' },
+          ],
+          rowType: 'body' as const
+        },
+        {
+          id: 'row2',
+          cells: [
+            { id: 'cell3', content: '', isPlaceholder: true },
+            { id: 'cell4', content: '', isPlaceholder: true },
+            { id: 'cell5', content: 'B' },
+          ],
+          rowType: 'body' as const
+        }
+      ]
+    };
+
+    const result = convertToTableNode(parsedTable);
+    expect(result.rows[0]).toEqual(['Merged', 'A']);
+    expect(result.rows[1]).toEqual(['B']);
   });
 });

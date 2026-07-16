@@ -18,6 +18,8 @@ export interface ParsedCell {
   rowSpan?: number;
   colSpan?: number;
   properties?: CellProperties;
+  /** 标记是否为合并单元格占位符（被其他单元格的rowSpan/colSpan覆盖） */
+  isPlaceholder?: boolean;
 }
 
 export interface TableProperties {
@@ -230,45 +232,101 @@ function extractCellProperties(cellElement: HtmlElement): CellProperties {
 
 /**
  * 处理合并单元格
+ * 
+ * 该函数会：
+ * 1. 创建一个网格来跟踪已使用的单元格位置
+ * 2. 处理水平合并（colSpan）和垂直合并（rowSpan）
+ * 3. 为被合并的单元格位置添加占位符
  */
 function processMergedCells(rows: ParsedRow[]): void {
-  // 创建网格以跟踪已使用的单元格
-  const grid: boolean[][] = [];
+  if (rows.length === 0) return;
   
+  // 计算最大列数（考虑colSpan）
+  const maxCols = Math.max(...rows.map(row => {
+    let cols = 0;
+    for (const cell of row.cells) {
+      cols += cell.colSpan || 1;
+    }
+    return cols;
+  }), 0);
+  
+  // 创建网格以跟踪哪些位置被哪个单元格占用
+  // 存储单元格在原始rows数组中的引用
+  const grid: (ParsedCell | null)[][] = Array.from({ length: rows.length }, () => 
+    Array(maxCols).fill(null)
+  );
+  
+  // 第一遍：填充网格，标记所有被合并单元格占用的位置
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex];
-    if (!grid[rowIndex]) {
-      grid[rowIndex] = [];
+    let logicalCol = 0;
+    
+    for (const cell of row.cells) {
+      const rowSpan = cell.rowSpan || 1;
+      const colSpan = cell.colSpan || 1;
+      
+      // 跳过已被占用的位置
+      while (logicalCol < maxCols && grid[rowIndex][logicalCol] !== null) {
+        logicalCol++;
+      }
+      
+      if (logicalCol >= maxCols) break;
+      
+      // 标记该合并单元格占用的所有位置
+      for (let r = 0; r < rowSpan; r++) {
+        for (let c = 0; c < colSpan; c++) {
+          const targetRow = rowIndex + r;
+          const targetCol = logicalCol + c;
+          
+          if (targetRow < rows.length && targetCol < maxCols) {
+            grid[targetRow][targetCol] = cell;
+          }
+        }
+      }
+      
+      logicalCol += colSpan;
+    }
+  }
+  
+  // 第二遍：根据网格重建每行的单元格列表
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    const row = rows[rowIndex];
+    const newCells: ParsedCell[] = [];
+    let colIndex = 0;
+    
+    while (colIndex < maxCols) {
+      const cellAtPosition = grid[rowIndex][colIndex];
+      
+      if (cellAtPosition === null) {
+        // 空位置，添加占位符
+        newCells.push({
+          id: generateId(),
+          content: '',
+          isPlaceholder: true
+        });
+        colIndex++;
+      } else {
+        // 检查这个单元格是否是当前行的原始单元格
+        const isOriginalCell = row.cells.includes(cellAtPosition);
+        
+        if (isOriginalCell) {
+          // 这是当前行的原始单元格
+          newCells.push(cellAtPosition);
+          colIndex += cellAtPosition.colSpan || 1;
+        } else {
+          // 这是被其他行的合并单元格占用的位置，添加占位符
+          newCells.push({
+            id: generateId(),
+            content: '',
+            isPlaceholder: true
+          });
+          colIndex++;
+        }
+      }
     }
     
-    let colIndex = 0;
-    for (let cellIndex = 0; cellIndex < row.cells.length; cellIndex++) {
-      const cell = row.cells[cellIndex];
-      
-      // 跳过已使用的单元格位置
-      while (grid[rowIndex][colIndex]) {
-        colIndex++;
-      }
-      
-      // 处理水平合并
-      if (cell.colSpan && cell.colSpan > 1) {
-        for (let i = 1; i < cell.colSpan; i++) {
-          grid[rowIndex][colIndex + i] = true;
-        }
-      }
-      
-      // 处理垂直合并
-      if (cell.rowSpan && cell.rowSpan > 1) {
-        for (let i = 1; i < cell.rowSpan; i++) {
-          if (!grid[rowIndex + i]) {
-            grid[rowIndex + i] = [];
-          }
-          grid[rowIndex + i][colIndex] = true;
-        }
-      }
-      
-      colIndex += cell.colSpan || 1;
-    }
+    // 替换行的单元格
+    row.cells = newCells;
   }
 }
 
@@ -281,7 +339,10 @@ export function convertToTableNode(parsedTable: ParsedTable): TableNode {
   for (const row of parsedTable.rows) {
     const rowCells: string[] = [];
     for (const cell of row.cells) {
-      rowCells.push(cell.content);
+      // 跳过占位符，只保留实际内容
+      if (!cell.isPlaceholder) {
+        rowCells.push(cell.content);
+      }
     }
     rows.push(rowCells);
   }

@@ -109,4 +109,55 @@ describe('TableCellView', () => {
     
     expect(onClick).not.toHaveBeenCalled();
   });
+
+  // 合并单元格相关测试
+  it('renders merged cell with rowSpan and colSpan', () => {
+    const { container } = render(<TableCellView content="Merged" rowSpan={2} colSpan={3} />);
+    const cell = container.querySelector('td');
+    expect(cell?.getAttribute('rowSpan')).toBe('2');
+    expect(cell?.getAttribute('colSpan')).toBe('3');
+  });
+
+  it('shows merge indicator for merged cells', () => {
+    const { container } = render(<TableCellView content="Merged" rowSpan={2} colSpan={3} />);
+    expect(container.textContent).toContain('2行3列');
+  });
+
+  it('shows merge change indicator when spanChanged is true', () => {
+    const diff = {
+      position: [0, 0] as [number, number],
+      changeType: 'span_changed' as const,
+      oldContent: 'Merged',
+      newContent: 'Merged',
+      similarity: 1.0,
+      spanChanged: true,
+    };
+    const { container } = render(<TableCellView content="Merged" diff={diff} />);
+    expect(container.textContent).toContain('合并变化');
+  });
+
+  it('does not render placeholder cells', () => {
+    const { container } = render(<TableCellView content="Placeholder" isPlaceholder />);
+    expect(container.querySelector('td')).toBeNull();
+  });
+
+  it('applies blue background for span_changed cells', () => {
+    const diff = {
+      position: [0, 0] as [number, number],
+      changeType: 'span_changed' as const,
+      oldContent: 'old',
+      newContent: 'new',
+      similarity: 1.0,
+      spanChanged: true,
+    };
+    const { container } = render(<TableCellView content="new" diff={diff} />);
+    const cell = container.querySelector('td');
+    expect(cell?.style.backgroundColor).toBe('rgb(204, 229, 255)'); // #cce5ff
+  });
+
+  it('applies special border for merged cells', () => {
+    const { container } = render(<TableCellView content="Merged" rowSpan={2} colSpan={2} />);
+    const cell = container.querySelector('td');
+    expect(cell?.style.border).toContain('2px solid');
+  });
 });

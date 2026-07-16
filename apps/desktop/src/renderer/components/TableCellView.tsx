@@ -1,21 +1,38 @@
 import type { CellChangeType, CellDiff } from '@bidlens/shared';
-import { getCellChangeColor } from '@bidlens/shared';
+import { getCellChangeColor, getCellDiffTooltip } from '@bidlens/shared';
 import { useState } from 'react';
 
 export interface TableCellViewProps {
   content: string;
   diff?: CellDiff;
   isHeader?: boolean;
+  rowSpan?: number;
+  colSpan?: number;
+  isPlaceholder?: boolean;
   onCellClick?: (position: [number, number]) => void;
 }
 
-export function TableCellView({ content, diff, isHeader, onCellClick }: TableCellViewProps) {
+export function TableCellView({ 
+  content, 
+  diff, 
+  isHeader, 
+  rowSpan = 1, 
+  colSpan = 1,
+  isPlaceholder = false,
+  onCellClick 
+}: TableCellViewProps) {
   const [showTooltip, setShowTooltip] = useState(false);
+
+  // 占位符单元格不显示
+  if (isPlaceholder) {
+    return null;
+  }
 
   const backgroundColor = diff ? getCellChangeColor(diff.changeType) : undefined;
   const changeType = diff?.changeType ?? 'identical';
+  const isSpanChanged = diff?.spanChanged ?? false;
 
-  const tooltipContent = diff && changeType !== 'identical' ? getTooltipText(diff) : undefined;
+  const tooltipContent = diff && changeType !== 'identical' ? getCellDiffTooltip(diff) : undefined;
 
   const handleClick = () => {
     if (onCellClick && diff && changeType !== 'identical') {
@@ -23,8 +40,17 @@ export function TableCellView({ content, diff, isHeader, onCellClick }: TableCel
     }
   };
 
+  // 合并单元格的特殊样式
+  const isMerged = rowSpan > 1 || colSpan > 1;
+  const mergedStyle = isMerged ? {
+    border: '2px solid #6c757d',
+    fontWeight: 'bold' as const,
+  } : {};
+
   return (
     <td
+      rowSpan={rowSpan}
+      colSpan={colSpan}
       style={{
         backgroundColor,
         padding: '8px 12px',
@@ -32,12 +58,49 @@ export function TableCellView({ content, diff, isHeader, onCellClick }: TableCel
         position: 'relative',
         cursor: onCellClick && changeType !== 'identical' ? 'pointer' : 'default',
         transition: 'background-color 0.2s',
+        ...mergedStyle,
       }}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
       onClick={handleClick}
     >
       {isHeader ? <strong>{content || '-'}</strong> : <span>{content || '-'}</span>}
+      
+      {/* 合并单元格标记 */}
+      {isMerged && (
+        <span 
+          style={{
+            position: 'absolute',
+            top: '2px',
+            right: '2px',
+            fontSize: '10px',
+            color: '#6c757d',
+            backgroundColor: '#f8f9fa',
+            padding: '1px 4px',
+            borderRadius: '2px',
+          }}
+        >
+          {rowSpan > 1 ? `${rowSpan}行` : ''}{colSpan > 1 ? `${colSpan}列` : ''}
+        </span>
+      )}
+      
+      {/* 合并信息变化标记 */}
+      {isSpanChanged && (
+        <span 
+          style={{
+            position: 'absolute',
+            top: '2px',
+            left: '2px',
+            fontSize: '10px',
+            color: '#0056b3',
+            backgroundColor: '#cce5ff',
+            padding: '1px 4px',
+            borderRadius: '2px',
+          }}
+        >
+          合并变化
+        </span>
+      )}
       
       {showTooltip && tooltipContent && (
         <div
@@ -75,14 +138,5 @@ export function TableCellView({ content, diff, isHeader, onCellClick }: TableCel
 }
 
 function getTooltipText(diff: CellDiff): string {
-  switch (diff.changeType) {
-    case 'modified':
-      return '修改: "' + diff.oldContent + '" → "' + diff.newContent + '" (相似度: ' + (diff.similarity * 100).toFixed(0) + '%)';
-    case 'added':
-      return '新增: "' + diff.newContent + '"';
-    case 'deleted':
-      return '删除: "' + diff.oldContent + '"';
-    default:
-      return '';
-  }
+  return getCellDiffTooltip(diff);
 }
