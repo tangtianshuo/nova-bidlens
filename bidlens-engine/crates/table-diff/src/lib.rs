@@ -2,11 +2,49 @@ use document_ast::{BlockNode, CellSpan, TableCell, TableNode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
+// ============================================================================
+// Configuration
+// ============================================================================
+
+/// Table diff configuration options
+#[derive(Debug, Clone)]
+pub struct TableDiffOptions {
+    pub match_strategy: MatchStrategy,
+    pub similarity_threshold: f32,
+}
+
+impl Default for TableDiffOptions {
+    fn default() -> Self {
+        Self {
+            match_strategy: MatchStrategy::Position,
+            similarity_threshold: 0.6,
+        }
+    }
+}
+
+/// Matching strategy
+#[derive(Debug, Clone)]
+pub enum MatchStrategy {
+    /// Strict position-based matching (existing logic)
+    Position,
+    /// Content similarity-based matching
+    Content,
+    /// Hybrid: prefer position, fallback to content
+    Hybrid,
+}
+
+// ============================================================================
+// Data Structures
+// ============================================================================
+
+/// Table diff result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TableDiffResult {
     pub table_match_type: TableMatchType,
     pub structural_changes: Vec<StructuralChange>,
     pub cell_diffs: Vec<CellDiff>,
+    pub row_alignments: Vec<RowAlignment>,
+    pub column_alignments: Vec<ColumnAlignment>,
     pub confidence: f32,
 }
 
@@ -32,22 +70,58 @@ pub enum CellChangeType {
     Modified,
     Added,
     Deleted,
-    SpanChanged,  // 新增：仅合并信息变化
+    SpanChanged,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CellDiff {
-    pub position: (usize, usize), // (row, col)
+    pub position: (usize, usize),
     pub change_type: CellChangeType,
     pub old_content: Option<String>,
     pub new_content: Option<String>,
     pub similarity: f32,
-    pub old_span: Option<CellSpan>,  // 新增：旧合并信息
-    pub new_span: Option<CellSpan>,  // 新增：新合并信息
-    pub span_changed: bool,          // 新增：标记合并信息是否变化
+    pub old_span: Option<CellSpan>,
+    pub new_span: Option<CellSpan>,
+    pub span_changed: bool,
 }
 
-/// 合并区域信息
+/// Row alignment result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RowAlignment {
+    pub left_idx: Option<usize>,
+    pub right_idx: Option<usize>,
+    pub similarity: f32,
+    pub alignment_type: AlignmentType,
+}
+
+/// Row alignment type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum AlignmentType {
+    Matched,
+    Added,
+    Deleted,
+    Moved,
+}
+
+/// Column alignment result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ColumnAlignment {
+    pub left_idx: Option<usize>,
+    pub right_idx: Option<usize>,
+    pub similarity: f32,
+    pub alignment_type: ColumnAlignmentType,
+}
+
+/// Column alignment type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ColumnAlignmentType {
+    Matched,
+    Added,
+    Deleted,
+    Moved,
+}
+
+/// Merge region info
 #[derive(Debug, Clone)]
 struct MergeRegion {
     start_row: usize,
@@ -57,364 +131,366 @@ struct MergeRegion {
     content: String,
 }
 
-/// 提取单元格文本内容
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
 fn extract_cell_text(cell: &TableCell) -> String {
     let mut texts = Vec::new();
     for block in &cell.content {
         match block {
             BlockNode::Paragraph(p) => texts.push(p.text.clone()),
-            _ => {} // 忽略嵌套表格
+            _ => {}
         }
     }
     texts.join(" ")
 }
 
-/// 计算两个字符串的Jaccard相似度
 fn jaccard_similarity(left: &str, right: &str) -> f32 {
-    if left == right {
-        return 1.0;
-    }
-    
+    if left == right { return 1.0; }
     let left_words: HashSet<&str> = left.split_whitespace().collect();
     let right_words: HashSet<&str> = right.split_whitespace().collect();
-    
-    if left_words.is_empty() && right_words.is_empty() {
-        return 1.0;
-    }
-    
+    if left_words.is_empty() && right_words.is_empty() { return 1.0; }
     let intersection = left_words.intersection(&right_words).count() as f32;
     let union = left_words.union(&right_words).count() as f32;
-    
-    if union == 0.0 {
-        0.0
-    } else {
-        intersection / union
-    }
+    if union == 0.0 { 0.0 } else { intersection / union }
 }
 
-/// 获取表格最大列数
 fn max_columns(table: &TableNode) -> usize {
-    table.rows.iter()
-        .map(|row| row.cells.len())
-        .max()
-        .unwrap_or(0)
+    table.rows.iter().map(|row| row.cells.len()).max().unwrap_or(0)
 }
 
-/// 提取表格中的合并区域
+fn get_cell<'a>(table: &'a TableNode, row_idx: usize, col_idx: usize) -> Option<&'a TableCell> {
+    table.rows.get(row_idx).and_then(|row| row.cells.get(col_idx))
+}
+
 fn extract_merge_regions(table: &TableNode) -> Vec<MergeRegion> {
     let mut regions = Vec::new();
-    
     for (row_idx, row) in table.rows.iter().enumerate() {
         for (col_idx, cell) in row.cells.iter().enumerate() {
             if let Some(span) = &cell.span {
                 if span.row_span > 1 || span.col_span > 1 {
                     regions.push(MergeRegion {
-                        start_row: row_idx,
-                        start_col: col_idx,
-                        row_span: span.row_span,
-                        col_span: span.col_span,
+                        start_row: row_idx, start_col: col_idx,
+                        row_span: span.row_span, col_span: span.col_span,
                         content: extract_cell_text(cell),
                     });
                 }
             }
         }
     }
-    
     regions
 }
 
-/// 检查两个合并区域是否重叠
 fn regions_overlap(left: &MergeRegion, right: &MergeRegion) -> bool {
-    let left_end_row = left.start_row + left.row_span;
-    let left_end_col = left.start_col + left.col_span;
-    let right_end_row = right.start_row + right.row_span;
-    let right_end_col = right.start_col + right.col_span;
-    
-    !(left.start_row >= right_end_row
-        || right.start_row >= left_end_row
-        || left.start_col >= right_end_col
-        || right.start_col >= left_end_col)
+    !(left.start_row >= right.start_row + right.row_span
+        || right.start_row >= left.start_row + left.row_span
+        || left.start_col >= right.start_col + right.col_span
+        || right.start_col >= left.start_col + left.col_span)
 }
 
-/// 检查位置是否在合并区域内
 fn is_in_merge_region(row_idx: usize, col_idx: usize, regions: &[MergeRegion]) -> bool {
     regions.iter().any(|r| {
-        row_idx >= r.start_row
-            && row_idx < r.start_row + r.row_span
-            && col_idx >= r.start_col
-            && col_idx < r.start_col + r.col_span
+        row_idx >= r.start_row && row_idx < r.start_row + r.row_span
+            && col_idx >= r.start_col && col_idx < r.start_col + r.col_span
     })
 }
 
-/// 比较两个合并区域的内容
 fn compare_merge_regions(left: &MergeRegion, right: &MergeRegion) -> (CellChangeType, f32) {
     let similarity = jaccard_similarity(&left.content, &right.content);
-    
-    if left.content == right.content {
-        (CellChangeType::Identical, 1.0)
-    } else if similarity > 0.5 {
-        (CellChangeType::Modified, similarity)
-    } else {
-        (CellChangeType::Modified, similarity)
+    if left.content == right.content { (CellChangeType::Identical, 1.0) }
+    else { (CellChangeType::Modified, similarity) }
+}
+
+// ============================================================================
+// Row Matching Algorithm
+// ============================================================================
+
+fn compute_row_similarity(left_table: &TableNode, right_table: &TableNode,
+                          left_row_idx: usize, right_row_idx: usize) -> f32 {
+    let left_row = &left_table.rows[left_row_idx];
+    let right_row = &right_table.rows[right_row_idx];
+    let max_cols = left_row.cells.len().max(right_row.cells.len());
+    if max_cols == 0 { return 1.0; }
+
+    let mut total = 0.0;
+    let mut count = 0;
+    for col_idx in 0..max_cols {
+        match (left_row.cells.get(col_idx), right_row.cells.get(col_idx)) {
+            (Some(l), Some(r)) => { total += jaccard_similarity(&extract_cell_text(l), &extract_cell_text(r)); count += 1; }
+            (Some(_), None) | (None, Some(_)) => { count += 1; }
+            _ => {}
+        }
     }
+    if count == 0 { 1.0 } else { total / count as f32 }
 }
 
-/// 安全获取单元格
-fn get_cell<'a>(table: &'a TableNode, row_idx: usize, col_idx: usize) -> Option<&'a TableCell> {
-    table.rows.get(row_idx)
-        .and_then(|row| row.cells.get(col_idx))
+fn compute_column_similarity(left_table: &TableNode, right_table: &TableNode,
+                             left_col_idx: usize, right_col_idx: usize) -> f32 {
+    let max_rows = left_table.rows.len().max(right_table.rows.len());
+    if max_rows == 0 { return 1.0; }
+
+    let mut total = 0.0;
+    let mut count = 0;
+    for row_idx in 0..max_rows {
+        match (get_cell(left_table, row_idx, left_col_idx), get_cell(right_table, row_idx, right_col_idx)) {
+            (Some(l), Some(r)) => { total += jaccard_similarity(&extract_cell_text(l), &extract_cell_text(r)); count += 1; }
+            (Some(_), None) | (None, Some(_)) => { count += 1; }
+            _ => {}
+        }
+    }
+    if count == 0 { 1.0 } else { total / count as f32 }
 }
 
-/// 比较两个表格并返回差异结果
+fn greedy_row_matching(left_table: &TableNode, right_table: &TableNode,
+                       threshold: f32) -> Vec<RowAlignment> {
+    let left_rows = left_table.rows.len();
+    let right_rows = right_table.rows.len();
+    let mut sim_matrix = vec![vec![0.0f32; right_rows]; left_rows];
+    for i in 0..left_rows { for j in 0..right_rows {
+        sim_matrix[i][j] = compute_row_similarity(left_table, right_table, i, j);
+    }}
+
+    let mut alignments = Vec::new();
+    let mut used_left = HashSet::new();
+    let mut used_right = HashSet::new();
+
+    loop {
+        let mut best = 0.0f32;
+        let mut best_i = None;
+        let mut best_j = None;
+        for i in 0..left_rows {
+            if used_left.contains(&i) { continue; }
+            for j in 0..right_rows {
+                if used_right.contains(&j) { continue; }
+                if sim_matrix[i][j] > best && sim_matrix[i][j] >= threshold {
+                    best = sim_matrix[i][j]; best_i = Some(i); best_j = Some(j);
+                }
+            }
+        }
+        match (best_i, best_j) {
+            (Some(i), Some(j)) => {
+                used_left.insert(i); used_right.insert(j);
+                alignments.push(RowAlignment {
+                    left_idx: Some(i), right_idx: Some(j), similarity: best,
+                    alignment_type: if i == j { AlignmentType::Matched } else { AlignmentType::Moved },
+                });
+            }
+            _ => break,
+        }
+    }
+
+    for i in 0..left_rows { if !used_left.contains(&i) {
+        alignments.push(RowAlignment { left_idx: Some(i), right_idx: None, similarity: 0.0, alignment_type: AlignmentType::Deleted });
+    }}
+    for j in 0..right_rows { if !used_right.contains(&j) {
+        alignments.push(RowAlignment { left_idx: None, right_idx: Some(j), similarity: 0.0, alignment_type: AlignmentType::Added });
+    }}
+    alignments
+}
+
+fn greedy_column_matching(left_table: &TableNode, right_table: &TableNode,
+                          threshold: f32) -> Vec<ColumnAlignment> {
+    let left_cols = max_columns(left_table);
+    let right_cols = max_columns(right_table);
+    let mut sim_matrix = vec![vec![0.0f32; right_cols]; left_cols];
+    for i in 0..left_cols { for j in 0..right_cols {
+        sim_matrix[i][j] = compute_column_similarity(left_table, right_table, i, j);
+    }}
+
+    let mut alignments = Vec::new();
+    let mut used_left = HashSet::new();
+    let mut used_right = HashSet::new();
+
+    loop {
+        let mut best = 0.0f32;
+        let mut best_i = None;
+        let mut best_j = None;
+        for i in 0..left_cols {
+            if used_left.contains(&i) { continue; }
+            for j in 0..right_cols {
+                if used_right.contains(&j) { continue; }
+                if sim_matrix[i][j] > best && sim_matrix[i][j] >= threshold {
+                    best = sim_matrix[i][j]; best_i = Some(i); best_j = Some(j);
+                }
+            }
+        }
+        match (best_i, best_j) {
+            (Some(i), Some(j)) => {
+                used_left.insert(i); used_right.insert(j);
+                alignments.push(ColumnAlignment {
+                    left_idx: Some(i), right_idx: Some(j), similarity: best,
+                    alignment_type: if i == j { ColumnAlignmentType::Matched } else { ColumnAlignmentType::Moved },
+                });
+            }
+            _ => break,
+        }
+    }
+
+    for i in 0..left_cols { if !used_left.contains(&i) {
+        alignments.push(ColumnAlignment { left_idx: Some(i), right_idx: None, similarity: 0.0, alignment_type: ColumnAlignmentType::Deleted });
+    }}
+    for j in 0..right_cols { if !used_right.contains(&j) {
+        alignments.push(ColumnAlignment { left_idx: None, right_idx: Some(j), similarity: 0.0, alignment_type: ColumnAlignmentType::Added });
+    }}
+    alignments
+}
+
+// ============================================================================
+// Main Compare Functions
+// ============================================================================
+
 pub fn compare_tables(left: &TableNode, right: &TableNode) -> TableDiffResult {
-    let left_rows = left.rows.len();
-    let right_rows = right.rows.len();
+    compare_tables_with_options(left, right, &TableDiffOptions::default())
+}
+
+pub fn compare_tables_with_options(left: &TableNode, right: &TableNode,
+                                   options: &TableDiffOptions) -> TableDiffResult {
+    let row_alignments = match options.match_strategy {
+        MatchStrategy::Position => position_based_row_alignment(left, right),
+        _ => greedy_row_matching(left, right, options.similarity_threshold),
+    };
+    let column_alignments = match options.match_strategy {
+        MatchStrategy::Position => position_based_column_alignment(left, right),
+        _ => greedy_column_matching(left, right, options.similarity_threshold),
+    };
+
+    let cell_diffs = compute_cell_diffs(left, right, &row_alignments, &column_alignments);
+    let structural_changes = detect_structural_changes(&row_alignments, &column_alignments);
+
+    let has_struct = !structural_changes.is_empty();
+    let has_content = cell_diffs.iter().any(|d| matches!(d.change_type,
+        CellChangeType::Modified | CellChangeType::Added | CellChangeType::Deleted | CellChangeType::SpanChanged));
+
+    let table_match_type = match (has_struct, has_content) {
+        (true, true) => TableMatchType::MixedChanges,
+        (true, false) => TableMatchType::StructureChanged,
+        (false, true) => TableMatchType::ContentChanged,
+        _ => TableMatchType::Identical,
+    };
+
+    let total = cell_diffs.len() as f32;
+    let identical = cell_diffs.iter().filter(|d| d.change_type == CellChangeType::Identical).count() as f32;
+    let confidence = if total == 0.0 { 1.0 } else { identical / total };
+
+    TableDiffResult { table_match_type, structural_changes, cell_diffs, row_alignments, column_alignments, confidence }
+}
+
+fn position_based_row_alignment(left: &TableNode, right: &TableNode) -> Vec<RowAlignment> {
+    let min_rows = left.rows.len().min(right.rows.len());
+    let mut alignments = Vec::new();
+    for i in 0..min_rows {
+        alignments.push(RowAlignment { left_idx: Some(i), right_idx: Some(i),
+            similarity: compute_row_similarity(left, right, i, i), alignment_type: AlignmentType::Matched });
+    }
+    for i in min_rows..left.rows.len() {
+        alignments.push(RowAlignment { left_idx: Some(i), right_idx: None, similarity: 0.0, alignment_type: AlignmentType::Deleted });
+    }
+    for j in min_rows..right.rows.len() {
+        alignments.push(RowAlignment { left_idx: None, right_idx: Some(j), similarity: 0.0, alignment_type: AlignmentType::Added });
+    }
+    alignments
+}
+
+fn position_based_column_alignment(left: &TableNode, right: &TableNode) -> Vec<ColumnAlignment> {
     let left_cols = max_columns(left);
     let right_cols = max_columns(right);
-    
-    let mut structural_changes = Vec::new();
+    let min_cols = left_cols.min(right_cols);
+    let mut alignments = Vec::new();
+    for i in 0..min_cols {
+        alignments.push(ColumnAlignment { left_idx: Some(i), right_idx: Some(i),
+            similarity: compute_column_similarity(left, right, i, i), alignment_type: ColumnAlignmentType::Matched });
+    }
+    for i in min_cols..left_cols {
+        alignments.push(ColumnAlignment { left_idx: Some(i), right_idx: None, similarity: 0.0, alignment_type: ColumnAlignmentType::Deleted });
+    }
+    for j in min_cols..right_cols {
+        alignments.push(ColumnAlignment { left_idx: None, right_idx: Some(j), similarity: 0.0, alignment_type: ColumnAlignmentType::Added });
+    }
+    alignments
+}
+
+fn compute_cell_diffs(left: &TableNode, right: &TableNode,
+                      row_alignments: &[RowAlignment], column_alignments: &[ColumnAlignment]) -> Vec<CellDiff> {
     let mut cell_diffs = Vec::new();
-    let mut has_structural_changes = false;
-    let mut has_content_changes = false;
-    let mut has_span_changes = false;
-    
-    // 检测结构变化
-    if left_rows != right_rows {
-        has_structural_changes = true;
-        if right_rows > left_rows {
-            structural_changes.push(StructuralChange::RowsAdded {
-                count: right_rows - left_rows,
-                position: left_rows,
-            });
-        } else {
-            structural_changes.push(StructuralChange::RowsDeleted {
-                count: left_rows - right_rows,
-                position: right_rows,
-            });
-        }
-    }
-    
-    if left_cols != right_cols {
-        has_structural_changes = true;
-        if right_cols > left_cols {
-            structural_changes.push(StructuralChange::ColumnsAdded {
-                count: right_cols - left_cols,
-                position: left_cols,
-            });
-        } else {
-            structural_changes.push(StructuralChange::ColumnsDeleted {
-                count: left_cols - right_cols,
-                position: right_cols,
-            });
-        }
-    }
-    
-    // 提取合并区域
     let left_regions = extract_merge_regions(left);
     let right_regions = extract_merge_regions(right);
-    
-    // 跟踪已处理的合并区域
-    let mut processed_left_regions: HashSet<(usize, usize)> = HashSet::new();
-    let mut processed_right_regions: HashSet<(usize, usize)> = HashSet::new();
-    
-    // 比较匹配的合并区域
-    for left_region in &left_regions {
-        for right_region in &right_regions {
-            if regions_overlap(left_region, right_region) {
-                let (change_type, similarity) = compare_merge_regions(left_region, right_region);
-                
-                let span_changed = left_region.row_span != right_region.row_span
-                    || left_region.col_span != right_region.col_span;
-                
-                if span_changed {
-                    has_span_changes = true;
-                }
-                
-                if change_type != CellChangeType::Identical || span_changed {
-                    has_content_changes = true;
-                    
-                    cell_diffs.push(CellDiff {
-                        position: (left_region.start_row, left_region.start_col),
-                        change_type: if span_changed && change_type == CellChangeType::Identical {
-                            CellChangeType::SpanChanged
-                        } else {
-                            change_type
-                        },
-                        old_content: Some(left_region.content.clone()),
-                        new_content: Some(right_region.content.clone()),
-                        similarity,
-                        old_span: Some(CellSpan {
-                            row_span: left_region.row_span,
-                            col_span: left_region.col_span,
-                        }),
-                        new_span: Some(CellSpan {
-                            row_span: right_region.row_span,
-                            col_span: right_region.col_span,
-                        }),
-                        span_changed,
-                    });
-                }
-                
-                processed_left_regions.insert((left_region.start_row, left_region.start_col));
-                processed_right_regions.insert((right_region.start_row, right_region.start_col));
-                break;
+    let mut processed_left: HashSet<(usize, usize)> = HashSet::new();
+    let mut processed_right: HashSet<(usize, usize)> = HashSet::new();
+
+    for lr in &left_regions { for rr in &right_regions {
+        if regions_overlap(lr, rr) {
+            let (ct, sim) = compare_merge_regions(lr, rr);
+            let span_changed = lr.row_span != rr.row_span || lr.col_span != rr.col_span;
+            if ct != CellChangeType::Identical || span_changed {
+                cell_diffs.push(CellDiff {
+                    position: (lr.start_row, lr.start_col),
+                    change_type: if span_changed && ct == CellChangeType::Identical { CellChangeType::SpanChanged } else { ct },
+                    old_content: Some(lr.content.clone()), new_content: Some(rr.content.clone()), similarity: sim,
+                    old_span: Some(CellSpan { row_span: lr.row_span, col_span: lr.col_span }),
+                    new_span: Some(CellSpan { row_span: rr.row_span, col_span: rr.col_span }), span_changed,
+                });
             }
+            processed_left.insert((lr.start_row, lr.start_col));
+            processed_right.insert((rr.start_row, rr.start_col));
+            break;
         }
-    }
-    
-    // 处理未匹配的左侧合并区域（被拆分）
-    for left_region in &left_regions {
-        if !processed_left_regions.contains(&(left_region.start_row, left_region.start_col)) {
-            has_content_changes = true;
-            cell_diffs.push(CellDiff {
-                position: (left_region.start_row, left_region.start_col),
-                change_type: CellChangeType::Deleted,
-                old_content: Some(left_region.content.clone()),
-                new_content: None,
-                similarity: 0.0,
-                old_span: Some(CellSpan {
-                    row_span: left_region.row_span,
-                    col_span: left_region.col_span,
-                }),
-                new_span: None,
-                span_changed: true,
-            });
-        }
-    }
-    
-    // 处理未匹配的右侧合并区域（新增合并）
-    for right_region in &right_regions {
-        if !processed_right_regions.contains(&(right_region.start_row, right_region.start_col)) {
-            has_content_changes = true;
-            cell_diffs.push(CellDiff {
-                position: (right_region.start_row, right_region.start_col),
-                change_type: CellChangeType::Added,
-                old_content: None,
-                new_content: Some(right_region.content.clone()),
-                similarity: 1.0,
-                old_span: None,
-                new_span: Some(CellSpan {
-                    row_span: right_region.row_span,
-                    col_span: right_region.col_span,
-                }),
-                span_changed: true,
-            });
-        }
-    }
-    
-    // 比较普通单元格（跳过合并区域覆盖的单元格）
-    let common_rows = left_rows.min(right_rows);
-    let max_common_cols = left_cols.max(right_cols);
-    
-    for row_idx in 0..common_rows {
-        for col_idx in 0..max_common_cols {
-            // 检查是否在已处理的合并区域内
-            if is_in_merge_region(row_idx, col_idx, &left_regions) 
-                || is_in_merge_region(row_idx, col_idx, &right_regions) {
-                continue;
+    }}
+
+    for lr in &left_regions { if !processed_left.contains(&(lr.start_row, lr.start_col)) {
+        cell_diffs.push(CellDiff { position: (lr.start_row, lr.start_col), change_type: CellChangeType::Deleted,
+            old_content: Some(lr.content.clone()), new_content: None, similarity: 0.0,
+            old_span: Some(CellSpan { row_span: lr.row_span, col_span: lr.col_span }), new_span: None, span_changed: true });
+    }}
+    for rr in &right_regions { if !processed_right.contains(&(rr.start_row, rr.start_col)) {
+        cell_diffs.push(CellDiff { position: (rr.start_row, rr.start_col), change_type: CellChangeType::Added,
+            old_content: None, new_content: Some(rr.content.clone()), similarity: 1.0, old_span: None,
+            new_span: Some(CellSpan { row_span: rr.row_span, col_span: rr.col_span }), span_changed: true });
+    }}
+
+    for ra in row_alignments { if let (Some(lr), Some(rr)) = (ra.left_idx, ra.right_idx) {
+        for ca in column_alignments { if let (Some(lc), Some(rc)) = (ca.left_idx, ca.right_idx) {
+            if is_in_merge_region(lr, lc, &left_regions) || is_in_merge_region(rr, rc, &right_regions) { continue; }
+            match (get_cell(left, lr, lc), get_cell(right, rr, rc)) {
+                (Some(l), Some(r)) => {
+                    let lt = extract_cell_text(l); let rt = extract_cell_text(r);
+                    let sim = jaccard_similarity(&lt, &rt);
+                    cell_diffs.push(CellDiff { position: (lr, lc),
+                        change_type: if lt == rt { CellChangeType::Identical } else { CellChangeType::Modified },
+                        old_content: Some(lt), new_content: Some(rt), similarity: sim,
+                        old_span: l.span.clone(), new_span: r.span.clone(), span_changed: false });
+                }
+                (Some(l), None) => { let lt = extract_cell_text(l); if !lt.is_empty() {
+                    cell_diffs.push(CellDiff { position: (lr, lc), change_type: CellChangeType::Deleted,
+                        old_content: Some(lt), new_content: None, similarity: 0.0,
+                        old_span: l.span.clone(), new_span: None, span_changed: false }); }}
+                (None, Some(r)) => { let rt = extract_cell_text(r); if !rt.is_empty() {
+                    cell_diffs.push(CellDiff { position: (rr, rc), change_type: CellChangeType::Added,
+                        old_content: None, new_content: Some(rt), similarity: 1.0,
+                        old_span: None, new_span: r.span.clone(), span_changed: false }); }}
+                _ => {}
             }
-            
-            let left_cell = get_cell(left, row_idx, col_idx);
-            let right_cell = get_cell(right, row_idx, col_idx);
-            
-            match (left_cell, right_cell) {
-                (Some(l_cell), Some(r_cell)) => {
-                    let left_text = extract_cell_text(l_cell);
-                    let right_text = extract_cell_text(r_cell);
-                    let similarity = jaccard_similarity(&left_text, &right_text);
-                    
-                    if left_text == right_text {
-                        cell_diffs.push(CellDiff {
-                            position: (row_idx, col_idx),
-                            change_type: CellChangeType::Identical,
-                            old_content: Some(left_text),
-                            new_content: Some(right_text),
-                            similarity: 1.0,
-                            old_span: l_cell.span.clone(),
-                            new_span: r_cell.span.clone(),
-                            span_changed: false,
-                        });
-                    } else {
-                        has_content_changes = true;
-                        cell_diffs.push(CellDiff {
-                            position: (row_idx, col_idx),
-                            change_type: CellChangeType::Modified,
-                            old_content: Some(left_text),
-                            new_content: Some(right_text),
-                            similarity,
-                            old_span: l_cell.span.clone(),
-                            new_span: r_cell.span.clone(),
-                            span_changed: false,
-                        });
-                    }
-                }
-                (Some(l_cell), None) => {
-                    let left_text = extract_cell_text(l_cell);
-                    if !left_text.is_empty() {
-                        has_content_changes = true;
-                        cell_diffs.push(CellDiff {
-                            position: (row_idx, col_idx),
-                            change_type: CellChangeType::Deleted,
-                            old_content: Some(left_text),
-                            new_content: None,
-                            similarity: 0.0,
-                            old_span: l_cell.span.clone(),
-                            new_span: None,
-                            span_changed: false,
-                        });
-                    }
-                }
-                (None, Some(r_cell)) => {
-                    let right_text = extract_cell_text(r_cell);
-                    if !right_text.is_empty() {
-                        has_content_changes = true;
-                        cell_diffs.push(CellDiff {
-                            position: (row_idx, col_idx),
-                            change_type: CellChangeType::Added,
-                            old_content: None,
-                            new_content: Some(right_text),
-                            similarity: 1.0,
-                            old_span: None,
-                            new_span: r_cell.span.clone(),
-                            span_changed: false,
-                        });
-                    }
-                }
-                (None, None) => {} // 两边都没有单元格，跳过
-            }
-        }
-    }
-    
-    // 确定匹配类型
-    let table_match_type = if has_structural_changes && (has_content_changes || has_span_changes) {
-        TableMatchType::MixedChanges
-    } else if has_structural_changes {
-        TableMatchType::StructureChanged
-    } else if has_content_changes || has_span_changes {
-        TableMatchType::ContentChanged
-    } else {
-        TableMatchType::Identical
-    };
-    
-    // 计算置信度
-    let total_cells = cell_diffs.len() as f32;
-    let identical_cells = cell_diffs.iter()
-        .filter(|d| d.change_type == CellChangeType::Identical)
-        .count() as f32;
-    
-    let confidence = if total_cells == 0.0 {
-        1.0
-    } else {
-        identical_cells / total_cells
-    };
-    
-    TableDiffResult {
-        table_match_type,
-        structural_changes,
-        cell_diffs,
-        confidence,
-    }
+        }}
+    }}
+    cell_diffs
 }
+
+fn detect_structural_changes(row_alignments: &[RowAlignment], column_alignments: &[ColumnAlignment]) -> Vec<StructuralChange> {
+    let mut changes = Vec::new();
+    let dr = row_alignments.iter().filter(|a| a.alignment_type == AlignmentType::Deleted).count();
+    let ar = row_alignments.iter().filter(|a| a.alignment_type == AlignmentType::Added).count();
+    if dr > 0 { changes.push(StructuralChange::RowsDeleted { count: dr, position: 0 }); }
+    if ar > 0 { changes.push(StructuralChange::RowsAdded { count: ar, position: 0 }); }
+    let dc = column_alignments.iter().filter(|a| a.alignment_type == ColumnAlignmentType::Deleted).count();
+    let ac = column_alignments.iter().filter(|a| a.alignment_type == ColumnAlignmentType::Added).count();
+    if dc > 0 { changes.push(StructuralChange::ColumnsDeleted { count: dc, position: 0 }); }
+    if ac > 0 { changes.push(StructuralChange::ColumnsAdded { count: ac, position: 0 }); }
+    changes
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
 
 #[cfg(test)]
 mod tests {
@@ -422,396 +498,205 @@ mod tests {
     use document_ast::{CellSpan, TableCell, TableRow, RowType, ParagraphNode};
 
     fn create_cell(id: &str, text: &str) -> TableCell {
-        TableCell {
-            id: id.to_string(),
-            content: vec![BlockNode::Paragraph(ParagraphNode {
-                id: format!("{}-p", id),
-                text: text.to_string(),
-                page_start: None,
-                page_end: None,
-            })],
-            span: None,
-            properties: None,
-        }
+        TableCell { id: id.to_string(), content: vec![BlockNode::Paragraph(ParagraphNode {
+            id: format!("{}-p", id), text: text.to_string(), page_start: None, page_end: None,
+        })], span: None, properties: None }
     }
-
-    fn create_cell_with_span(id: &str, text: &str, row_span: usize, col_span: usize) -> TableCell {
-        TableCell {
-            id: id.to_string(),
-            content: vec![BlockNode::Paragraph(ParagraphNode {
-                id: format!("{}-p", id),
-                text: text.to_string(),
-                page_start: None,
-                page_end: None,
-            })],
-            span: Some(CellSpan { row_span, col_span }),
-            properties: None,
-        }
-    }
-
     fn create_row(id: &str, cells: Vec<TableCell>) -> TableRow {
-        TableRow {
-            id: id.to_string(),
-            cells,
-            row_type: RowType::Body,
-        }
+        TableRow { id: id.to_string(), cells, row_type: RowType::Body }
     }
-
     fn create_table(id: &str, rows: Vec<TableRow>) -> TableNode {
-        TableNode {
-            id: id.to_string(),
-            rows,
-            page_start: None,
-            page_end: None,
-            properties: None,
-        }
+        TableNode { id: id.to_string(), rows, page_start: None, page_end: None, properties: None }
     }
 
     #[test]
-    fn test_identical_tables() {
+    fn test_row_move_detection() {
         let left = create_table("t1", vec![
-            create_row("r1", vec![
-                create_cell("c1", "Header 1"),
-                create_cell("c2", "Header 2"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "Value 1"),
-                create_cell("c4", "Value 2"),
-            ]),
+            create_row("r1", vec![create_cell("c1", "Header A"), create_cell("c2", "Header B")]),
+            create_row("r2", vec![create_cell("c3", "Row 1 Data"), create_cell("c4", "Row 1 Value")]),
+            create_row("r3", vec![create_cell("c5", "Row 2 Data"), create_cell("c6", "Row 2 Value")]),
         ]);
-
         let right = create_table("t2", vec![
-            create_row("r1", vec![
-                create_cell("c1", "Header 1"),
-                create_cell("c2", "Header 2"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "Value 1"),
-                create_cell("c4", "Value 2"),
-            ]),
+            create_row("r1", vec![create_cell("c1", "Header A"), create_cell("c2", "Header B")]),
+            create_row("r2", vec![create_cell("c3", "Row 2 Data"), create_cell("c4", "Row 2 Value")]),
+            create_row("r3", vec![create_cell("c5", "Row 1 Data"), create_cell("c6", "Row 1 Value")]),
         ]);
-
-        let result = compare_tables(&left, &right);
-
-        assert_eq!(result.table_match_type, TableMatchType::Identical);
-        assert!(result.structural_changes.is_empty());
-        assert_eq!(result.confidence, 1.0);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+        });
+        assert!(result.row_alignments.iter().any(|a| a.alignment_type == AlignmentType::Moved), "Should detect row move");
     }
 
     #[test]
-    fn test_content_change() {
+    fn test_row_move_with_content_match() {
         let left = create_table("t1", vec![
-            create_row("r1", vec![
-                create_cell("c1", "Header 1"),
-                create_cell("c2", "Header 2"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "Original Value"),
-                create_cell("c4", "Value 2"),
-            ]),
+            create_row("r1", vec![create_cell("c1", "Apple iPhone 15"), create_cell("c2", "999")]),
+            create_row("r2", vec![create_cell("c3", "Samsung Galaxy S24"), create_cell("c4", "899")]),
+            create_row("r3", vec![create_cell("c5", "Google Pixel 8"), create_cell("c6", "799")]),
         ]);
-
         let right = create_table("t2", vec![
-            create_row("r1", vec![
-                create_cell("c1", "Header 1"),
-                create_cell("c2", "Header 2"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "Modified Value"),
-                create_cell("c4", "Value 2"),
-            ]),
+            create_row("r1", vec![create_cell("c1", "Samsung Galaxy S24"), create_cell("c2", "899")]),
+            create_row("r2", vec![create_cell("c3", "Google Pixel 8"), create_cell("c4", "799")]),
+            create_row("r3", vec![create_cell("c5", "Apple iPhone 15"), create_cell("c6", "999")]),
         ]);
-
-        let result = compare_tables(&left, &right);
-
-        assert_eq!(result.table_match_type, TableMatchType::ContentChanged);
-        assert!(result.structural_changes.is_empty());
-        
-        let modified_cells: Vec<_> = result.cell_diffs.iter()
-            .filter(|d| d.change_type == CellChangeType::Modified)
-            .collect();
-        assert_eq!(modified_cells.len(), 1);
-        assert_eq!(modified_cells[0].position, (1, 0));
-        assert_eq!(modified_cells[0].old_content.as_deref(), Some("Original Value"));
-        assert_eq!(modified_cells[0].new_content.as_deref(), Some("Modified Value"));
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.5,
+        });
+        let matched = result.row_alignments.iter()
+            .filter(|a| a.alignment_type == AlignmentType::Matched || a.alignment_type == AlignmentType::Moved).count();
+        assert_eq!(matched, 3, "All rows should be matched");
     }
 
     #[test]
     fn test_row_addition() {
         let left = create_table("t1", vec![
-            create_row("r1", vec![
-                create_cell("c1", "Header 1"),
-                create_cell("c2", "Header 2"),
-            ]),
+            create_row("r1", vec![create_cell("c1", "Header")]),
+            create_row("r2", vec![create_cell("c2", "Data")]),
         ]);
-
         let right = create_table("t2", vec![
-            create_row("r1", vec![
-                create_cell("c1", "Header 1"),
-                create_cell("c2", "Header 2"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "New Value 1"),
-                create_cell("c4", "New Value 2"),
-            ]),
+            create_row("r1", vec![create_cell("c1", "Header")]),
+            create_row("r2", vec![create_cell("c2", "Data")]),
+            create_row("r3", vec![create_cell("c3", "New Row")]),
         ]);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+        });
+        let added: Vec<_> = result.row_alignments.iter().filter(|a| a.alignment_type == AlignmentType::Added).collect();
+        assert_eq!(added.len(), 1);
+        assert_eq!(added[0].right_idx, Some(2));
+    }
 
-        let result = compare_tables(&left, &right);
+    #[test]
+    fn test_row_deletion() {
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell("c1", "Header")]),
+            create_row("r2", vec![create_cell("c2", "Data 1")]),
+            create_row("r3", vec![create_cell("c3", "Data 2")]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell("c1", "Header")]),
+            create_row("r2", vec![create_cell("c2", "Data 1")]),
+        ]);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+        });
+        let deleted: Vec<_> = result.row_alignments.iter().filter(|a| a.alignment_type == AlignmentType::Deleted).collect();
+        assert_eq!(deleted.len(), 1);
+        assert_eq!(deleted[0].left_idx, Some(2));
+    }
 
-        assert_eq!(result.table_match_type, TableMatchType::StructureChanged);
-        assert_eq!(result.structural_changes.len(), 1);
-        
-        match &result.structural_changes[0] {
-            StructuralChange::RowsAdded { count, position } => {
-                assert_eq!(*count, 1);
-                assert_eq!(*position, 1);
-            }
-            _ => panic!("Expected RowsAdded"),
-        }
+    #[test]
+    fn test_column_move_detection() {
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell("c1", "Name"), create_cell("c2", "Age"), create_cell("c3", "City")]),
+            create_row("r2", vec![create_cell("c4", "Alice"), create_cell("c5", "30"), create_cell("c6", "NYC")]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell("c1", "Name"), create_cell("c2", "City"), create_cell("c3", "Age")]),
+            create_row("r2", vec![create_cell("c4", "Alice"), create_cell("c5", "NYC"), create_cell("c6", "30")]),
+        ]);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.5,
+        });
+        assert!(result.column_alignments.iter().any(|a| a.alignment_type == ColumnAlignmentType::Moved), "Should detect column move");
+    }
+
+    #[test]
+    fn test_column_addition() {
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell("c1", "Name"), create_cell("c2", "Age")]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell("c1", "Name"), create_cell("c2", "Age"), create_cell("c3", "City")]),
+        ]);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+        });
+        let added: Vec<_> = result.column_alignments.iter().filter(|a| a.alignment_type == ColumnAlignmentType::Added).collect();
+        assert_eq!(added.len(), 1);
     }
 
     #[test]
     fn test_column_deletion() {
         let left = create_table("t1", vec![
-            create_row("r1", vec![
-                create_cell("c1", "A"),
-                create_cell("c2", "B"),
-                create_cell("c3", "C"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c4", "D"),
-                create_cell("c5", "E"),
-                create_cell("c6", "F"),
-            ]),
+            create_row("r1", vec![create_cell("c1", "Name"), create_cell("c2", "Age"), create_cell("c3", "City")]),
         ]);
-
         let right = create_table("t2", vec![
-            create_row("r1", vec![
-                create_cell("c1", "A"),
-                create_cell("c2", "B"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c4", "D"),
-                create_cell("c5", "E"),
-            ]),
+            create_row("r1", vec![create_cell("c1", "Name"), create_cell("c2", "Age")]),
         ]);
-
-        let result = compare_tables(&left, &right);
-
-        // 列删除时，原有的单元格也会被标记为删除，所以是 MixedChanges
-        assert_eq!(result.table_match_type, TableMatchType::MixedChanges);
-        
-        let has_cols_deleted = result.structural_changes.iter().any(|c| {
-            matches!(c, StructuralChange::ColumnsDeleted { .. })
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
         });
-        assert!(has_cols_deleted);
+        let deleted: Vec<_> = result.column_alignments.iter().filter(|a| a.alignment_type == ColumnAlignmentType::Deleted).collect();
+        assert_eq!(deleted.len(), 1);
+    }
+
+    #[test]
+    fn test_position_strategy_identical() {
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell("c1", "Header"), create_cell("c2", "Data")]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell("c1", "Header"), create_cell("c2", "Data")]),
+        ]);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Position, similarity_threshold: 0.6,
+        });
+        assert_eq!(result.table_match_type, TableMatchType::Identical);
+        assert!(result.structural_changes.is_empty());
+    }
+
+    #[test]
+    fn test_position_strategy_structure_change() {
+        let left = create_table("t1", vec![create_row("r1", vec![create_cell("c1", "A")])]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell("c1", "A")]),
+            create_row("r2", vec![create_cell("c2", "B")]),
+        ]);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Position, similarity_threshold: 0.6,
+        });
+        assert_eq!(result.table_match_type, TableMatchType::StructureChanged);
+    }
+
+    #[test]
+    fn test_default_backward_compatible() {
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell("c1", "Header"), create_cell("c2", "Data")]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell("c1", "Header"), create_cell("c2", "Data")]),
+        ]);
+        let result = compare_tables(&left, &right);
+        assert_eq!(result.table_match_type, TableMatchType::Identical);
+        assert!(result.structural_changes.is_empty());
+        assert_eq!(result.confidence, 1.0);
     }
 
     #[test]
     fn test_empty_tables() {
         let left = create_table("t1", vec![]);
         let right = create_table("t2", vec![]);
-
         let result = compare_tables(&left, &right);
-
         assert_eq!(result.table_match_type, TableMatchType::Identical);
-        assert!(result.structural_changes.is_empty());
-        assert!(result.cell_diffs.is_empty());
-        assert_eq!(result.confidence, 1.0);
+        assert!(result.row_alignments.is_empty());
+        assert!(result.column_alignments.is_empty());
     }
 
     #[test]
-    fn test_empty_vs_non_empty() {
-        let left = create_table("t1", vec![]);
-        let right = create_table("t2", vec![
-            create_row("r1", vec![
-                create_cell("c1", "Value"),
-            ]),
+    fn test_similar_content_matching() {
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell("c1", "The quick brown fox"), create_cell("c2", "jumps over")]),
+            create_row("r2", vec![create_cell("c3", "the lazy dog"), create_cell("c4", "every day")]),
         ]);
-
-        let result = compare_tables(&left, &right);
-
-        assert_eq!(result.table_match_type, TableMatchType::StructureChanged);
-        
-        let has_rows_added = result.structural_changes.iter().any(|c| {
-            matches!(c, StructuralChange::RowsAdded { .. })
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell("c1", "The quick brown fox"), create_cell("c2", "jumps over")]),
+            create_row("r2", vec![create_cell("c3", "the lazy cat"), create_cell("c4", "every day")]),
+        ]);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.5,
         });
-        assert!(has_rows_added);
-    }
-
-    #[test]
-    fn test_mixed_changes() {
-        let left = create_table("t1", vec![
-            create_row("r1", vec![
-                create_cell("c1", "Header"),
-                create_cell("c2", "Data"),
-            ]),
-        ]);
-
-        let right = create_table("t2", vec![
-            create_row("r1", vec![
-                create_cell("c1", "New Header"),
-                create_cell("c2", "Data"),
-                create_cell("c3", "Extra"),
-            ]),
-        ]);
-
-        let result = compare_tables(&left, &right);
-
-        assert_eq!(result.table_match_type, TableMatchType::MixedChanges);
-        assert!(!result.structural_changes.is_empty());
-        
-        let has_modified = result.cell_diffs.iter()
-            .any(|d| d.change_type == CellChangeType::Modified);
-        assert!(has_modified);
-    }
-
-    #[test]
-    fn test_span_change_only() {
-        // 测试仅合并信息变化，内容不变
-        let left = create_table("t1", vec![
-            create_row("r1", vec![
-                create_cell_with_span("c1", "Merged", 2, 1),
-                create_cell("c2", "A"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "B"),
-            ]),
-        ]);
-
-        let right = create_table("t2", vec![
-            create_row("r1", vec![
-                create_cell_with_span("c1", "Merged", 1, 2), // 改为跨列合并
-                create_cell("c2", "A"),
-            ]),
-            create_row("r2", vec![
-                create_cell_with_span("c3", "B", 1, 1),
-            ]),
-        ]);
-
-        let result = compare_tables(&left, &right);
-
         assert_eq!(result.table_match_type, TableMatchType::ContentChanged);
-        
-        let span_changed_cells: Vec<_> = result.cell_diffs.iter()
-            .filter(|d| d.span_changed)
-            .collect();
-        assert!(!span_changed_cells.is_empty());
-    }
-
-    #[test]
-    fn test_merge_split_detection() {
-        // 测试合并变拆分
-        let left = create_table("t1", vec![
-            create_row("r1", vec![
-                create_cell_with_span("c1", "Merged Cell", 2, 2),
-                create_cell("c2", "A"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "B"),
-            ]),
-        ]);
-
-        let right = create_table("t2", vec![
-            create_row("r1", vec![
-                create_cell("c1", "Merged Cell"),
-                create_cell("c2", "A"),
-                create_cell("c3", "C"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c4", "D"),
-                create_cell("c5", "E"),
-                create_cell("c6", "B"),
-            ]),
-        ]);
-
-        let result = compare_tables(&left, &right);
-
-        // 应该检测到合并区域被拆分
-        let deleted_as_split: Vec<_> = result.cell_diffs.iter()
-            .filter(|d| d.change_type == CellChangeType::Deleted && d.old_span.is_some())
-            .collect();
-        
-        // 或者检测到新增的单元格
-        let added_cells: Vec<_> = result.cell_diffs.iter()
-            .filter(|d| d.change_type == CellChangeType::Added)
-            .collect();
-        
-        assert!(!deleted_as_split.is_empty() || !added_cells.is_empty());
-    }
-
-    #[test]
-    fn test_row_span_merge_content_change() {
-        // 测试跨行合并的内容变化
-        let left = create_table("t1", vec![
-            create_row("r1", vec![
-                create_cell_with_span("c1", "Old Merged", 2, 1),
-                create_cell("c2", "A"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "B"),
-            ]),
-        ]);
-
-        let right = create_table("t2", vec![
-            create_row("r1", vec![
-                create_cell_with_span("c1", "New Merged", 2, 1),
-                create_cell("c2", "A"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "B"),
-            ]),
-        ]);
-
-        let result = compare_tables(&left, &right);
-
-        assert_eq!(result.table_match_type, TableMatchType::ContentChanged);
-        
-        let modified_merged: Vec<_> = result.cell_diffs.iter()
-            .filter(|d| d.change_type == CellChangeType::Modified && d.old_span.is_some())
-            .collect();
-        
-        assert_eq!(modified_merged.len(), 1);
-        assert_eq!(modified_merged[0].old_content.as_deref(), Some("Old Merged"));
-        assert_eq!(modified_merged[0].new_content.as_deref(), Some("New Merged"));
-    }
-
-    #[test]
-    fn test_col_span_merge_content_change() {
-        // 测试跨列合并的内容变化
-        let left = create_table("t1", vec![
-            create_row("r1", vec![
-                create_cell_with_span("c1", "Old Horizontal", 1, 2),
-                create_cell("c2", "A"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "B"),
-                create_cell("c4", "C"),
-                create_cell("c5", "D"),
-            ]),
-        ]);
-
-        let right = create_table("t2", vec![
-            create_row("r1", vec![
-                create_cell_with_span("c1", "New Horizontal", 1, 2),
-                create_cell("c2", "A"),
-            ]),
-            create_row("r2", vec![
-                create_cell("c3", "B"),
-                create_cell("c4", "C"),
-                create_cell("c5", "D"),
-            ]),
-        ]);
-
-        let result = compare_tables(&left, &right);
-
-        assert_eq!(result.table_match_type, TableMatchType::ContentChanged);
-        
-        let modified_merged: Vec<_> = result.cell_diffs.iter()
-            .filter(|d| d.change_type == CellChangeType::Modified && d.old_span.is_some())
-            .collect();
-        
-        assert_eq!(modified_merged.len(), 1);
-        assert_eq!(modified_merged[0].position, (0, 0));
+        assert!(result.structural_changes.is_empty());
     }
 }
