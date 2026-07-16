@@ -5,7 +5,7 @@ import type { TableDiffResult } from '@bidlens/shared';
 
 describe('TableDiffView', () => {
   const tableA = {
-    id: 'table-a',
+    id: 'table-a', type: 'table',
     rows: [
       ['Header 1', 'Header 2'],
       ['Value A1', 'Value A2'],
@@ -15,7 +15,7 @@ describe('TableDiffView', () => {
   };
 
   const tableB = {
-    id: 'table-b',
+    id: 'table-b', type: 'table',
     rows: [
       ['Header 1', 'Header 2'],
       ['Modified A1', 'Value A2'],
@@ -115,7 +115,7 @@ describe('TableDiffView', () => {
   });
 
   it('renders empty table with no rows', () => {
-    const emptyTable = { id: 'empty', rows: [], pageStart: null, pageEnd: null };
+    const emptyTable = { id: 'empty', type: 'table', rows: [], pageStart: null, pageEnd: null };
     const diffResult: TableDiffResult = {
       tableMatchType: 'identical',
       structuralChanges: [],
@@ -131,13 +131,13 @@ describe('TableDiffView', () => {
 
   it('handles tables with different column counts', () => {
     const tableA3Cols = {
-      id: 'table-a',
+      id: 'table-a', type: 'table',
       rows: [['A', 'B', 'C']],
       pageStart: 1,
       pageEnd: 1,
     };
     const tableB2Cols = {
-      id: 'table-b',
+      id: 'table-b', type: 'table',
       rows: [['A', 'B']],
       pageStart: 1,
       pageEnd: 1,
@@ -156,3 +156,4 @@ describe('TableDiffView', () => {
     expect(screen.getByText(/有删除列/)).toBeTruthy();
   });
 });
+

@@ -1,10 +1,10 @@
-import type { TableDiffResult, StructuralChange } from '@bidlens/shared';
-import type { TableNode } from '@bidlens/shared';
+import type { TableDiffResult, StructuralChange, TableNode, TableNodeForDiff, CellDiff } from '@bidlens/shared';
+import { useMemo } from 'react';
 import { TableCellView } from './TableCellView';
 
 export interface TableDiffViewProps {
-  tableA: TableNode;
-  tableB: TableNode;
+  tableA: TableNode | TableNodeForDiff;
+  tableB: TableNode | TableNodeForDiff;
   diffResult: TableDiffResult;
   onCellClick?: (position: [number, number]) => void;
 }
@@ -14,6 +14,15 @@ export function TableDiffView({ tableA, tableB, diffResult, onCellClick }: Table
   const maxRows = Math.max(tableA.rows.length, tableB.rows.length);
   const maxColsA = getMaxColumns(tableA);
   const maxColsB = getMaxColumns(tableB);
+
+  // Pre-build cell diff map for O(1) lookup
+  const cellDiffMap = useMemo(() => {
+    const map = new Map<string, CellDiff>();
+    for (const diff of diffResult.cellDiffs) {
+      map.set(`${diff.position[0]},${diff.position[1]}`, diff);
+    }
+    return map;
+  }, [diffResult.cellDiffs]);
 
   // Process structural changes to find added/deleted rows/cols
   const addedRows = new Set<number>();
@@ -41,6 +50,7 @@ export function TableDiffView({ tableA, tableB, diffResult, onCellClick }: Table
               maxRows={maxRows}
               maxCols={maxColsA}
               diffResult={diffResult}
+              cellDiffMap={cellDiffMap}
               addedRows={deletedRows}  // Invert: what's deleted in A was "added" to show
               deletedRows={addedRows}
               addedCols={deletedCols}
@@ -66,6 +76,7 @@ export function TableDiffView({ tableA, tableB, diffResult, onCellClick }: Table
               maxRows={maxRows}
               maxCols={maxColsB}
               diffResult={diffResult}
+              cellDiffMap={cellDiffMap}
               addedRows={addedRows}
               deletedRows={deletedRows}
               addedCols={addedCols}
@@ -97,6 +108,7 @@ interface TableBodyProps {
   maxRows: number;
   maxCols: number;
   diffResult: TableDiffResult;
+  cellDiffMap: Map<string, CellDiff>;
   addedRows: Set<number>;
   deletedRows: Set<number>;
   addedCols: Set<number>;
@@ -110,6 +122,7 @@ function TableBody({
   maxRows,
   maxCols,
   diffResult,
+  cellDiffMap,
   addedRows,
   deletedRows,
   addedCols,
@@ -154,9 +167,7 @@ function TableBody({
               const content = rowCells[colIdx] ?? '';
               
               // Get diff for this cell
-              const cellDiff = diffResult.cellDiffs.find(
-                d => d.position[0] === rowIdx && d.position[1] === colIdx
-              );
+              const cellDiff = cellDiffMap.get(`${rowIdx},${colIdx}`);
 
               // Show placeholder for added/deleted rows/cols
               const isPlaceholder = (isRowAdded && isTableA) || (isRowDeleted && !isTableA) ||
@@ -179,7 +190,7 @@ function TableBody({
   );
 }
 
-function getMaxColumns(table: TableNode): number {
+function getMaxColumns(table: TableNode | TableNodeForDiff): number {
   return table.rows.reduce((max, row) => Math.max(max, row.length), 0);
 }
 
