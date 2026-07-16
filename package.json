@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "pnpm --filter @bidlens/desktop dev",
     "build": "pnpm --filter @bidlens/shared build && pnpm --filter @bidlens/desktop build && cargo build --manifest-path bidlens-engine/Cargo.toml",
-    "test": "pnpm test:ts && pnpm test:rust",
+    "test": "pnpm test:ts && pnpm test:rust && pnpm test:integration && pnpm test:e2e",
     "test:ts": "pnpm --filter @bidlens/shared test && pnpm --filter @bidlens/desktop test",
-    "test:rust": "cargo test --manifest-path bidlens-engine/Cargo.toml"
+    "test:rust": "cargo test --manifest-path bidlens-engine/Cargo.toml",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "vitest run tests/e2e"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
