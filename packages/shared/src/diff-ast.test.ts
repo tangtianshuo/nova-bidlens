@@ -1,18 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { createDiffSummary, isTraceableDiffItem } from './diff-ast';
+import { createDiffSummary, isTraceableDiffItem, type MatchType } from './diff-ast';
 
 describe('Diff AST helpers', () => {
   it('counts all MVP match types', () => {
     const summary = createDiffSummary([
+      item('identical', ['a0'], ['b0']),
       item('modified', ['a1'], ['b1']),
       item('added', [], ['b2']),
-      item('deleted', ['a3'], [])
+      item('deleted', ['a3'], []),
+      item('moved', ['a4'], ['b4']),
+      item('split', ['a5'], ['b5', 'b6']),
+      item('merged', ['a7', 'a8'], ['b7']),
+      item('uncertain', ['a9'], ['b9'])
     ]);
 
-    expect(summary.modified).toBe(1);
-    expect(summary.added).toBe(1);
-    expect(summary.deleted).toBe(1);
-    expect(summary.uncertain).toBe(0);
+    expect(summary).toEqual({
+      identical: 1,
+      modified: 1,
+      added: 1,
+      deleted: 1,
+      moved: 1,
+      split: 1,
+      merged: 1,
+      uncertain: 1
+    });
   });
 
   it('requires node references for traceability', () => {
@@ -21,7 +32,7 @@ describe('Diff AST helpers', () => {
   });
 });
 
-function item(matchType: 'modified' | 'added' | 'deleted', nodeIdsA: string[], nodeIdsB: string[]) {
+function item(matchType: MatchType, nodeIdsA: string[], nodeIdsB: string[]) {
   return {
     matchId: `${matchType}-1`,
     matchType,
