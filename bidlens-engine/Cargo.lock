@@ -322,6 +322,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "table-diff"
+version = "0.1.0"
+dependencies = [
+ "document-ast",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
 name = "tokio"
 version = "1.52.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

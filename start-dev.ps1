@@ -104,6 +104,7 @@ Write-Host ""
 # 检查依赖是否安装
 if (-not (Test-Path "node_modules")) {
     Write-Host "安装依赖..." -ForegroundColor Green
+    $env:ELECTRON_MIRROR = "https://npmmirror.com/mirrors/electron/"
     pnpm install
     if ($LASTEXITCODE -ne 0) {
         Write-Host "依赖安装失败" -ForegroundColor Red

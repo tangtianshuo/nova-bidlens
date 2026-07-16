@@ -1,0 +1,10 @@
+[package]
+name = "table-diff"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+document-ast = { path = "../document-ast" }
