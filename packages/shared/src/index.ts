@@ -4,3 +4,4 @@ export * from './diff-ast.js';
 export * from './document-ast.js';
 export * from './ipc.js';
 export * from './report.js';
+export * from './table-diff.js';

@@ -1,3 +1,5 @@
+import type { TableDiffResult } from './table-diff.js';
+
 export type MatchType = 'identical' | 'modified' | 'added' | 'deleted' | 'moved' | 'split' | 'merged' | 'uncertain';
 
 export interface TextDiffToken {
@@ -17,6 +19,16 @@ export interface DiffItem {
   diffDetail: TextDiffToken[];
   summary: string;
   reviewAnnotationId?: string;
+  // Table diff support
+  blockType?: 'paragraph' | 'table';
+  tableA?: TableNodeForDiff;
+  tableB?: TableNodeForDiff;
+  tableDiff?: TableDiffResult;
+}
+
+export interface TableNodeForDiff {
+  id: string;
+  rows: string[][];
 }
 
 export type DiffSummary = Record<MatchType, number>;
@@ -49,4 +61,8 @@ export function isTraceableDiffItem(item: DiffItem): boolean {
   if (item.matchType === 'added') return item.nodeIdsB.length > 0;
   if (item.matchType === 'deleted') return item.nodeIdsA.length > 0;
   return item.nodeIdsA.length > 0 && item.nodeIdsB.length > 0;
+}
+
+export function isTableDiffItem(item: DiffItem): boolean {
+  return item.blockType === 'table' && item.tableDiff !== undefined;
 }
