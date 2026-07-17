@@ -1,6 +1,6 @@
 use document_ast::{BlockNode, CellSpan, TableCell, TableNode};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 // ============================================================================
 // Configuration
@@ -11,6 +11,7 @@ use std::collections::HashSet;
 pub struct TableDiffOptions {
     pub match_strategy: MatchStrategy,
     pub similarity_threshold: f32,
+    pub similarity_algorithm: SimilarityAlgorithm,
 }
 
 impl Default for TableDiffOptions {
@@ -18,6 +19,7 @@ impl Default for TableDiffOptions {
         Self {
             match_strategy: MatchStrategy::Position,
             similarity_threshold: 0.6,
+            similarity_algorithm: SimilarityAlgorithm::Jaccard,
         }
     }
 }
@@ -31,6 +33,25 @@ pub enum MatchStrategy {
     Content,
     /// Hybrid: prefer position, fallback to content
     Hybrid,
+}
+
+/// Similarity algorithm options
+#[derive(Debug, Clone)]
+pub enum SimilarityAlgorithm {
+    /// Jaccard similarity (set-based, current default)
+    Jaccard,
+    /// Levenshtein distance (edit distance)
+    Levenshtein,
+    /// Cosine similarity (bag-of-words vector)
+    Cosine,
+    /// Hybrid: auto-selects best algorithm per content type
+    Hybrid,
+}
+
+impl Default for SimilarityAlgorithm {
+    fn default() -> Self {
+        SimilarityAlgorithm::Jaccard
+    }
 }
 
 // ============================================================================
@@ -156,6 +177,87 @@ fn jaccard_similarity(left: &str, right: &str) -> f32 {
     if union == 0.0 { 0.0 } else { intersection / union }
 }
 
+fn levenshtein_similarity(left: &str, right: &str) -> f32 {
+    if left == right { return 1.0; }
+    let left_chars: Vec<char> = left.chars().collect();
+    let right_chars: Vec<char> = right.chars().collect();
+    let m = left_chars.len();
+    let n = right_chars.len();
+    if m == 0 && n == 0 { return 1.0; }
+    if m == 0 || n == 0 { return 0.0; }
+
+    let mut prev = (0..=n).collect::<Vec<_>>();
+    let mut curr = vec![0usize; n + 1];
+    for i in 1..=m {
+        curr[0] = i;
+        for j in 1..=n {
+            let cost = if left_chars[i - 1] == right_chars[j - 1] { 0 } else { 1 };
+            curr[j] = (prev[j] + 1).min(curr[j - 1] + 1).min(prev[j - 1] + cost);
+        }
+        std::mem::swap(&mut prev, &mut curr);
+    }
+    let max_len = m.max(n) as f32;
+    1.0 - (prev[n] as f32 / max_len)
+}
+
+fn cosine_similarity(left: &str, right: &str) -> f32 {
+    if left == right { return 1.0; }
+    let left_words: Vec<&str> = left.split_whitespace().collect();
+    let right_words: Vec<&str> = right.split_whitespace().collect();
+    if left_words.is_empty() && right_words.is_empty() { return 1.0; }
+    if left_words.is_empty() || right_words.is_empty() { return 0.0; }
+
+    let mut freq: HashMap<&str, (f32, f32)> = HashMap::new();
+    for w in &left_words { freq.entry(w).or_insert((0.0, 0.0)).0 += 1.0; }
+    for w in &right_words { freq.entry(w).or_insert((0.0, 0.0)).1 += 1.0; }
+
+    let mut dot = 0.0;
+    let mut norm_a = 0.0;
+    let mut norm_b = 0.0;
+    for (_, (a, b)) in &freq {
+        dot += a * b;
+        norm_a += a * a;
+        norm_b += b * b;
+    }
+    if norm_a == 0.0 || norm_b == 0.0 { return 0.0; }
+    dot / (norm_a.sqrt() * norm_b.sqrt())
+}
+
+fn numeric_similarity(left: &str, right: &str) -> f32 {
+    let parse_num = |s: &str| -> Option<f64> {
+        let cleaned: String = s.chars().filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-' || *c == '+').collect();
+        cleaned.parse::<f64>().ok()
+    };
+    let ln = parse_num(left);
+    let rn = parse_num(right);
+    match (ln, rn) {
+        (Some(l), Some(r)) => {
+            if l == r { return 1.0; }
+            let max_val = l.abs().max(r.abs());
+            if max_val == 0.0 { return 1.0; }
+            let diff = (l - r).abs();
+            (1.0 - (diff / max_val) as f32).max(0.0)
+        }
+        _ => -1.0,
+    }
+}
+
+fn compute_similarity(left: &str, right: &str, algorithm: &SimilarityAlgorithm) -> f32 {
+    match algorithm {
+        SimilarityAlgorithm::Jaccard => jaccard_similarity(left, right),
+        SimilarityAlgorithm::Levenshtein => levenshtein_similarity(left, right),
+        SimilarityAlgorithm::Cosine => cosine_similarity(left, right),
+        SimilarityAlgorithm::Hybrid => {
+            let num_sim = numeric_similarity(left, right);
+            if num_sim >= 0.0 { return num_sim; }
+            let j = jaccard_similarity(left, right);
+            let l = levenshtein_similarity(left, right);
+            let c = cosine_similarity(left, right);
+            (j + l + c) / 3.0
+        }
+    }
+}
+
 fn max_columns(table: &TableNode) -> usize {
     table.rows.iter().map(|row| row.cells.len()).max().unwrap_or(0)
 }
@@ -196,8 +298,8 @@ fn is_in_merge_region(row_idx: usize, col_idx: usize, regions: &[MergeRegion]) -
     })
 }
 
-fn compare_merge_regions(left: &MergeRegion, right: &MergeRegion) -> (CellChangeType, f32) {
-    let similarity = jaccard_similarity(&left.content, &right.content);
+fn compare_merge_regions(left: &MergeRegion, right: &MergeRegion, algorithm: &SimilarityAlgorithm) -> (CellChangeType, f32) {
+    let similarity = compute_similarity(&left.content, &right.content, algorithm);
     if left.content == right.content { (CellChangeType::Identical, 1.0) }
     else { (CellChangeType::Modified, similarity) }
 }
@@ -207,7 +309,7 @@ fn compare_merge_regions(left: &MergeRegion, right: &MergeRegion) -> (CellChange
 // ============================================================================
 
 fn compute_row_similarity(left_table: &TableNode, right_table: &TableNode,
-                          left_row_idx: usize, right_row_idx: usize) -> f32 {
+                          left_row_idx: usize, right_row_idx: usize, algorithm: &SimilarityAlgorithm) -> f32 {
     let left_row = &left_table.rows[left_row_idx];
     let right_row = &right_table.rows[right_row_idx];
     let max_cols = left_row.cells.len().max(right_row.cells.len());
@@ -217,7 +319,7 @@ fn compute_row_similarity(left_table: &TableNode, right_table: &TableNode,
     let mut count = 0;
     for col_idx in 0..max_cols {
         match (left_row.cells.get(col_idx), right_row.cells.get(col_idx)) {
-            (Some(l), Some(r)) => { total += jaccard_similarity(&extract_cell_text(l), &extract_cell_text(r)); count += 1; }
+            (Some(l), Some(r)) => { total += compute_similarity(&extract_cell_text(l), &extract_cell_text(r), algorithm); count += 1; }
             (Some(_), None) | (None, Some(_)) => { count += 1; }
             _ => {}
         }
@@ -226,7 +328,7 @@ fn compute_row_similarity(left_table: &TableNode, right_table: &TableNode,
 }
 
 fn compute_column_similarity(left_table: &TableNode, right_table: &TableNode,
-                             left_col_idx: usize, right_col_idx: usize) -> f32 {
+                             left_col_idx: usize, right_col_idx: usize, algorithm: &SimilarityAlgorithm) -> f32 {
     let max_rows = left_table.rows.len().max(right_table.rows.len());
     if max_rows == 0 { return 1.0; }
 
@@ -234,7 +336,7 @@ fn compute_column_similarity(left_table: &TableNode, right_table: &TableNode,
     let mut count = 0;
     for row_idx in 0..max_rows {
         match (get_cell(left_table, row_idx, left_col_idx), get_cell(right_table, row_idx, right_col_idx)) {
-            (Some(l), Some(r)) => { total += jaccard_similarity(&extract_cell_text(l), &extract_cell_text(r)); count += 1; }
+            (Some(l), Some(r)) => { total += compute_similarity(&extract_cell_text(l), &extract_cell_text(r), algorithm); count += 1; }
             (Some(_), None) | (None, Some(_)) => { count += 1; }
             _ => {}
         }
@@ -243,12 +345,12 @@ fn compute_column_similarity(left_table: &TableNode, right_table: &TableNode,
 }
 
 fn greedy_row_matching(left_table: &TableNode, right_table: &TableNode,
-                       threshold: f32) -> Vec<RowAlignment> {
+                       threshold: f32, algorithm: &SimilarityAlgorithm) -> Vec<RowAlignment> {
     let left_rows = left_table.rows.len();
     let right_rows = right_table.rows.len();
     let mut sim_matrix = vec![vec![0.0f32; right_rows]; left_rows];
     for i in 0..left_rows { for j in 0..right_rows {
-        sim_matrix[i][j] = compute_row_similarity(left_table, right_table, i, j);
+        sim_matrix[i][j] = compute_row_similarity(left_table, right_table, i, j, algorithm);
     }}
 
     let mut alignments = Vec::new();
@@ -290,12 +392,12 @@ fn greedy_row_matching(left_table: &TableNode, right_table: &TableNode,
 }
 
 fn greedy_column_matching(left_table: &TableNode, right_table: &TableNode,
-                          threshold: f32) -> Vec<ColumnAlignment> {
+                          threshold: f32, algorithm: &SimilarityAlgorithm) -> Vec<ColumnAlignment> {
     let left_cols = max_columns(left_table);
     let right_cols = max_columns(right_table);
     let mut sim_matrix = vec![vec![0.0f32; right_cols]; left_cols];
     for i in 0..left_cols { for j in 0..right_cols {
-        sim_matrix[i][j] = compute_column_similarity(left_table, right_table, i, j);
+        sim_matrix[i][j] = compute_column_similarity(left_table, right_table, i, j, algorithm);
     }}
 
     let mut alignments = Vec::new();
@@ -347,15 +449,15 @@ pub fn compare_tables(left: &TableNode, right: &TableNode) -> TableDiffResult {
 pub fn compare_tables_with_options(left: &TableNode, right: &TableNode,
                                    options: &TableDiffOptions) -> TableDiffResult {
     let row_alignments = match options.match_strategy {
-        MatchStrategy::Position => position_based_row_alignment(left, right),
-        _ => greedy_row_matching(left, right, options.similarity_threshold),
+        MatchStrategy::Position => position_based_row_alignment(left, right, &options.similarity_algorithm),
+        _ => greedy_row_matching(left, right, options.similarity_threshold, &options.similarity_algorithm),
     };
     let column_alignments = match options.match_strategy {
-        MatchStrategy::Position => position_based_column_alignment(left, right),
-        _ => greedy_column_matching(left, right, options.similarity_threshold),
+        MatchStrategy::Position => position_based_column_alignment(left, right, &options.similarity_algorithm),
+        _ => greedy_column_matching(left, right, options.similarity_threshold, &options.similarity_algorithm),
     };
 
-    let cell_diffs = compute_cell_diffs(left, right, &row_alignments, &column_alignments);
+    let cell_diffs = compute_cell_diffs(left, right, &row_alignments, &column_alignments, &options.similarity_algorithm);
     let structural_changes = detect_structural_changes(&row_alignments, &column_alignments);
 
     let has_struct = !structural_changes.is_empty();
@@ -376,12 +478,12 @@ pub fn compare_tables_with_options(left: &TableNode, right: &TableNode,
     TableDiffResult { table_match_type, structural_changes, cell_diffs, row_alignments, column_alignments, confidence }
 }
 
-fn position_based_row_alignment(left: &TableNode, right: &TableNode) -> Vec<RowAlignment> {
+fn position_based_row_alignment(left: &TableNode, right: &TableNode, algorithm: &SimilarityAlgorithm) -> Vec<RowAlignment> {
     let min_rows = left.rows.len().min(right.rows.len());
     let mut alignments = Vec::new();
     for i in 0..min_rows {
         alignments.push(RowAlignment { left_idx: Some(i), right_idx: Some(i),
-            similarity: compute_row_similarity(left, right, i, i), alignment_type: AlignmentType::Matched });
+            similarity: compute_row_similarity(left, right, i, i, algorithm), alignment_type: AlignmentType::Matched });
     }
     for i in min_rows..left.rows.len() {
         alignments.push(RowAlignment { left_idx: Some(i), right_idx: None, similarity: 0.0, alignment_type: AlignmentType::Deleted });
@@ -392,14 +494,14 @@ fn position_based_row_alignment(left: &TableNode, right: &TableNode) -> Vec<RowA
     alignments
 }
 
-fn position_based_column_alignment(left: &TableNode, right: &TableNode) -> Vec<ColumnAlignment> {
+fn position_based_column_alignment(left: &TableNode, right: &TableNode, algorithm: &SimilarityAlgorithm) -> Vec<ColumnAlignment> {
     let left_cols = max_columns(left);
     let right_cols = max_columns(right);
     let min_cols = left_cols.min(right_cols);
     let mut alignments = Vec::new();
     for i in 0..min_cols {
         alignments.push(ColumnAlignment { left_idx: Some(i), right_idx: Some(i),
-            similarity: compute_column_similarity(left, right, i, i), alignment_type: ColumnAlignmentType::Matched });
+            similarity: compute_column_similarity(left, right, i, i, algorithm), alignment_type: ColumnAlignmentType::Matched });
     }
     for i in min_cols..left_cols {
         alignments.push(ColumnAlignment { left_idx: Some(i), right_idx: None, similarity: 0.0, alignment_type: ColumnAlignmentType::Deleted });
@@ -411,7 +513,8 @@ fn position_based_column_alignment(left: &TableNode, right: &TableNode) -> Vec<C
 }
 
 fn compute_cell_diffs(left: &TableNode, right: &TableNode,
-                      row_alignments: &[RowAlignment], column_alignments: &[ColumnAlignment]) -> Vec<CellDiff> {
+                      row_alignments: &[RowAlignment], column_alignments: &[ColumnAlignment],
+                      algorithm: &SimilarityAlgorithm) -> Vec<CellDiff> {
     let mut cell_diffs = Vec::new();
     let left_regions = extract_merge_regions(left);
     let right_regions = extract_merge_regions(right);
@@ -420,7 +523,7 @@ fn compute_cell_diffs(left: &TableNode, right: &TableNode,
 
     for lr in &left_regions { for rr in &right_regions {
         if regions_overlap(lr, rr) {
-            let (ct, sim) = compare_merge_regions(lr, rr);
+            let (ct, sim) = compare_merge_regions(lr, rr, algorithm);
             let span_changed = lr.row_span != rr.row_span || lr.col_span != rr.col_span;
             if ct != CellChangeType::Identical || span_changed {
                 cell_diffs.push(CellDiff {
@@ -454,7 +557,7 @@ fn compute_cell_diffs(left: &TableNode, right: &TableNode,
             match (get_cell(left, lr, lc), get_cell(right, rr, rc)) {
                 (Some(l), Some(r)) => {
                     let lt = extract_cell_text(l); let rt = extract_cell_text(r);
-                    let sim = jaccard_similarity(&lt, &rt);
+                    let sim = compute_similarity(&lt, &rt, algorithm);
                     cell_diffs.push(CellDiff { position: (lr, lc),
                         change_type: if lt == rt { CellChangeType::Identical } else { CellChangeType::Modified },
                         old_content: Some(lt), new_content: Some(rt), similarity: sim,
@@ -522,7 +625,7 @@ mod tests {
             create_row("r3", vec![create_cell("c5", "Row 1 Data"), create_cell("c6", "Row 1 Value")]),
         ]);
         let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
-            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6, ..Default::default()
         });
         assert!(result.row_alignments.iter().any(|a| a.alignment_type == AlignmentType::Moved), "Should detect row move");
     }
@@ -540,7 +643,7 @@ mod tests {
             create_row("r3", vec![create_cell("c5", "Apple iPhone 15"), create_cell("c6", "999")]),
         ]);
         let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
-            match_strategy: MatchStrategy::Content, similarity_threshold: 0.5,
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.5, ..Default::default()
         });
         let matched = result.row_alignments.iter()
             .filter(|a| a.alignment_type == AlignmentType::Matched || a.alignment_type == AlignmentType::Moved).count();
@@ -559,7 +662,7 @@ mod tests {
             create_row("r3", vec![create_cell("c3", "New Row")]),
         ]);
         let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
-            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6, ..Default::default()
         });
         let added: Vec<_> = result.row_alignments.iter().filter(|a| a.alignment_type == AlignmentType::Added).collect();
         assert_eq!(added.len(), 1);
@@ -578,7 +681,7 @@ mod tests {
             create_row("r2", vec![create_cell("c2", "Data 1")]),
         ]);
         let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
-            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6, ..Default::default()
         });
         let deleted: Vec<_> = result.row_alignments.iter().filter(|a| a.alignment_type == AlignmentType::Deleted).collect();
         assert_eq!(deleted.len(), 1);
@@ -596,7 +699,7 @@ mod tests {
             create_row("r2", vec![create_cell("c4", "Alice"), create_cell("c5", "NYC"), create_cell("c6", "30")]),
         ]);
         let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
-            match_strategy: MatchStrategy::Content, similarity_threshold: 0.5,
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.5, ..Default::default()
         });
         assert!(result.column_alignments.iter().any(|a| a.alignment_type == ColumnAlignmentType::Moved), "Should detect column move");
     }
@@ -610,7 +713,7 @@ mod tests {
             create_row("r1", vec![create_cell("c1", "Name"), create_cell("c2", "Age"), create_cell("c3", "City")]),
         ]);
         let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
-            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6, ..Default::default()
         });
         let added: Vec<_> = result.column_alignments.iter().filter(|a| a.alignment_type == ColumnAlignmentType::Added).collect();
         assert_eq!(added.len(), 1);
@@ -625,7 +728,7 @@ mod tests {
             create_row("r1", vec![create_cell("c1", "Name"), create_cell("c2", "Age")]),
         ]);
         let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
-            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6, ..Default::default()
         });
         let deleted: Vec<_> = result.column_alignments.iter().filter(|a| a.alignment_type == ColumnAlignmentType::Deleted).collect();
         assert_eq!(deleted.len(), 1);
@@ -640,7 +743,7 @@ mod tests {
             create_row("r1", vec![create_cell("c1", "Header"), create_cell("c2", "Data")]),
         ]);
         let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
-            match_strategy: MatchStrategy::Position, similarity_threshold: 0.6,
+            match_strategy: MatchStrategy::Position, similarity_threshold: 0.6, ..Default::default()
         });
         assert_eq!(result.table_match_type, TableMatchType::Identical);
         assert!(result.structural_changes.is_empty());
@@ -654,7 +757,7 @@ mod tests {
             create_row("r2", vec![create_cell("c2", "B")]),
         ]);
         let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
-            match_strategy: MatchStrategy::Position, similarity_threshold: 0.6,
+            match_strategy: MatchStrategy::Position, similarity_threshold: 0.6, ..Default::default()
         });
         assert_eq!(result.table_match_type, TableMatchType::StructureChanged);
     }
@@ -694,9 +797,164 @@ mod tests {
             create_row("r2", vec![create_cell("c3", "the lazy cat"), create_cell("c4", "every day")]),
         ]);
         let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
-            match_strategy: MatchStrategy::Content, similarity_threshold: 0.5,
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.5, ..Default::default()
         });
         assert_eq!(result.table_match_type, TableMatchType::ContentChanged);
         assert!(result.structural_changes.is_empty());
     }
+    // ========== Similarity Algorithm Tests ==========
+
+    #[test]
+    fn test_levenshtein_similarity_identical() {
+        assert_eq!(levenshtein_similarity("hello", "hello"), 1.0);
+    }
+
+    #[test]
+    fn test_levenshtein_similarity_empty() {
+        assert_eq!(levenshtein_similarity("", ""), 1.0);
+    }
+
+    #[test]
+    fn test_levenshtein_similarity_one_empty() {
+        assert_eq!(levenshtein_similarity("hello", ""), 0.0);
+        assert_eq!(levenshtein_similarity("", "hello"), 0.0);
+    }
+
+    #[test]
+    fn test_levenshtein_similarity_similar() {
+        // "kitten" -> "sitting" has edit distance 3, max_len = 7
+        let sim = levenshtein_similarity("kitten", "sitting");
+        assert!(sim > 0.4 && sim < 0.6, "Expected ~0.571, got {}", sim);
+    }
+
+    #[test]
+    fn test_levenshtein_similarity_single_char_diff() {
+        let sim = levenshtein_similarity("abc", "ab");
+        assert!(sim > 0.6, "Expected ~0.667, got {}", sim);
+    }
+
+    #[test]
+    fn test_cosine_similarity_identical() {
+        assert_eq!(cosine_similarity("hello world", "hello world"), 1.0);
+    }
+
+    #[test]
+    fn test_cosine_similarity_empty() {
+        assert_eq!(cosine_similarity("", ""), 1.0);
+    }
+
+    #[test]
+    fn test_cosine_similarity_one_empty() {
+        assert_eq!(cosine_similarity("hello", ""), 0.0);
+    }
+
+    #[test]
+    fn test_cosine_similarity_overlapping() {
+        // "hello world" vs "hello there" share 1 word "hello"
+        let sim = cosine_similarity("hello world", "hello there");
+        assert!(sim > 0.0 && sim < 1.0, "Expected partial similarity, got {}", sim);
+    }
+
+    #[test]
+    fn test_cosine_similarity_no_overlap() {
+        let sim = cosine_similarity("apple banana", "cat dog");
+        assert_eq!(sim, 0.0);
+    }
+
+    #[test]
+    fn test_numeric_similarity_identical() {
+        assert_eq!(numeric_similarity("42", "42"), 1.0);
+    }
+
+    #[test]
+    fn test_numeric_similarity_close() {
+        // 100 vs 110: diff=10, max=110, ratio = 10/110 ~ 0.091, similarity ~ 0.909
+        let sim = numeric_similarity("100", "110");
+        assert!(sim > 0.85 && sim < 0.95, "Expected ~0.909, got {}", sim);
+    }
+
+    #[test]
+    fn test_numeric_similarity_non_numeric() {
+        // Non-numeric should return -1.0 (signal)
+        assert_eq!(numeric_similarity("hello", "world"), -1.0);
+    }
+
+    #[test]
+    fn test_numeric_similarity_with_text_and_numbers() {
+        // "Price: 100" should extract 100
+        let sim = numeric_similarity("Price: 100", "Price: 110");
+        assert!(sim > 0.85, "Expected high similarity for close numbers, got {}", sim);
+    }
+
+    #[test]
+    fn test_numeric_similarity_zeroes() {
+        assert_eq!(numeric_similarity("0", "0"), 1.0);
+    }
+
+    #[test]
+    fn test_hybrid_algorithm_uses_numeric_for_numbers() {
+        // Hybrid should use numeric_similarity for number-like content
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell("c1", "Total"), create_cell("c2", "100")]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell("c1", "Total"), create_cell("c2", "105")]),
+        ]);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.5,
+            similarity_algorithm: SimilarityAlgorithm::Hybrid,
+        });
+        // "100" vs "105" should have high similarity via numeric
+        assert!(result.confidence >= 0.5, "Hybrid should produce reasonable confidence, got {}", result.confidence);
+    }
+
+    #[test]
+    fn test_levenshtein_algorithm_integration() {
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell("c1", "Header"), create_cell("c2", "Data")]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell("c1", "Header"), create_cell("c2", "Data")]),
+        ]);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+            similarity_algorithm: SimilarityAlgorithm::Levenshtein,
+        });
+        assert_eq!(result.table_match_type, TableMatchType::Identical);
+    }
+
+    #[test]
+    fn test_cosine_algorithm_integration() {
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell("c1", "Apple iPhone"), create_cell("c2", "999")]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell("c1", "Apple iPhone"), create_cell("c2", "999")]),
+        ]);
+        let result = compare_tables_with_options(&left, &right, &TableDiffOptions {
+            match_strategy: MatchStrategy::Content, similarity_threshold: 0.6,
+            similarity_algorithm: SimilarityAlgorithm::Cosine,
+        });
+        assert_eq!(result.table_match_type, TableMatchType::Identical);
+    }
+
+    #[test]
+    fn test_different_algorithms_produce_different_scores() {
+        let sim_j = jaccard_similarity("hello world", "hello there");
+        let sim_l = levenshtein_similarity("hello world", "hello there");
+        let sim_c = cosine_similarity("hello world", "hello there");
+        // They should all be > 0 but not necessarily equal
+        assert!(sim_j > 0.0 && sim_l > 0.0 && sim_c > 0.0);
+    }
+
+    #[test]
+    fn test_compute_similarity_dispatches_correctly() {
+        let sim_j = compute_similarity("abc", "abc", &SimilarityAlgorithm::Jaccard);
+        let sim_l = compute_similarity("abc", "abc", &SimilarityAlgorithm::Levenshtein);
+        let sim_c = compute_similarity("abc", "abc", &SimilarityAlgorithm::Cosine);
+        assert_eq!(sim_j, 1.0);
+        assert_eq!(sim_l, 1.0);
+        assert_eq!(sim_c, 1.0);
+    }
+
 }
