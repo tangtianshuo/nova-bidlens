@@ -60,13 +60,13 @@ pub fn compare_documents(
     let mut used_right = HashSet::new();
     let mut items = Vec::new();
 
-    for (left_id, left_text) in left_nodes {
+    for (left_id, left_text) in &left_nodes {
         let best = right_nodes
             .iter()
             .enumerate()
             .filter(|(idx, _)| !used_right.contains(idx))
             .map(|(idx, (right_id, right_text))| {
-                (idx, *right_id, *right_text, jaccard(left_text, right_text))
+                (idx, right_id.as_str(), right_text.as_str(), jaccard(left_text.as_str(), right_text.as_str()))
             })
             .max_by(|a, b| a.3.total_cmp(&b.3));
 
@@ -83,9 +83,9 @@ pub fn compare_documents(
                 },
                 confidence: score,
                 similarity: score,
-                source_a: Some(left_text.to_string()),
+                source_a: Some(left_text.clone()),
                 source_b: Some(right_text.to_string()),
-                node_ids_a: vec![left_id.to_string()],
+                node_ids_a: vec![left_id.clone()],
                 node_ids_b: vec![right_id.to_string()],
                 summary: "semantic match".to_string(),
             });
@@ -95,9 +95,9 @@ pub fn compare_documents(
                 match_type: MatchType::Deleted,
                 confidence: 1.0,
                 similarity: 0.0,
-                source_a: Some(left_text.to_string()),
+                source_a: Some(left_text.clone()),
                 source_b: None,
-                node_ids_a: vec![left_id.to_string()],
+                node_ids_a: vec![left_id.clone()],
                 node_ids_b: vec![],
                 summary: "only in document A".to_string(),
             });
@@ -112,9 +112,9 @@ pub fn compare_documents(
                 confidence: 1.0,
                 similarity: 0.0,
                 source_a: None,
-                source_b: Some((*right_text).to_string()),
+                source_b: Some(right_text.clone()),
                 node_ids_a: vec![],
-                node_ids_b: vec![(*right_id).to_string()],
+                node_ids_b: vec![right_id.clone()],
                 summary: "only in document B".to_string(),
             });
         }
@@ -144,7 +144,7 @@ fn jaccard(left: &str, right: &str) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use document_ast::{BlockNode, DocumentAst, ParagraphNode};
+    use document_ast::{simple_paragraph, BlockNode, DocumentAst};
 
     #[test]
     fn detects_modified_added_and_deleted_chunks() {
@@ -166,13 +166,10 @@ mod tests {
             word_count: texts.iter().map(|text| text.chars().count()).sum(),
             parser_version: "test".to_string(),
             blocks: texts.iter().enumerate().map(|(idx, text)| {
-                BlockNode::Paragraph(ParagraphNode {
-                    id: format!("{id}-p{idx}"),
-                    text: text.to_string(),
-                    page_start: None,
-                    page_end: None
-                })
+                BlockNode::Paragraph(simple_paragraph(&format!("{id}-p{idx}"), text))
             }).collect()
         }
     }
 }
+
+

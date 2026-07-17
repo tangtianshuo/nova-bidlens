@@ -161,7 +161,7 @@ fn extract_cell_text(cell: &TableCell) -> String {
     let mut texts = Vec::new();
     for block in &cell.content {
         match block {
-            BlockNode::Paragraph(p) => texts.push(p.text.clone()),
+            BlockNode::Paragraph(p) => texts.push(p.plain_text()),
             BlockNode::Table(t) => {
                 // Recursively extract text from nested table cells
                 for row in &t.rows {
@@ -645,12 +645,10 @@ fn detect_structural_changes(row_alignments: &[RowAlignment], column_alignments:
 #[cfg(test)]
 mod tests {
     use super::*;
-    use document_ast::{TableCell, TableRow, RowType, ParagraphNode};
+    use document_ast::{simple_paragraph, TableCell, TableRow, RowType};
 
     fn create_cell(id: &str, text: &str) -> TableCell {
-        TableCell { id: id.to_string(), content: vec![BlockNode::Paragraph(ParagraphNode {
-            id: format!("{}-p", id), text: text.to_string(), page_start: None, page_end: None,
-        })], span: None, properties: None }
+        TableCell { id: id.to_string(), content: vec![BlockNode::Paragraph(simple_paragraph(&format!("{}-p", id), text))], span: None, properties: None }
     }
     fn create_row(id: &str, cells: Vec<TableCell>) -> TableRow {
         TableRow { id: id.to_string(), cells, row_type: RowType::Body }
@@ -1022,12 +1020,7 @@ mod tests {
         TableCell {
             id: id.to_string(),
             content: vec![
-                BlockNode::Paragraph(ParagraphNode {
-                    id: format!("{}-p", id),
-                    text: text.to_string(),
-                    page_start: None,
-                    page_end: None,
-                }),
+                BlockNode::Paragraph(simple_paragraph(&format!("{}-p", id), text)),
                 BlockNode::Table(nested_table),
             ],
             span: None,
@@ -1192,3 +1185,5 @@ mod tests {
     }
 
 }
+
+
