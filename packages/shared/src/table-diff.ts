@@ -22,6 +22,8 @@ export interface CellDiff {
   oldSpan?: CellSpan;  // 旧合并信息
   newSpan?: CellSpan;  // 新合并信息
   spanChanged?: boolean;  // 标记合并信息是否变化
+  /** 嵌套表格的差异结果（当单元格包含嵌套表格时） */
+  nestedTableDiff?: TableDiffResult;
 }
 
 export interface TableDiffResult {
@@ -84,7 +86,7 @@ function formatSpanChange(oldSpan?: CellSpan, newSpan?: CellSpan): string {
     return `新增合并 (${newSpan.rowSpan}行×${newSpan.colSpan}列)`;
   }
   if (oldSpan && !newSpan) {
-    return `取消合并`;
+    return '取消合并';
   }
   if (oldSpan && newSpan) {
     return `${oldSpan.rowSpan}行×${oldSpan.colSpan}列 → ${newSpan.rowSpan}行×${newSpan.colSpan}列`;

@@ -161,3 +161,146 @@ describe('TableCellView', () => {
     expect(cell?.style.border).toContain('2px solid');
   });
 });
+
+describe('Nested Table Rendering', () => {
+  const simpleNestedTable = {
+    id: 'nested-1',
+    rows: [
+      {
+        id: 'nr1',
+        cells: [
+          { id: 'nc1', content: 'Inner A' },
+          { id: 'nc2', content: 'Inner B' },
+        ],
+        rowType: 'body' as const,
+      },
+      {
+        id: 'nr2',
+        cells: [
+          { id: 'nc3', content: 'Inner C' },
+          { id: 'nc4', content: 'Inner D' },
+        ],
+        rowType: 'body' as const,
+      }
+    ]
+  };
+
+  it('renders nested table inside a cell', () => {
+    const { container } = render(
+      <TableCellView content="" nestedTable={simpleNestedTable} />
+    );
+    expect(container.textContent).toContain('Inner A');
+    expect(container.textContent).toContain('Inner B');
+    expect(container.textContent).toContain('Inner C');
+    expect(container.textContent).toContain('Inner D');
+  });
+
+  it('renders cell with both text and nested table', () => {
+    const { container } = render(
+      <TableCellView content="Cell text" nestedTable={simpleNestedTable} />
+    );
+    expect(container.textContent).toContain('Cell text');
+    expect(container.textContent).toContain('Inner A');
+  });
+
+  it('renders nested table with diff highlighting', () => {
+    const diff = {
+      position: [0, 0] as [number, number],
+      changeType: 'modified' as const,
+      oldContent: '',
+      newContent: '',
+      similarity: 0.5,
+      nestedTableDiff: {
+        tableMatchType: 'content_changed' as const,
+        structuralChanges: [],
+        cellDiffs: [
+          {
+            position: [0, 1] as [number, number],
+            changeType: 'modified' as const,
+            oldContent: 'Inner B',
+            newContent: 'Inner CHANGED',
+            similarity: 0.6,
+          }
+        ],
+        confidence: 0.75,
+      }
+    };
+    const { container } = render(
+      <TableCellView content="" diff={diff} nestedTable={simpleNestedTable} />
+    );
+    // Should show nested table change indicator
+    expect(container.textContent).toContain('嵌套表格有变化');
+  });
+
+  it('renders nested table with header rows', () => {
+    const tableWithHeader = {
+      id: 'nested-h',
+      rows: [
+        {
+          id: 'nr1',
+          cells: [{ id: 'nc1', content: 'Header Cell' }],
+          rowType: 'header' as const,
+        },
+        {
+          id: 'nr2',
+          cells: [{ id: 'nc2', content: 'Body Cell' }],
+          rowType: 'body' as const,
+        }
+      ]
+    };
+    const { container } = render(
+      <TableCellView content="" nestedTable={tableWithHeader} />
+    );
+    const headerCell = container.querySelector('strong');
+    expect(headerCell?.textContent).toBe('Header Cell');
+  });
+
+  it('shows depth limit exceeded warning', () => {
+    const deepTable = {
+      id: 'deep',
+      rows: [
+        {
+          id: 'dr1',
+          cells: [{ id: 'dc1', content: 'Deep content' }],
+          rowType: 'body' as const,
+        }
+      ],
+      depthLimitExceeded: true,
+    };
+    const { container } = render(
+      <TableCellView content="" nestedTable={deepTable} />
+    );
+    expect(container.textContent).toContain('嵌套深度超限');
+  });
+
+  it('handles nested table with placeholder cells', () => {
+    const tableWithPlaceholders = {
+      id: 'nested-ph',
+      rows: [
+        {
+          id: 'nr1',
+          cells: [
+            { id: 'nc1', content: 'Merged', rowSpan: 2, colSpan: 2 },
+            { id: 'nc2', content: 'A' },
+          ],
+          rowType: 'body' as const,
+        },
+        {
+          id: 'nr2',
+          cells: [
+            { id: 'nc3', content: '', isPlaceholder: true },
+            { id: 'nc4', content: '', isPlaceholder: true },
+            { id: 'nc5', content: 'B' },
+          ],
+          rowType: 'body' as const,
+        }
+      ]
+    };
+    const { container } = render(
+      <TableCellView content="" nestedTable={tableWithPlaceholders} />
+    );
+    // Should render A and B but not placeholder cells
+    expect(container.textContent).toContain('A');
+    expect(container.textContent).toContain('B');
+  });
+});

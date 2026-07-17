@@ -293,3 +293,263 @@ describe('convertToTableNode', () => {
     expect(result.rows[1]).toEqual(['B']);
   });
 });
+
+describe('Nested Table Support', () => {
+  it('should parse a single-level nested table inside a cell', () => {
+    const innerTable = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Inner A1'),
+          createHtmlElement('td', {}, [], 'Inner A2'),
+        ]),
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Inner B1'),
+          createHtmlElement('td', {}, [], 'Inner B2'),
+        ])
+      ])
+    ]);
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Cell 1'),
+          createHtmlElement('td', {}, [innerTable]),
+        ]),
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Cell 3'),
+          createHtmlElement('td', {}, [], 'Cell 4'),
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    expect(result.rows).toHaveLength(2);
+    // First row, second cell should have a nested table
+    const cellWithNested = result.rows[0].cells[1];
+    expect(cellWithNested.nestedTable).toBeDefined();
+    expect(cellWithNested.nestedTable!.rows).toHaveLength(2);
+    expect(cellWithNested.nestedTable!.rows[0].cells[0].content).toBe('Inner A1');
+    expect(cellWithNested.nestedTable!.rows[1].cells[1].content).toBe('Inner B2');
+    // Cell's own content should not include nested table text
+    expect(cellWithNested.content).toBe('');
+  });
+
+  it('should parse a cell with both text and a nested table', () => {
+    const innerTable = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Inner 1'),
+        ])
+      ])
+    ]);
+    const cellWithBoth = createHtmlElement('td', {}, [
+      createHtmlElement('span', {}, [], 'Some text'),
+      innerTable
+    ]);
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          cellWithBoth,
+          createHtmlElement('td', {}, [], 'Other cell'),
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    const cell = result.rows[0].cells[0];
+    expect(cell.content).toBe('Some text');
+    expect(cell.nestedTable).toBeDefined();
+    expect(cell.nestedTable!.rows[0].cells[0].content).toBe('Inner 1');
+  });
+
+  it('should parse multi-level nested tables', () => {
+    // Level 3 innermost table
+    const innermostTable = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Deep value'),
+        ])
+      ])
+    ]);
+    // Level 2 table containing level 3
+    const level2Table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [innermostTable]),
+        ])
+      ])
+    ]);
+    // Level 1 (outermost) table containing level 2
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [level2Table]),
+          createHtmlElement('td', {}, [], 'Regular'),
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    // Level 1 -> cell has nested table
+    const level1Cell = result.rows[0].cells[0];
+    expect(level1Cell.nestedTable).toBeDefined();
+    expect(level1Cell.nestedTable!.depth).toBe(1);
+    
+    // Level 2 -> cell has nested table
+    const level2Cell = level1Cell.nestedTable!.rows[0].cells[0];
+    expect(level2Cell.nestedTable).toBeDefined();
+    expect(level2Cell.nestedTable!.depth).toBe(2);
+    
+    // Level 3 -> innermost
+    const level3Cell = level2Cell.nestedTable!.rows[0].cells[0];
+    expect(level3Cell.nestedTable).toBeUndefined();
+    expect(level3Cell.content).toBe('Deep value');
+  });
+
+  it('should respect max depth limit (default 3)', () => {
+    // Create 4 levels deep
+    const level4 = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Level 4'),
+        ])
+      ])
+    ]);
+    const level3 = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [level4]),
+        ])
+      ])
+    ]);
+    const level2 = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [level3]),
+        ])
+      ])
+    ]);
+    const level1 = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [level2]),
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(level1);
+    // Level 1 (depth 0) -> has nested
+    expect(result.rows[0].cells[0].nestedTable).toBeDefined();
+    // Level 2 (depth 1) -> has nested
+    expect(result.rows[0].cells[0].nestedTable!.rows[0].cells[0].nestedTable).toBeDefined();
+    // Level 3 (depth 2) -> has nested, but it's at depth limit
+    const l3 = result.rows[0].cells[0].nestedTable!.rows[0].cells[0].nestedTable!;
+    expect(l3.depthLimitExceeded).toBe(false);
+    // Level 3 cell content should include "Level 4" text since it's parsed as flat
+    expect(l3.rows[0].cells[0].nestedTable).toBeDefined();
+    // Level 4 (depth 3) should be at depth limit
+    const l4 = l3.rows[0].cells[0].nestedTable!;
+    expect(l4.depthLimitExceeded).toBe(true);
+  });
+
+  it('should handle nested table with merged cells', () => {
+    const innerTable = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', { colspan: '2' }, [], 'Merged Inner'),
+          createHtmlElement('td', {}, [], 'C'),
+        ]),
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'D'),
+          createHtmlElement('td', {}, [], 'E'),
+          createHtmlElement('td', {}, [], 'F'),
+        ])
+      ])
+    ]);
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [innerTable]),
+          createHtmlElement('td', {}, [], 'Regular'),
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    const nested = result.rows[0].cells[0].nestedTable!;
+    expect(nested.rows[0].cells[0].colSpan).toBe(2);
+    expect(nested.rows[0].cells[0].content).toBe('Merged Inner');
+  });
+
+  it('should handle nested table with thead and tfoot', () => {
+    const innerTable = createHtmlElement('table', {}, [
+      createHtmlElement('thead', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('th', {}, [], 'Inner Header'),
+        ])
+      ]),
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Inner Body'),
+        ])
+      ]),
+      createHtmlElement('tfoot', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Inner Footer'),
+        ])
+      ])
+    ]);
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [innerTable]),
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    const nested = result.rows[0].cells[0].nestedTable!;
+    expect(nested.rows).toHaveLength(3);
+    expect(nested.rows[0].rowType).toBe('header');
+    expect(nested.rows[1].rowType).toBe('body');
+    expect(nested.rows[2].rowType).toBe('footer');
+  });
+
+  it('should parse custom max depth limit', () => {
+    // Create 3 levels deep, but limit to 2
+    const level3 = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Level 3'),
+        ])
+      ])
+    ]);
+    const level2 = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [level3]),
+        ])
+      ])
+    ]);
+    const level1 = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [level2]),
+        ])
+      ])
+    ]);
+
+    // Parse with max depth = 2
+    const result = parseDocxTable(level1, 0, 2);
+    // Level 1 (depth 0) -> has nested
+    expect(result.rows[0].cells[0].nestedTable).toBeDefined();
+    // Level 2 (depth 1) -> at depth limit (max=2, currentDepth=1, so 1 < 2 is true)
+    const l2 = result.rows[0].cells[0].nestedTable!;
+    expect(l2.rows[0].cells[0].nestedTable).toBeDefined();
+    // Level 3 (depth 2) -> depth limit exceeded (2 >= 2)
+    const l3 = l2.rows[0].cells[0].nestedTable!;
+    expect(l3.depthLimitExceeded).toBe(true);
+    // Content should include Level 3 text (since it's parsed without nesting)
+    expect(l3.rows[0].cells[0].content).toBe('Level 3');
+    expect(l3.rows[0].cells[0].nestedTable).toBeUndefined();
+  });
+});

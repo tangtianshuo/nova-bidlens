@@ -1,9 +1,16 @@
 import { TableNode } from '../document-ast.js';
 
+/** Maximum nesting depth for tables (to prevent infinite recursion) */
+export const MAX_NESTED_TABLE_DEPTH = 3;
+
 export interface ParsedTable {
   id: string;
   rows: ParsedRow[];
   properties?: TableProperties;
+  /** 当前嵌套深度（从0开始） */
+  depth?: number;
+  /** 是否因超出嵌套深度限制而被截断 */
+  depthLimitExceeded?: boolean;
 }
 
 export interface ParsedRow {
@@ -20,6 +27,8 @@ export interface ParsedCell {
   properties?: CellProperties;
   /** 标记是否为合并单元格占位符（被其他单元格的rowSpan/colSpan覆盖） */
   isPlaceholder?: boolean;
+  /** 嵌套表格（单元格内包含的子表格） */
+  nestedTable?: ParsedTable;
 }
 
 export interface TableProperties {
@@ -63,13 +72,22 @@ function getAttribute(element: HtmlElement, name: string): string | undefined {
 }
 
 /**
- * 解析HTML表格元素
+ * 解析HTML表格元素（支持嵌套表格递归解析）
+ * 
+ * @param tableElement - 要解析的table HTML元素
+ * @param currentDepth - 当前嵌套深度（0表示最外层表格）
+ * @param maxDepth - 最大嵌套深度，默认为 MAX_NESTED_TABLE_DEPTH (3)
  */
-export function parseDocxTable(tableElement: HtmlElement): ParsedTable {
+export function parseDocxTable(
+  tableElement: HtmlElement,
+  currentDepth: number = 0,
+  maxDepth: number = MAX_NESTED_TABLE_DEPTH
+): ParsedTable {
   if (tableElement.tagName !== 'table') {
     throw new Error('Expected a table element');
   }
 
+  const depthLimitExceeded = currentDepth >= maxDepth;
   const tableId = generateId();
   const properties = extractTableProperties(tableElement);
   
@@ -82,26 +100,26 @@ export function parseDocxTable(tableElement: HtmlElement): ParsedTable {
       currentRowType = 'header';
       for (const row of child.children) {
         if (row.tagName === 'tr') {
-          rows.push(parseRow(row, currentRowType));
+          rows.push(parseRow(row, currentRowType, currentDepth, maxDepth));
         }
       }
     } else if (child.tagName === 'tbody') {
       currentRowType = 'body';
       for (const row of child.children) {
         if (row.tagName === 'tr') {
-          rows.push(parseRow(row, currentRowType));
+          rows.push(parseRow(row, currentRowType, currentDepth, maxDepth));
         }
       }
     } else if (child.tagName === 'tfoot') {
       currentRowType = 'footer';
       for (const row of child.children) {
         if (row.tagName === 'tr') {
-          rows.push(parseRow(row, currentRowType));
+          rows.push(parseRow(row, currentRowType, currentDepth, maxDepth));
         }
       }
     } else if (child.tagName === 'tr') {
       // 直接位于 table 下的 tr
-      rows.push(parseRow(child, currentRowType));
+      rows.push(parseRow(child, currentRowType, currentDepth, maxDepth));
     }
   }
   
@@ -111,20 +129,27 @@ export function parseDocxTable(tableElement: HtmlElement): ParsedTable {
   return {
     id: tableId,
     rows,
-    properties
+    properties,
+    depth: currentDepth,
+    depthLimitExceeded,
   };
 }
 
 /**
  * 解析表格行
  */
-function parseRow(rowElement: HtmlElement, rowType: 'header' | 'body' | 'footer'): ParsedRow {
+function parseRow(
+  rowElement: HtmlElement,
+  rowType: 'header' | 'body' | 'footer',
+  currentDepth: number,
+  maxDepth: number
+): ParsedRow {
   const rowId = generateId();
   const cells: ParsedCell[] = [];
   
   for (const cell of rowElement.children) {
     if (cell.tagName === 'td' || cell.tagName === 'th') {
-      cells.push(parseCell(cell));
+      cells.push(parseCell(cell, currentDepth, maxDepth));
     }
   }
   
@@ -136,27 +161,63 @@ function parseRow(rowElement: HtmlElement, rowType: 'header' | 'body' | 'footer'
 }
 
 /**
- * 解析单元格
+ * 解析单元格（支持嵌套表格）
  */
-function parseCell(cellElement: HtmlElement): ParsedCell {
+function parseCell(
+  cellElement: HtmlElement,
+  currentDepth: number,
+  maxDepth: number
+): ParsedCell {
   const cellId = generateId();
-  const content = extractTextContent(cellElement);
   const properties = extractCellProperties(cellElement);
   
   const colSpan = getAttribute(cellElement, 'colspan');
   const rowSpan = getAttribute(cellElement, 'rowspan');
+  
+  // 检查是否包含嵌套表格
+  const nestedTableElement = findNestedTable(cellElement);
+  let nestedTable: ParsedTable | undefined;
+  let content: string;
+  
+  if (nestedTableElement && currentDepth < maxDepth) {
+    // 递归解析嵌套表格
+    nestedTable = parseDocxTable(nestedTableElement, currentDepth + 1, maxDepth);
+    // 提取不包含嵌套表格的文本内容
+    content = extractTextContentExcludingTables(cellElement);
+  } else {
+    // 没有嵌套表格，或已超出深度限制
+    content = extractTextContent(cellElement);
+  }
   
   return {
     id: cellId,
     content,
     colSpan: colSpan ? parseInt(colSpan, 10) : undefined,
     rowSpan: rowSpan ? parseInt(rowSpan, 10) : undefined,
-    properties
+    properties,
+    nestedTable,
   };
 }
 
 /**
- * 提取文本内容
+ * 在单元格元素中查找嵌套的table元素
+ */
+function findNestedTable(element: HtmlElement): HtmlElement | undefined {
+  for (const child of element.children) {
+    if (child.tagName === 'table') {
+      return child;
+    }
+  }
+  // 递归查找更深层次
+  for (const child of element.children) {
+    const found = findNestedTable(child);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/**
+ * 提取文本内容（包含嵌套表格的全部文本）
  */
 function extractTextContent(element: HtmlElement): string {
   if (element.textContent) {
@@ -165,6 +226,22 @@ function extractTextContent(element: HtmlElement): string {
   
   let text = '';
   for (const child of element.children) {
+    text += extractTextContent(child);
+  }
+  return text.trim();
+}
+
+/**
+ * 提取文本内容，但排除嵌套table元素的文本
+ * 用于包含嵌套表格的单元格，content只记录单元格自身的文本
+ */
+function extractTextContentExcludingTables(element: HtmlElement): string {
+  let text = '';
+  for (const child of element.children) {
+    if (child.tagName === 'table') {
+      // 跳过嵌套表格
+      continue;
+    }
     text += extractTextContent(child);
   }
   return text.trim();
@@ -251,7 +328,6 @@ function processMergedCells(rows: ParsedRow[]): void {
   }), 0);
   
   // 创建网格以跟踪哪些位置被哪个单元格占用
-  // 存储单元格在原始rows数组中的引用
   const grid: (ParsedCell | null)[][] = Array.from({ length: rows.length }, () => 
     Array(maxCols).fill(null)
   );
@@ -298,7 +374,6 @@ function processMergedCells(rows: ParsedRow[]): void {
       const cellAtPosition = grid[rowIndex][colIndex];
       
       if (cellAtPosition === null) {
-        // 空位置，添加占位符
         newCells.push({
           id: generateId(),
           content: '',
@@ -306,15 +381,12 @@ function processMergedCells(rows: ParsedRow[]): void {
         });
         colIndex++;
       } else {
-        // 检查这个单元格是否是当前行的原始单元格
         const isOriginalCell = row.cells.includes(cellAtPosition);
         
         if (isOriginalCell) {
-          // 这是当前行的原始单元格
           newCells.push(cellAtPosition);
           colIndex += cellAtPosition.colSpan || 1;
         } else {
-          // 这是被其他行的合并单元格占用的位置，添加占位符
           newCells.push({
             id: generateId(),
             content: '',
@@ -325,7 +397,6 @@ function processMergedCells(rows: ParsedRow[]): void {
       }
     }
     
-    // 替换行的单元格
     row.cells = newCells;
   }
 }

@@ -104,6 +104,7 @@ pub struct CellDiff {
     pub old_span: Option<CellSpan>,
     pub new_span: Option<CellSpan>,
     pub span_changed: bool,
+    pub nested_table_diff: Option<Box<TableDiffResult>>,
 }
 
 /// Row alignment result
@@ -161,12 +162,31 @@ fn extract_cell_text(cell: &TableCell) -> String {
     for block in &cell.content {
         match block {
             BlockNode::Paragraph(p) => texts.push(p.text.clone()),
-            _ => {}
+            BlockNode::Table(t) => {
+                // Recursively extract text from nested table cells
+                for row in &t.rows {
+                    for c in &row.cells {
+                        let nested_text = extract_cell_text(c);
+                        if !nested_text.is_empty() {
+                            texts.push(nested_text);
+                        }
+                    }
+                }
+            }
         }
     }
     texts.join(" ")
 }
 
+/// Extract a nested table from cell content, if present
+fn extract_nested_table<'a>(cell: &'a TableCell) -> Option<&'a TableNode> {
+    for block in &cell.content {
+        if let BlockNode::Table(t) = block {
+            return Some(t);
+        }
+    }
+    None
+}
 fn jaccard_similarity(left: &str, right: &str) -> f32 {
     if left == right { return 1.0; }
     let left_words: HashSet<&str> = left.split_whitespace().collect();
@@ -532,6 +552,7 @@ fn compute_cell_diffs(left: &TableNode, right: &TableNode,
                     old_content: Some(lr.content.clone()), new_content: Some(rr.content.clone()), similarity: sim,
                     old_span: Some(CellSpan { row_span: lr.row_span, col_span: lr.col_span }),
                     new_span: Some(CellSpan { row_span: rr.row_span, col_span: rr.col_span }), span_changed,
+                    nested_table_diff: None,
                 });
             }
             processed_left.insert((lr.start_row, lr.start_col));
@@ -543,12 +564,14 @@ fn compute_cell_diffs(left: &TableNode, right: &TableNode,
     for lr in &left_regions { if !processed_left.contains(&(lr.start_row, lr.start_col)) {
         cell_diffs.push(CellDiff { position: (lr.start_row, lr.start_col), change_type: CellChangeType::Deleted,
             old_content: Some(lr.content.clone()), new_content: None, similarity: 0.0,
-            old_span: Some(CellSpan { row_span: lr.row_span, col_span: lr.col_span }), new_span: None, span_changed: true });
+            old_span: Some(CellSpan { row_span: lr.row_span, col_span: lr.col_span }), new_span: None, span_changed: true,
+            nested_table_diff: None });
     }}
     for rr in &right_regions { if !processed_right.contains(&(rr.start_row, rr.start_col)) {
         cell_diffs.push(CellDiff { position: (rr.start_row, rr.start_col), change_type: CellChangeType::Added,
             old_content: None, new_content: Some(rr.content.clone()), similarity: 1.0, old_span: None,
-            new_span: Some(CellSpan { row_span: rr.row_span, col_span: rr.col_span }), span_changed: true });
+            new_span: Some(CellSpan { row_span: rr.row_span, col_span: rr.col_span }), span_changed: true,
+            nested_table_diff: None });
     }}
 
     for ra in row_alignments { if let (Some(lr), Some(rr)) = (ra.left_idx, ra.right_idx) {
@@ -558,19 +581,43 @@ fn compute_cell_diffs(left: &TableNode, right: &TableNode,
                 (Some(l), Some(r)) => {
                     let lt = extract_cell_text(l); let rt = extract_cell_text(r);
                     let sim = compute_similarity(&lt, &rt, algorithm);
+
+                    // Compare nested tables recursively
+                    let nested_diff = match (extract_nested_table(l), extract_nested_table(r)) {
+                        (Some(lt_inner), Some(rt_inner)) => {
+                            let diff = compare_tables_with_options(lt_inner, rt_inner, &TableDiffOptions {
+                                match_strategy: MatchStrategy::Position,
+                                similarity_threshold: 0.6,
+                                similarity_algorithm: algorithm.clone(),
+                            });
+                            Some(Box::new(diff))
+                        }
+                        _ => None,
+                    };
+
+                    // Determine if nested tables have actual differences
+                    let nested_has_changes = nested_diff.as_ref().map_or(false, |d| {
+                        d.table_match_type != TableMatchType::Identical
+                    });
+                    // Only include nested diff if there are actual changes
+                    let nested_diff_out = if nested_has_changes { nested_diff } else { None };
+
                     cell_diffs.push(CellDiff { position: (lr, lc),
-                        change_type: if lt == rt { CellChangeType::Identical } else { CellChangeType::Modified },
+                        change_type: if lt == rt && !nested_has_changes { CellChangeType::Identical } else { CellChangeType::Modified },
                         old_content: Some(lt), new_content: Some(rt), similarity: sim,
-                        old_span: l.span.clone(), new_span: r.span.clone(), span_changed: false });
+                        old_span: l.span.clone(), new_span: r.span.clone(), span_changed: false,
+                        nested_table_diff: nested_diff_out });
                 }
                 (Some(l), None) => { let lt = extract_cell_text(l); if !lt.is_empty() {
                     cell_diffs.push(CellDiff { position: (lr, lc), change_type: CellChangeType::Deleted,
                         old_content: Some(lt), new_content: None, similarity: 0.0,
-                        old_span: l.span.clone(), new_span: None, span_changed: false }); }}
+                        old_span: l.span.clone(), new_span: None, span_changed: false,
+                        nested_table_diff: None }); }}
                 (None, Some(r)) => { let rt = extract_cell_text(r); if !rt.is_empty() {
                     cell_diffs.push(CellDiff { position: (rr, rc), change_type: CellChangeType::Added,
                         old_content: None, new_content: Some(rt), similarity: 1.0,
-                        old_span: None, new_span: r.span.clone(), span_changed: false }); }}
+                        old_span: None, new_span: r.span.clone(), span_changed: false,
+                        nested_table_diff: None }); }}
                 _ => {}
             }
         }}
@@ -598,7 +645,7 @@ fn detect_structural_changes(row_alignments: &[RowAlignment], column_alignments:
 #[cfg(test)]
 mod tests {
     use super::*;
-    use document_ast::{CellSpan, TableCell, TableRow, RowType, ParagraphNode};
+    use document_ast::{TableCell, TableRow, RowType, ParagraphNode};
 
     fn create_cell(id: &str, text: &str) -> TableCell {
         TableCell { id: id.to_string(), content: vec![BlockNode::Paragraph(ParagraphNode {
@@ -955,6 +1002,193 @@ mod tests {
         assert_eq!(sim_j, 1.0);
         assert_eq!(sim_l, 1.0);
         assert_eq!(sim_c, 1.0);
+    }
+
+
+    // ============================================================================
+    // Nested Table Tests
+    // ============================================================================
+
+    fn create_cell_with_nested_table(id: &str, nested_table: TableNode) -> TableCell {
+        TableCell {
+            id: id.to_string(),
+            content: vec![BlockNode::Table(nested_table)],
+            span: None,
+            properties: None,
+        }
+    }
+
+    fn create_cell_with_text_and_nested(id: &str, text: &str, nested_table: TableNode) -> TableCell {
+        TableCell {
+            id: id.to_string(),
+            content: vec![
+                BlockNode::Paragraph(ParagraphNode {
+                    id: format!("{}-p", id),
+                    text: text.to_string(),
+                    page_start: None,
+                    page_end: None,
+                }),
+                BlockNode::Table(nested_table),
+            ],
+            span: None,
+            properties: None,
+        }
+    }
+
+    #[test]
+    fn test_nested_table_identical() {
+        let inner_left = create_table("inner-l", vec![
+            create_row("ir1", vec![create_cell("ic1", "A"), create_cell("ic2", "B")]),
+            create_row("ir2", vec![create_cell("ic3", "C"), create_cell("ic4", "D")]),
+        ]);
+        let inner_right = create_table("inner-r", vec![
+            create_row("ir1", vec![create_cell("ic1", "A"), create_cell("ic2", "B")]),
+            create_row("ir2", vec![create_cell("ic3", "C"), create_cell("ic4", "D")]),
+        ]);
+        let left = create_table("t1", vec![
+            create_row("r1", vec![
+                create_cell("c1", "Regular"),
+                create_cell_with_nested_table("c2", inner_left),
+            ]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![
+                create_cell("c1", "Regular"),
+                create_cell_with_nested_table("c2", inner_right),
+            ]),
+        ]);
+
+        let result = compare_tables(&left, &right);
+        // All cells should be identical since nested tables are the same
+        assert_eq!(result.table_match_type, TableMatchType::Identical);
+        assert_eq!(result.cell_diffs.len(), 2);
+        for diff in &result.cell_diffs {
+            assert_eq!(diff.change_type, CellChangeType::Identical);
+        }
+    }
+
+    #[test]
+    fn test_nested_table_content_changed() {
+        let inner_left = create_table("inner-l", vec![
+            create_row("ir1", vec![create_cell("ic1", "A"), create_cell("ic2", "B")]),
+        ]);
+        let inner_right = create_table("inner-r", vec![
+            create_row("ir1", vec![create_cell("ic1", "A"), create_cell("ic2", "CHANGED")]),
+        ]);
+        let left = create_table("t1", vec![
+            create_row("r1", vec![
+                create_cell("c1", "Regular"),
+                create_cell_with_nested_table("c2", inner_left),
+            ]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![
+                create_cell("c1", "Regular"),
+                create_cell_with_nested_table("c2", inner_right),
+            ]),
+        ]);
+
+        let result = compare_tables(&left, &right);
+        // The nested table cell should be marked as modified
+        assert_eq!(result.table_match_type, TableMatchType::ContentChanged);
+        let nested_cell = result.cell_diffs.iter().find(|d| d.position == (0, 1)).unwrap();
+        assert_eq!(nested_cell.change_type, CellChangeType::Modified);
+        assert!(nested_cell.nested_table_diff.is_some(), "Should have nested table diff");
+        let nested_diff = nested_cell.nested_table_diff.as_ref().unwrap();
+        assert!(nested_diff.cell_diffs.iter().any(|d| d.change_type == CellChangeType::Modified),
+            "Nested table should have a modified cell");
+    }
+
+    #[test]
+    fn test_nested_table_structure_changed() {
+        let inner_left = create_table("inner-l", vec![
+            create_row("ir1", vec![create_cell("ic1", "A"), create_cell("ic2", "B")]),
+        ]);
+        let inner_right = create_table("inner-r", vec![
+            create_row("ir1", vec![create_cell("ic1", "A"), create_cell("ic2", "B")]),
+            create_row("ir2", vec![create_cell("ic3", "C"), create_cell("ic4", "D")]),
+        ]);
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell_with_nested_table("c1", inner_left)]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell_with_nested_table("c1", inner_right)]),
+        ]);
+
+        let result = compare_tables(&left, &right);
+        let nested_cell = result.cell_diffs.iter().find(|d| d.position == (0, 0)).unwrap();
+        assert!(nested_cell.nested_table_diff.is_some());
+        let nested_diff = nested_cell.nested_table_diff.as_ref().unwrap();
+        // Should detect row addition in nested table
+        assert!(nested_diff.structural_changes.iter().any(|c| matches!(c, StructuralChange::RowsAdded { .. })));
+    }
+
+    #[test]
+    fn test_nested_table_with_text_and_table() {
+        let inner = create_table("inner", vec![
+            create_row("ir1", vec![create_cell("ic1", "Nested Content")]),
+        ]);
+        let left = create_table("t1", vec![
+            create_row("r1", vec![
+                create_cell_with_text_and_nested("c1", "Cell text", inner.clone()),
+            ]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![
+                create_cell_with_text_and_nested("c1", "Cell text", inner),
+            ]),
+        ]);
+
+        let result = compare_tables(&left, &right);
+        assert_eq!(result.table_match_type, TableMatchType::Identical);
+    }
+
+    #[test]
+    fn test_extract_cell_text_with_nested_table() {
+        let inner = create_table("inner", vec![
+            create_row("ir1", vec![create_cell("ic1", "Nested A"), create_cell("ic2", "Nested B")]),
+        ]);
+        let cell = create_cell_with_nested_table("c1", inner);
+        let text = extract_cell_text(&cell);
+        assert!(text.contains("Nested A"), "Should include nested table text");
+        assert!(text.contains("Nested B"), "Should include nested table text");
+    }
+
+    #[test]
+    fn test_extract_nested_table() {
+        let inner = create_table("inner", vec![
+            create_row("ir1", vec![create_cell("ic1", "A")]),
+        ]);
+        let cell_with = create_cell_with_nested_table("c1", inner);
+        assert!(extract_nested_table(&cell_with).is_some());
+
+        let cell_without = create_cell("c2", "Just text");
+        assert!(extract_nested_table(&cell_without).is_none());
+    }
+
+    #[test]
+    fn test_nested_table_cell_diff_has_nested_diff_field() {
+        let inner_left = create_table("inner-l", vec![
+            create_row("ir1", vec![create_cell("ic1", "X"), create_cell("ic2", "Y")]),
+        ]);
+        let inner_right = create_table("inner-r", vec![
+            create_row("ir1", vec![create_cell("ic1", "X"), create_cell("ic2", "Z")]),
+        ]);
+        let left = create_table("t1", vec![
+            create_row("r1", vec![create_cell_with_nested_table("c1", inner_left)]),
+        ]);
+        let right = create_table("t2", vec![
+            create_row("r1", vec![create_cell_with_nested_table("c1", inner_right)]),
+        ]);
+
+        let result = compare_tables(&left, &right);
+        // Serialize and deserialize to verify JSON structure
+        let json = serde_json::to_string(&result).expect("Should serialize");
+        let parsed: serde_json::Value = serde_json::from_str(&json).expect("Should parse JSON");
+        // The cell diff should contain nested_table_diff
+        let cell_diffs = parsed["cell_diffs"].as_array().unwrap();
+        assert!(cell_diffs.iter().any(|cd| cd["nested_table_diff"].is_object()),
+            "JSON should contain nested_table_diff for cells with nested tables");
     }
 
 }
