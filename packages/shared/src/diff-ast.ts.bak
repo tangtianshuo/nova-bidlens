@@ -1,5 +1,4 @@
 import type { TableDiffResult } from './table-diff.js';
-import type { FormatDiffResult } from './format-diff.js';
 
 export type MatchType = 'identical' | 'modified' | 'added' | 'deleted' | 'moved' | 'split' | 'merged' | 'uncertain';
 
@@ -9,8 +8,6 @@ export interface TextDiffToken {
 }
 
 export interface DiffItem {
-  // Format diff support
-  formatDiff?: FormatDiffResult;
   matchId: string;
   matchType: MatchType;
   confidence: number;
@@ -69,4 +66,3 @@ export function isTraceableDiffItem(item: DiffItem): boolean {
 export function isTableDiffItem(item: DiffItem): boolean {
   return item.blockType === 'table' && item.tableDiff !== undefined;
 }
-

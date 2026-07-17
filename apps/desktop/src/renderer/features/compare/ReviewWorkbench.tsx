@@ -1,4 +1,5 @@
 import type { CompareResult, DiffItem } from '@bidlens/shared';
+import { FormatDiffPanel } from '../../components/FormatDiffPanel';
 import { isTableDiffItem } from '@bidlens/shared';
 import { useMemo, useState } from 'react';
 import { TableDiffView } from '../../components/TableDiffView';
@@ -10,6 +11,11 @@ export function ReviewWorkbench({ result }: { result: CompareResult }) {
   const handleCellClick = (position: [number, number]) => {
     console.log('Cell clicked:', position);
     // Could implement navigation to specific cell in detail panel
+  };
+
+  const handleJumpToPosition = (position: string) => {
+    console.log('Jump to position:', position);
+    // Could implement navigation to specific format position
   };
 
   return (
@@ -36,6 +42,9 @@ export function ReviewWorkbench({ result }: { result: CompareResult }) {
             {item.blockType === 'table' && (
               <span style={{ marginLeft: '4px', fontSize: '12px', color: '#666' }}>📊</span>
             )}
+            {item.formatDiff?.hasChanges && (
+              <span style={{ marginLeft: '4px', fontSize: '12px', color: '#007bff' }}>🎨</span>
+            )}
             <span style={{ float: 'right' }}>{item.confidence.toFixed(2)}</span>
           </button>
         ))}
@@ -52,8 +61,8 @@ export function ReviewWorkbench({ result }: { result: CompareResult }) {
         )}
       </section>
 
-      <aside style={{ borderLeft: '1px solid #ddd', padding: 16 }}>
-        {selected ? <DetailPanel item={selected} /> : <p>没有差异</p>}
+      <aside style={{ borderLeft: '1px solid #ddd', padding: 16, overflow: 'auto' }}>
+        {selected ? <DetailPanel item={selected} onJumpToPosition={handleJumpToPosition} /> : <p>没有差异</p>}
       </aside>
     </main>
   );
@@ -83,7 +92,7 @@ function DocumentPane({ title, text }: { title: string; text: string }) {
   );
 }
 
-function DetailPanel({ item }: { item: DiffItem }) {
+function DetailPanel({ item, onJumpToPosition }: { item: DiffItem; onJumpToPosition?: (position: string) => void }) {
   const isTable = isTableDiffItem(item);
 
   return (
@@ -93,6 +102,12 @@ function DetailPanel({ item }: { item: DiffItem }) {
       <p>confidence {item.confidence.toFixed(2)}</p>
       <p>similarity {item.similarity.toFixed(2)}</p>
       <p>{item.summary}</p>
+
+      {item.formatDiff && (
+        <div style={{ marginTop: '16px' }}>
+          <FormatDiffPanel formatDiff={item.formatDiff} onJumpToPosition={onJumpToPosition} />
+        </div>
+      )}
 
       {isTable && item.tableDiff && (
         <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
