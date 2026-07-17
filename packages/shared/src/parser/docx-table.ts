@@ -1,4 +1,5 @@
-import { TableNode } from '../document-ast.js';
+import { TableNode } from "../document-ast.js";
+import { ParagraphFormat, extractParagraphFormat } from "./docx-format.js";
 
 /** Maximum nesting depth for tables (to prevent infinite recursion) */
 export const MAX_NESTED_TABLE_DEPTH = 3;
@@ -29,6 +30,8 @@ export interface ParsedCell {
   isPlaceholder?: boolean;
   /** 嵌套表格（单元格内包含的子表格） */
   nestedTable?: ParsedTable;
+  /** 段落格式 */
+  paragraphFormat?: ParagraphFormat;
 }
 
 export interface TableProperties {
@@ -189,6 +192,10 @@ function parseCell(
     content = extractTextContent(cellElement);
   }
   
+  // 提取段落格式（从第一个p元素）
+  const paragraphElement = findFirstParagraph(cellElement);
+  const paragraphFormat = paragraphElement ? extractParagraphFormat(paragraphElement) : undefined;
+  
   return {
     id: cellId,
     content,
@@ -196,7 +203,25 @@ function parseCell(
     rowSpan: rowSpan ? parseInt(rowSpan, 10) : undefined,
     properties,
     nestedTable,
+    paragraphFormat,
   };
+}
+
+/**
+ * 在单元格中查找第一个段落元素
+ */
+function findFirstParagraph(element: HtmlElement): HtmlElement | undefined {
+  for (const child of element.children) {
+    if (child.tagName === 'p') {
+      return child;
+    }
+  }
+  // 递归查找更深层次
+  for (const child of element.children) {
+    const found = findFirstParagraph(child);
+    if (found) return found;
+  }
+  return undefined;
 }
 
 /**
@@ -426,3 +451,6 @@ export function convertToTableNode(parsedTable: ParsedTable): TableNode {
     pageEnd: null
   };
 }
+
+
+

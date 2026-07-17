@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { extractTextFormat, extractRunNodes, TextFormat, RunNode } from './docx-format.js';
+import { describe, expect, it } from "vitest";
+import { extractTextFormat, extractRunNodes, extractParagraphFormat, TextFormat, RunNode, ParagraphFormat } from "./docx-format.js";
 
 // 模拟HTML元素
 function createHtmlElement(
@@ -341,5 +341,168 @@ describe('extractRunNodes', () => {
     expect(runs[3].text).toBe('italic');
     expect(runs[3].format.italic).toBe(true);
     expect(runs[4].text).toBe(' text.');
+  });
+});
+
+describe('extractParagraphFormat', () => {
+  it('should extract left alignment', () => {
+    const element = createHtmlElement('p', {
+      style: 'text-align: left;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.alignment).toBe('left');
+  });
+
+  it('should extract center alignment', () => {
+    const element = createHtmlElement('p', {
+      style: 'text-align: center;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.alignment).toBe('center');
+  });
+
+  it('should extract right alignment', () => {
+    const element = createHtmlElement('p', {
+      style: 'text-align: right;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.alignment).toBe('right');
+  });
+
+  it('should extract justify alignment', () => {
+    const element = createHtmlElement('p', {
+      style: 'text-align: justify;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.alignment).toBe('justify');
+  });
+
+  it('should extract margin-left in pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'margin-left: 24pt;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.indentLeft).toBe(24);
+  });
+
+  it('should convert margin-left from px to pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'margin-left: 32px;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.indentLeft).toBe(24); // 32 * 0.75 = 24
+  });
+
+  it('should extract margin-right in pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'margin-right: 12pt;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.indentRight).toBe(12);
+  });
+
+  it('should convert margin-right from px to pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'margin-right: 16px;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.indentRight).toBe(12); // 16 * 0.75 = 12
+  });
+
+  it('should extract text-indent in pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'text-indent: 24pt;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.indentFirstLine).toBe(24);
+  });
+
+  it('should convert text-indent from px to pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'text-indent: 32px;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.indentFirstLine).toBe(24); // 32 * 0.75 = 24
+  });
+
+  it('should extract line-height in pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'line-height: 18pt;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.lineSpacing).toBe(18);
+  });
+
+  it('should convert line-height from px to pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'line-height: 24px;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.lineSpacing).toBe(18); // 24 * 0.75 = 18
+  });
+
+  it('should extract line-height without unit', () => {
+    const element = createHtmlElement('p', {
+      style: 'line-height: 1.5;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.lineSpacing).toBe(1.5);
+  });
+
+  it('should extract margin-top in pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'margin-top: 12pt;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.spaceBefore).toBe(12);
+  });
+
+  it('should convert margin-top from px to pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'margin-top: 16px;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.spaceBefore).toBe(12); // 16 * 0.75 = 12
+  });
+
+  it('should extract margin-bottom in pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'margin-bottom: 12pt;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.spaceAfter).toBe(12);
+  });
+
+  it('should convert margin-bottom from px to pt', () => {
+    const element = createHtmlElement('p', {
+      style: 'margin-bottom: 16px;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.spaceAfter).toBe(12); // 16 * 0.75 = 12
+  });
+
+  it('should extract multiple paragraph formats', () => {
+    const element = createHtmlElement('p', {
+      style: 'text-align: center; margin-left: 24pt; text-indent: 24pt; line-height: 18pt; margin-top: 12pt; margin-bottom: 12pt;'
+    });
+    const format = extractParagraphFormat(element);
+    expect(format.alignment).toBe('center');
+    expect(format.indentLeft).toBe(24);
+    expect(format.indentFirstLine).toBe(24);
+    expect(format.lineSpacing).toBe(18);
+    expect(format.spaceBefore).toBe(12);
+    expect(format.spaceAfter).toBe(12);
+  });
+
+  it('should return empty object for no style', () => {
+    const element = createHtmlElement('p');
+    const format = extractParagraphFormat(element);
+    expect(format).toEqual({});
+  });
+
+  it('should handle empty style string', () => {
+    const element = createHtmlElement('p', { style: '' });
+    const format = extractParagraphFormat(element);
+    expect(format).toEqual({});
   });
 });

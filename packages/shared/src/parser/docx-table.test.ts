@@ -553,3 +553,133 @@ describe('Nested Table Support', () => {
     expect(l3.rows[0].cells[0].nestedTable).toBeUndefined();
   });
 });
+
+describe('parseDocxTable with paragraph format', () => {
+  it('should extract paragraph format from cell with p element', () => {
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [
+            createHtmlElement('p', { style: 'text-align: center; margin-left: 24pt;' }, [], 'Centered text')
+          ])
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    expect(result.rows[0].cells[0].paragraphFormat).toBeDefined();
+    expect(result.rows[0].cells[0].paragraphFormat?.alignment).toBe('center');
+    expect(result.rows[0].cells[0].paragraphFormat?.indentLeft).toBe(24);
+  });
+
+  it('should extract paragraph format with multiple styles', () => {
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [
+            createHtmlElement('p', { 
+              style: 'text-align: justify; margin-left: 24pt; text-indent: 24pt; line-height: 18pt; margin-top: 12pt; margin-bottom: 12pt;' 
+            }, [], 'Formatted text')
+          ])
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    expect(result.rows[0].cells[0].paragraphFormat).toBeDefined();
+    expect(result.rows[0].cells[0].paragraphFormat?.alignment).toBe('justify');
+    expect(result.rows[0].cells[0].paragraphFormat?.indentLeft).toBe(24);
+    expect(result.rows[0].cells[0].paragraphFormat?.indentFirstLine).toBe(24);
+    expect(result.rows[0].cells[0].paragraphFormat?.lineSpacing).toBe(18);
+    expect(result.rows[0].cells[0].paragraphFormat?.spaceBefore).toBe(12);
+    expect(result.rows[0].cells[0].paragraphFormat?.spaceAfter).toBe(12);
+  });
+
+  it('should return undefined paragraph format when no p element', () => {
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [], 'Plain text without p element')
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    expect(result.rows[0].cells[0].paragraphFormat).toBeUndefined();
+  });
+
+  it('should extract paragraph format from first p element only', () => {
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [
+            createHtmlElement('p', { style: 'text-align: left;' }, [], 'First paragraph'),
+            createHtmlElement('p', { style: 'text-align: right;' }, [], 'Second paragraph')
+          ])
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    expect(result.rows[0].cells[0].paragraphFormat).toBeDefined();
+    expect(result.rows[0].cells[0].paragraphFormat?.alignment).toBe('left');
+  });
+
+  it('should extract paragraph format from nested p element', () => {
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [
+            createHtmlElement('div', {}, [
+              createHtmlElement('p', { style: 'text-align: center; margin-left: 48pt;' }, [], 'Nested paragraph')
+            ])
+          ])
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    expect(result.rows[0].cells[0].paragraphFormat).toBeDefined();
+    expect(result.rows[0].cells[0].paragraphFormat?.alignment).toBe('center');
+    expect(result.rows[0].cells[0].paragraphFormat?.indentLeft).toBe(48);
+  });
+
+  it('should handle cell with no style on p element', () => {
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [
+            createHtmlElement('p', {}, [], 'Text without style')
+          ])
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    expect(result.rows[0].cells[0].paragraphFormat).toBeDefined();
+    expect(result.rows[0].cells[0].paragraphFormat).toEqual({});
+  });
+
+  it('should handle multiple cells with different paragraph formats', () => {
+    const table = createHtmlElement('table', {}, [
+      createHtmlElement('tbody', {}, [
+        createHtmlElement('tr', {}, [
+          createHtmlElement('td', {}, [
+            createHtmlElement('p', { style: 'text-align: left;' }, [], 'Left')
+          ]),
+          createHtmlElement('td', {}, [
+            createHtmlElement('p', { style: 'text-align: center;' }, [], 'Center')
+          ]),
+          createHtmlElement('td', {}, [
+            createHtmlElement('p', { style: 'text-align: right;' }, [], 'Right')
+          ])
+        ])
+      ])
+    ]);
+
+    const result = parseDocxTable(table);
+    expect(result.rows[0].cells[0].paragraphFormat?.alignment).toBe('left');
+    expect(result.rows[0].cells[1].paragraphFormat?.alignment).toBe('center');
+    expect(result.rows[0].cells[2].paragraphFormat?.alignment).toBe('right');
+  });
+});
