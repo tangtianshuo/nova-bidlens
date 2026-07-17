@@ -55,6 +55,66 @@ impl RunNode {
 }
 
 // ============================================================================
+// Comments
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Comment {
+    pub id: String,
+    pub author: String,
+    pub date: String,
+    pub content: String,
+    pub range: CommentRange,
+    pub replies: Vec<Comment>,
+    pub resolved: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CommentRange {
+    pub start_node_id: String,
+    pub start_offset: usize,
+    pub end_node_id: String,
+    pub end_offset: usize,
+}
+
+// ============================================================================
+// Revisions
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Revision {
+    pub id: String,
+    pub author: String,
+    pub date: String,
+    pub revision_type: RevisionType,
+    pub content: RevisionContent,
+    pub accepted: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum RevisionType {
+    Insert,
+    Delete,
+    FormatChange,
+    MoveFrom,
+    MoveTo,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RevisionContent {
+    pub text: String,
+    pub format: Option<TextFormat>,
+    pub position: RevisionPosition,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct RevisionPosition {
+    pub node_id: String,
+    pub offset: usize,
+}
+
+// ============================================================================
 // Document AST
 // ============================================================================
 
@@ -67,6 +127,8 @@ pub struct DocumentAst {
     pub word_count: usize,
     pub parser_version: String,
     pub blocks: Vec<BlockNode>,
+    pub comments: Vec<Comment>,
+    pub revisions: Vec<Revision>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -373,6 +435,8 @@ mod tests {
                 }),
                 BlockNode::Paragraph(simple_paragraph("p-2", "Second paragraph")),
             ],
+            comments: vec![],
+            revisions: vec![],
         };
 
         let paras = paragraphs(&doc);
@@ -490,6 +554,8 @@ mod tests {
                 }),
                 BlockNode::Paragraph(paragraph_with_pages("p-2", "Conclusion", 3, 3)),
             ],
+            comments: vec![],
+            revisions: vec![],
         };
 
         // Serialize the entire document
@@ -582,5 +648,531 @@ mod tests {
         let deserialized: TextFormat = serde_json::from_str(&json).unwrap();
         assert_eq!(format, deserialized);
     }
-}
 
+    // ============================================================================
+    // Comment Tests
+    // ============================================================================
+
+    #[test]
+    fn test_comment_serialization_roundtrip() {
+        let comment = Comment {
+            id: "comment-1".to_string(),
+            author: "John Doe".to_string(),
+            date: "2025-01-15T10:30:00Z".to_string(),
+            content: "This section needs clarification.".to_string(),
+            range: CommentRange {
+                start_node_id: "run-1".to_string(),
+                start_offset: 10,
+                end_node_id: "run-2".to_string(),
+                end_offset: 5,
+            },
+            replies: vec![],
+            resolved: false,
+        };
+
+        let json = serde_json::to_string_pretty(&comment).expect("Failed to serialize Comment");
+        let deserialized: Comment = serde_json::from_str(&json).expect("Failed to deserialize Comment");
+        assert_eq!(comment, deserialized);
+    }
+
+    #[test]
+    fn test_comment_with_replies() {
+        let comment = Comment {
+            id: "comment-1".to_string(),
+            author: "Alice".to_string(),
+            date: "2025-01-15T10:30:00Z".to_string(),
+            content: "Please review this section.".to_string(),
+            range: CommentRange {
+                start_node_id: "p-1".to_string(),
+                start_offset: 0,
+                end_node_id: "p-1".to_string(),
+                end_offset: 50,
+            },
+            replies: vec![
+                Comment {
+                    id: "reply-1".to_string(),
+                    author: "Bob".to_string(),
+                    date: "2025-01-15T11:00:00Z".to_string(),
+                    content: "Looks good to me.".to_string(),
+                    range: CommentRange {
+                        start_node_id: "p-1".to_string(),
+                        start_offset: 0,
+                        end_node_id: "p-1".to_string(),
+                        end_offset: 50,
+                    },
+                    replies: vec![],
+                    resolved: false,
+                },
+                Comment {
+                    id: "reply-2".to_string(),
+                    author: "Alice".to_string(),
+                    date: "2025-01-15T11:15:00Z".to_string(),
+                    content: "Thanks! I'll mark as resolved.".to_string(),
+                    range: CommentRange {
+                        start_node_id: "p-1".to_string(),
+                        start_offset: 0,
+                        end_node_id: "p-1".to_string(),
+                        end_offset: 50,
+                    },
+                    replies: vec![],
+                    resolved: false,
+                },
+            ],
+            resolved: true,
+        };
+
+        let json = serde_json::to_string_pretty(&comment).expect("Failed to serialize Comment with replies");
+        let deserialized: Comment = serde_json::from_str(&json).expect("Failed to deserialize Comment with replies");
+        assert_eq!(comment, deserialized);
+        assert_eq!(deserialized.replies.len(), 2);
+        assert_eq!(deserialized.replies[0].author, "Bob");
+        assert_eq!(deserialized.replies[1].author, "Alice");
+        assert!(deserialized.resolved);
+    }
+
+    #[test]
+    fn test_comment_range_serialization() {
+        let range = CommentRange {
+            start_node_id: "run-1".to_string(),
+            start_offset: 0,
+            end_node_id: "run-3".to_string(),
+            end_offset: 15,
+        };
+
+        let json = serde_json::to_string(&range).unwrap();
+        let deserialized: CommentRange = serde_json::from_str(&json).unwrap();
+        assert_eq!(range, deserialized);
+    }
+
+    #[test]
+    fn test_nested_comment_replies() {
+        // Test deeply nested replies (comment -> reply -> reply-to-reply)
+        let deep_reply = Comment {
+            id: "deep-reply".to_string(),
+            author: "Charlie".to_string(),
+            date: "2025-01-15T12:00:00Z".to_string(),
+            content: "Agreed with the above.".to_string(),
+            range: CommentRange {
+                start_node_id: "p-1".to_string(),
+                start_offset: 0,
+                end_node_id: "p-1".to_string(),
+                end_offset: 50,
+            },
+            replies: vec![],
+            resolved: false,
+        };
+
+        let reply = Comment {
+            id: "reply-1".to_string(),
+            author: "Bob".to_string(),
+            date: "2025-01-15T11:00:00Z".to_string(),
+            content: "Good point.".to_string(),
+            range: CommentRange {
+                start_node_id: "p-1".to_string(),
+                start_offset: 0,
+                end_node_id: "p-1".to_string(),
+                end_offset: 50,
+            },
+            replies: vec![deep_reply],
+            resolved: false,
+        };
+
+        let comment = Comment {
+            id: "comment-1".to_string(),
+            author: "Alice".to_string(),
+            date: "2025-01-15T10:30:00Z".to_string(),
+            content: "Consider this approach.".to_string(),
+            range: CommentRange {
+                start_node_id: "p-1".to_string(),
+                start_offset: 0,
+                end_node_id: "p-1".to_string(),
+                end_offset: 50,
+            },
+            replies: vec![reply],
+            resolved: false,
+        };
+
+        let json = serde_json::to_string_pretty(&comment).unwrap();
+        let deserialized: Comment = serde_json::from_str(&json).unwrap();
+        assert_eq!(comment, deserialized);
+        assert_eq!(deserialized.replies[0].replies[0].id, "deep-reply");
+    }
+
+    // ============================================================================
+    // Revision Tests
+    // ============================================================================
+
+    #[test]
+    fn test_revision_type_serialization() {
+        let cases = vec![
+            (RevisionType::Insert, r#""insert""#),
+            (RevisionType::Delete, r#""delete""#),
+            (RevisionType::FormatChange, r#""format_change""#),
+            (RevisionType::MoveFrom, r#""move_from""#),
+            (RevisionType::MoveTo, r#""move_to""#),
+        ];
+
+        for (rev_type, expected) in cases {
+            let json = serde_json::to_string(&rev_type).unwrap();
+            assert_eq!(json, expected);
+
+            let deserialized: RevisionType = serde_json::from_str(&json).unwrap();
+            assert_eq!(rev_type, deserialized);
+        }
+    }
+
+    #[test]
+    fn test_revision_serialization_roundtrip() {
+        let revision = Revision {
+            id: "rev-1".to_string(),
+            author: "Jane Smith".to_string(),
+            date: "2025-01-15T14:00:00Z".to_string(),
+            revision_type: RevisionType::Insert,
+            content: RevisionContent {
+                text: "new text here".to_string(),
+                format: Some(TextFormat {
+                    bold: Some(true),
+                    italic: None,
+                    underline: None,
+                    font_family: None,
+                    font_size: None,
+                    color: None,
+                    background_color: None,
+                    strikethrough: None,
+                }),
+                position: RevisionPosition {
+                    node_id: "run-1".to_string(),
+                    offset: 10,
+                },
+            },
+            accepted: None,
+        };
+
+        let json = serde_json::to_string_pretty(&revision).expect("Failed to serialize Revision");
+        let deserialized: Revision = serde_json::from_str(&json).expect("Failed to deserialize Revision");
+        assert_eq!(revision, deserialized);
+    }
+
+    #[test]
+    fn test_revision_accepted_state() {
+        // Test revision that is accepted
+        let accepted_revision = Revision {
+            id: "rev-accepted".to_string(),
+            author: "Alice".to_string(),
+            date: "2025-01-15T14:00:00Z".to_string(),
+            revision_type: RevisionType::Insert,
+            content: RevisionContent {
+                text: "accepted text".to_string(),
+                format: None,
+                position: RevisionPosition {
+                    node_id: "p-1".to_string(),
+                    offset: 5,
+                },
+            },
+            accepted: Some(true),
+        };
+
+        let json = serde_json::to_string(&accepted_revision).unwrap();
+        let deserialized: Revision = serde_json::from_str(&json).unwrap();
+        assert_eq!(accepted_revision, deserialized);
+        assert_eq!(deserialized.accepted, Some(true));
+
+        // Test revision that is rejected
+        let rejected_revision = Revision {
+            id: "rev-rejected".to_string(),
+            author: "Bob".to_string(),
+            date: "2025-01-15T15:00:00Z".to_string(),
+            revision_type: RevisionType::Delete,
+            content: RevisionContent {
+                text: "deleted text".to_string(),
+                format: None,
+                position: RevisionPosition {
+                    node_id: "p-2".to_string(),
+                    offset: 0,
+                },
+            },
+            accepted: Some(false),
+        };
+
+        let json = serde_json::to_string(&rejected_revision).unwrap();
+        let deserialized: Revision = serde_json::from_str(&json).unwrap();
+        assert_eq!(rejected_revision, deserialized);
+        assert_eq!(deserialized.accepted, Some(false));
+
+        // Test revision with pending state (None)
+        let pending_revision = Revision {
+            id: "rev-pending".to_string(),
+            author: "Charlie".to_string(),
+            date: "2025-01-15T16:00:00Z".to_string(),
+            revision_type: RevisionType::FormatChange,
+            content: RevisionContent {
+                text: "".to_string(),
+                format: Some(TextFormat {
+                    bold: Some(true),
+                    italic: None,
+                    underline: None,
+                    font_family: None,
+                    font_size: None,
+                    color: None,
+                    background_color: None,
+                    strikethrough: None,
+                }),
+                position: RevisionPosition {
+                    node_id: "run-3".to_string(),
+                    offset: 0,
+                },
+            },
+            accepted: None,
+        };
+
+        let json = serde_json::to_string(&pending_revision).unwrap();
+        let deserialized: Revision = serde_json::from_str(&json).unwrap();
+        assert_eq!(pending_revision, deserialized);
+        assert_eq!(deserialized.accepted, None);
+    }
+
+    #[test]
+    fn test_revision_content_serialization() {
+        let content = RevisionContent {
+            text: "some text".to_string(),
+            format: Some(TextFormat {
+                bold: None,
+                italic: Some(true),
+                underline: None,
+                font_family: Some("Times New Roman".to_string()),
+                font_size: Some(12.0),
+                color: None,
+                background_color: None,
+                strikethrough: None,
+            }),
+            position: RevisionPosition {
+                node_id: "run-1".to_string(),
+                offset: 5,
+            },
+        };
+
+        let json = serde_json::to_string_pretty(&content).unwrap();
+        let deserialized: RevisionContent = serde_json::from_str(&json).unwrap();
+        assert_eq!(content, deserialized);
+    }
+
+    #[test]
+    fn test_revision_position_serialization() {
+        let position = RevisionPosition {
+            node_id: "p-1".to_string(),
+            offset: 42,
+        };
+
+        let json = serde_json::to_string(&position).unwrap();
+        let deserialized: RevisionPosition = serde_json::from_str(&json).unwrap();
+        assert_eq!(position, deserialized);
+    }
+
+    // ============================================================================
+    // Document AST with Comments and Revisions
+    // ============================================================================
+
+    #[test]
+    fn test_document_ast_with_comments_and_revisions() {
+        let doc = DocumentAst {
+            id: "doc-full".to_string(),
+            filename: "document.docx".to_string(),
+            sha256: "abc123".to_string(),
+            page_count: Some(5),
+            word_count: 1000,
+            parser_version: "0.3.0".to_string(),
+            blocks: vec![
+                BlockNode::Paragraph(simple_paragraph("p-1", "Introduction")),
+                BlockNode::Paragraph(simple_paragraph("p-2", "Main content here")),
+                BlockNode::Paragraph(simple_paragraph("p-3", "Conclusion")),
+            ],
+            comments: vec![
+                Comment {
+                    id: "c-1".to_string(),
+                    author: "Reviewer".to_string(),
+                    date: "2025-01-15T10:00:00Z".to_string(),
+                    content: "Please expand this section.".to_string(),
+                    range: CommentRange {
+                        start_node_id: "p-2".to_string(),
+                        start_offset: 0,
+                        end_node_id: "p-2".to_string(),
+                        end_offset: 18,
+                    },
+                    replies: vec![],
+                    resolved: false,
+                },
+            ],
+            revisions: vec![
+                Revision {
+                    id: "r-1".to_string(),
+                    author: "Editor".to_string(),
+                    date: "2025-01-15T11:00:00Z".to_string(),
+                    revision_type: RevisionType::Insert,
+                    content: RevisionContent {
+                        text: "new ".to_string(),
+                        format: None,
+                        position: RevisionPosition {
+                            node_id: "p-2".to_string(),
+                            offset: 0,
+                        },
+                    },
+                    accepted: Some(true),
+                },
+            ],
+        };
+
+        let json = serde_json::to_string_pretty(&doc).expect("Failed to serialize DocumentAst");
+        let deserialized: DocumentAst = serde_json::from_str(&json).expect("Failed to deserialize DocumentAst");
+        assert_eq!(doc, deserialized);
+
+        // Verify comments and revisions are preserved
+        assert_eq!(deserialized.comments.len(), 1);
+        assert_eq!(deserialized.comments[0].author, "Reviewer");
+        assert!(!deserialized.comments[0].resolved);
+
+        assert_eq!(deserialized.revisions.len(), 1);
+        assert_eq!(deserialized.revisions[0].revision_type, RevisionType::Insert);
+        assert_eq!(deserialized.revisions[0].accepted, Some(true));
+    }
+
+    #[test]
+    fn test_document_ast_empty_comments_and_revisions() {
+        let doc = DocumentAst {
+            id: "doc-empty".to_string(),
+            filename: "empty.pdf".to_string(),
+            sha256: "empty123".to_string(),
+            page_count: Some(1),
+            word_count: 10,
+            parser_version: "0.3.0".to_string(),
+            blocks: vec![],
+            comments: vec![],
+            revisions: vec![],
+        };
+
+        let json = serde_json::to_string(&doc).unwrap();
+        let deserialized: DocumentAst = serde_json::from_str(&json).unwrap();
+        assert_eq!(doc, deserialized);
+        assert!(deserialized.comments.is_empty());
+        assert!(deserialized.revisions.is_empty());
+    }
+
+    #[test]
+    fn test_document_ast_multiple_comments_and_revisions() {
+        let doc = DocumentAst {
+            id: "doc-multi".to_string(),
+            filename: "multi.docx".to_string(),
+            sha256: "multi123".to_string(),
+            page_count: Some(10),
+            word_count: 5000,
+            parser_version: "0.3.0".to_string(),
+            blocks: vec![
+                BlockNode::Paragraph(simple_paragraph("p-1", "Content")),
+            ],
+            comments: vec![
+                Comment {
+                    id: "c-1".to_string(),
+                    author: "Alice".to_string(),
+                    date: "2025-01-15T10:00:00Z".to_string(),
+                    content: "First comment".to_string(),
+                    range: CommentRange {
+                        start_node_id: "p-1".to_string(),
+                        start_offset: 0,
+                        end_node_id: "p-1".to_string(),
+                        end_offset: 7,
+                    },
+                    replies: vec![],
+                    resolved: false,
+                },
+                Comment {
+                    id: "c-2".to_string(),
+                    author: "Bob".to_string(),
+                    date: "2025-01-15T11:00:00Z".to_string(),
+                    content: "Second comment".to_string(),
+                    range: CommentRange {
+                        start_node_id: "p-1".to_string(),
+                        start_offset: 0,
+                        end_node_id: "p-1".to_string(),
+                        end_offset: 7,
+                    },
+                    replies: vec![],
+                    resolved: true,
+                },
+            ],
+            revisions: vec![
+                Revision {
+                    id: "r-1".to_string(),
+                    author: "Charlie".to_string(),
+                    date: "2025-01-15T12:00:00Z".to_string(),
+                    revision_type: RevisionType::Insert,
+                    content: RevisionContent {
+                        text: "Added ".to_string(),
+                        format: None,
+                        position: RevisionPosition {
+                            node_id: "p-1".to_string(),
+                            offset: 0,
+                        },
+                    },
+                    accepted: Some(true),
+                },
+                Revision {
+                    id: "r-2".to_string(),
+                    author: "David".to_string(),
+                    date: "2025-01-15T13:00:00Z".to_string(),
+                    revision_type: RevisionType::Delete,
+                    content: RevisionContent {
+                        text: "old".to_string(),
+                        format: None,
+                        position: RevisionPosition {
+                            node_id: "p-1".to_string(),
+                            offset: 10,
+                        },
+                    },
+                    accepted: Some(false),
+                },
+                Revision {
+                    id: "r-3".to_string(),
+                    author: "Eve".to_string(),
+                    date: "2025-01-15T14:00:00Z".to_string(),
+                    revision_type: RevisionType::FormatChange,
+                    content: RevisionContent {
+                        text: "".to_string(),
+                        format: Some(TextFormat {
+                            bold: Some(true),
+                            italic: None,
+                            underline: None,
+                            font_family: None,
+                            font_size: None,
+                            color: None,
+                            background_color: None,
+                            strikethrough: None,
+                        }),
+                        position: RevisionPosition {
+                            node_id: "p-1".to_string(),
+                            offset: 5,
+                        },
+                    },
+                    accepted: None,
+                },
+            ],
+        };
+
+        let json = serde_json::to_string_pretty(&doc).expect("Failed to serialize DocumentAst");
+        let deserialized: DocumentAst = serde_json::from_str(&json).expect("Failed to deserialize DocumentAst");
+        assert_eq!(doc, deserialized);
+
+        // Verify all comments and revisions are preserved
+        assert_eq!(deserialized.comments.len(), 2);
+        assert_eq!(deserialized.comments[0].author, "Alice");
+        assert_eq!(deserialized.comments[1].author, "Bob");
+        assert!(deserialized.comments[1].resolved);
+
+        assert_eq!(deserialized.revisions.len(), 3);
+        assert_eq!(deserialized.revisions[0].revision_type, RevisionType::Insert);
+        assert_eq!(deserialized.revisions[1].revision_type, RevisionType::Delete);
+        assert_eq!(deserialized.revisions[2].revision_type, RevisionType::FormatChange);
+        assert_eq!(deserialized.revisions[0].accepted, Some(true));
+        assert_eq!(deserialized.revisions[1].accepted, Some(false));
+        assert_eq!(deserialized.revisions[2].accepted, None);
+    }
+
+}
