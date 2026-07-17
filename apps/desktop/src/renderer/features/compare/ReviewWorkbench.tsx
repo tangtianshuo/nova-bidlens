@@ -1,10 +1,27 @@
 import type { CompareResult, DiffItem } from '@bidlens/shared';
+import type { ParsedComment } from '@bidlens/shared/src/parser/docx-comments.js';
+import type { ParsedRevision } from '@bidlens/shared/src/parser/docx-revisions.js';
 import { FormatDiffPanel } from '../../components/FormatDiffPanel';
+import { CommentHighlight } from '../../components/CommentHighlight';
 import { isTableDiffItem } from '@bidlens/shared';
 import { useMemo, useState } from 'react';
 import { TableDiffView } from '../../components/TableDiffView';
 
-export function ReviewWorkbench({ result }: { result: CompareResult }) {
+export interface ReviewWorkbenchProps {
+  result: CompareResult;
+  commentsA?: ParsedComment[];
+  commentsB?: ParsedComment[];
+  revisionsA?: ParsedRevision[];
+  revisionsB?: ParsedRevision[];
+}
+
+export function ReviewWorkbench({ 
+  result, 
+  commentsA = [], 
+  commentsB = [], 
+  revisionsA = [], 
+  revisionsB = [] 
+}: ReviewWorkbenchProps) {
   const [selectedId, setSelectedId] = useState(result.diffAst.items[0]?.matchId ?? '');
   const selected = useMemo(() => result.diffAst.items.find((item) => item.matchId === selectedId) ?? result.diffAst.items[0], [result.diffAst.items, selectedId]);
 
@@ -55,8 +72,18 @@ export function ReviewWorkbench({ result }: { result: CompareResult }) {
           <TableDiffContent item={selected} onCellClick={handleCellClick} />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <DocumentPane title={result.docA.filename} text={selected?.sourceA ?? ''} />
-            <DocumentPane title={result.docB.filename} text={selected?.sourceB ?? ''} />
+            <DocumentPane 
+              title={result.docA.filename} 
+              text={selected?.sourceA ?? ''} 
+              comments={commentsA}
+              revisions={revisionsA}
+            />
+            <DocumentPane 
+              title={result.docB.filename} 
+              text={selected?.sourceB ?? ''} 
+              comments={commentsB}
+              revisions={revisionsB}
+            />
           </div>
         )}
       </section>
@@ -83,11 +110,24 @@ function TableDiffContent({ item, onCellClick }: { item: DiffItem; onCellClick: 
   );
 }
 
-function DocumentPane({ title, text }: { title: string; text: string }) {
+interface DocumentPaneProps {
+  title: string;
+  text: string;
+  comments?: ParsedComment[];
+  revisions?: ParsedRevision[];
+}
+
+function DocumentPane({ title, text, comments = [], revisions = [] }: DocumentPaneProps) {
   return (
     <article>
       <h2 style={{ fontSize: 18 }}>{title}</h2>
-      <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{text}</p>
+      {comments.length > 0 || revisions.length > 0 ? (
+        <CommentHighlight comments={comments} revisions={revisions}>
+          <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{text}</p>
+        </CommentHighlight>
+      ) : (
+        <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{text}</p>
+      )}
     </article>
   );
 }
