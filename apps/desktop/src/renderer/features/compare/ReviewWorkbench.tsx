@@ -1,9 +1,10 @@
-import type { CompareResult, DiffItem } from '@bidlens/shared';
-import type { ParsedComment } from '@bidlens/shared/src/parser/docx-comments.js';
-import type { ParsedRevision } from '@bidlens/shared/src/parser/docx-revisions.js';
+console.log('[ReviewWorkbench] Module loaded');
+
+import type { CompareResult, DiffItem } from '@bidlens/shared/types-only';
+import type { ParsedComment, ParsedRevision } from '@bidlens/shared/types-only';
 import { FormatDiffPanel } from '../../components/FormatDiffPanel';
 import { CommentHighlight } from '../../components/CommentHighlight';
-import { isTableDiffItem } from '@bidlens/shared';
+import { isTableDiffItem } from '@bidlens/shared/types-only';
 import { useMemo, useState } from 'react';
 import { TableDiffView } from '../../components/TableDiffView';
 
@@ -22,17 +23,16 @@ export function ReviewWorkbench({
   revisionsA = [], 
   revisionsB = [] 
 }: ReviewWorkbenchProps) {
+  console.log('[ReviewWorkbench] Rendering with result:', result);
   const [selectedId, setSelectedId] = useState(result.diffAst.items[0]?.matchId ?? '');
   const selected = useMemo(() => result.diffAst.items.find((item) => item.matchId === selectedId) ?? result.diffAst.items[0], [result.diffAst.items, selectedId]);
 
   const handleCellClick = (position: [number, number]) => {
     console.log('Cell clicked:', position);
-    // Could implement navigation to specific cell in detail panel
   };
 
   const handleJumpToPosition = (position: string) => {
     console.log('Jump to position:', position);
-    // Could implement navigation to specific format position
   };
 
   return (

@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+/* ============================================================
+   BidLens Swiss Minimalism Design Tokens
+   Philosophy: Clean, restrained, functional. Information hierarchy
+   via type size, weight, and neutral color depth.
+   ============================================================ */
+
+@theme {
+  /* Typography - Offline system fonts, zero letter spacing */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
+
+  /* Border radius - restrained */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* Shadows - only for true overlays */
+  --shadow-overlay: 0 4px 24px rgba(0, 0, 0, 0.12);
+  --shadow-dropdown: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ============================================================
+   Light Theme (default)
+   ============================================================ */
+:root {
+  /* Backgrounds */
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f8f9fa;
+  --color-bg-muted: #f1f3f5;
+
+  /* Borders */
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+
+  /* Text */
+  --color-text: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+
+  /* Accent */
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-light: #dbeafe;
+
+  /* Semantic diff colors */
+  --color-added: #16a34a;
+  --color-added-bg: #dcfce7;
+  --color-deleted: #dc2626;
+  --color-deleted-bg: #fee2e2;
+  --color-modified: #d97706;
+  --color-modified-bg: #fef3c7;
+  --color-uncertain: #6b7280;
+
+  /* Focus ring */
+  --color-ring: #2563eb;
+}
+
+/* ============================================================
+   Dark Theme (charcoal, not blue-black)
+   ============================================================ */
+:root[data-theme="dark"] {
+  --color-bg: #1a1a1a;
+  --color-bg-subtle: #222222;
+  --color-bg-muted: #2a2a2a;
+  --color-border: #333333;
+  --color-border-strong: #444444;
+  --color-text: #f3f4f6;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+  --color-accent: #3b82f6;
+  --color-accent-hover: #2563eb;
+  --color-accent-light: #1e3a5f;
+  --color-added: #22c55e;
+  --color-added-bg: #14532d;
+  --color-deleted: #ef4444;
+  --color-deleted-bg: #7f1d1d;
+  --color-modified: #f59e0b;
+  --color-modified-bg: #78350f;
+  --color-uncertain: #9ca3af;
+  --color-ring: #3b82f6;
+}
+
+/* ============================================================
+   Base styles
+   ============================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+}
+
+/* ============================================================
+   Focus styles - visible keyboard focus ring
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   Scrollbar styles (subtle, functional)
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-muted);
+}

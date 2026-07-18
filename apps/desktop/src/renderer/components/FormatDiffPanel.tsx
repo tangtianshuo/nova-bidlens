@@ -1,4 +1,4 @@
-import type { FormatDiffResult, TextFormatChange, ParagraphFormatChange } from '@bidlens/shared';
+import type { FormatDiffResult, TextFormatChange, ParagraphFormatChange } from '@bidlens/shared/types-only';
 import { useState } from 'react';
 
 export interface FormatDiffPanelProps {
@@ -254,3 +254,4 @@ export function FormatDiffPanel({ formatDiff, onJumpToPosition }: FormatDiffPane
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import type { BidLensApi } from '@bidlens/shared';
+import type { BidLensApi } from '@bidlens/shared/types-only';
 
 declare global {
   interface Window {

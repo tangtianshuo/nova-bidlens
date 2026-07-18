@@ -1,4 +1,4 @@
-import type { TableDiffResult, StructuralChange, TableNode, TableNodeForDiff, CellDiff } from '@bidlens/shared';
+import type { TableDiffResult, StructuralChange, TableNode, TableNodeForDiff, CellDiff } from '@bidlens/shared/types-only';
 import { useMemo } from 'react';
 import { TableCellView } from './TableCellView';
 
@@ -239,3 +239,4 @@ function formatStructuralChange(change: StructuralChange): string {
       return '';
   }
 }
+

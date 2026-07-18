@@ -1,7 +1,9 @@
-use document_ast::{paragraphs, DocumentAst};
+use document_ast::{DocumentAst, paragraphs};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use uuid::Uuid;
+
+pub mod optimized;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct CompareOptions {
@@ -55,18 +57,39 @@ pub fn compare_documents(
     right: &DocumentAst,
     options: CompareOptions,
 ) -> DiffAst {
+    compare_documents_cancellable(left, right, options, || false)
+        .expect("non-cancellable comparison cannot be cancelled")
+}
+
+pub fn compare_documents_cancellable<F>(
+    left: &DocumentAst,
+    right: &DocumentAst,
+    options: CompareOptions,
+    mut is_cancelled: F,
+) -> Option<DiffAst>
+where
+    F: FnMut() -> bool,
+{
     let left_nodes = paragraphs(left);
     let right_nodes = paragraphs(right);
     let mut used_right = HashSet::new();
     let mut items = Vec::new();
 
     for (left_id, left_text) in &left_nodes {
+        if is_cancelled() {
+            return None;
+        }
         let best = right_nodes
             .iter()
             .enumerate()
             .filter(|(idx, _)| !used_right.contains(idx))
             .map(|(idx, (right_id, right_text))| {
-                (idx, right_id.as_str(), right_text.as_str(), jaccard(left_text.as_str(), right_text.as_str()))
+                (
+                    idx,
+                    right_id.as_str(),
+                    right_text.as_str(),
+                    jaccard(left_text.as_str(), right_text.as_str()),
+                )
             })
             .max_by(|a, b| a.3.total_cmp(&b.3));
 
@@ -105,6 +128,9 @@ pub fn compare_documents(
     }
 
     for (idx, (right_id, right_text)) in right_nodes.iter().enumerate() {
+        if is_cancelled() {
+            return None;
+        }
         if !used_right.contains(&idx) {
             items.push(DiffItem {
                 match_id: Uuid::new_v4().to_string(),
@@ -120,12 +146,12 @@ pub fn compare_documents(
         }
     }
 
-    DiffAst {
+    Some(DiffAst {
         task_id: Uuid::new_v4().to_string(),
         doc_a_id: left.id.clone(),
         doc_b_id: right.id.clone(),
         items,
-    }
+    })
 }
 
 fn jaccard(left: &str, right: &str) -> f32 {
@@ -144,7 +170,7 @@ fn jaccard(left: &str, right: &str) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use document_ast::{simple_paragraph, BlockNode, DocumentAst};
+    use document_ast::{BlockNode, DocumentAst, simple_paragraph};
 
     #[test]
     fn detects_modified_added_and_deleted_chunks() {
@@ -152,9 +178,21 @@ mod tests {
         let right = doc("b", &["投标人须提供营业执照", "新增条款"]);
         let diff = compare_documents(&left, &right, CompareOptions::default());
 
-        assert!(diff.items.iter().any(|item| item.match_type == MatchType::Modified));
-        assert!(diff.items.iter().any(|item| item.match_type == MatchType::Added));
-        assert!(diff.items.iter().any(|item| item.match_type == MatchType::Deleted));
+        assert!(
+            diff.items
+                .iter()
+                .any(|item| item.match_type == MatchType::Modified)
+        );
+        assert!(
+            diff.items
+                .iter()
+                .any(|item| item.match_type == MatchType::Added)
+        );
+        assert!(
+            diff.items
+                .iter()
+                .any(|item| item.match_type == MatchType::Deleted)
+        );
     }
 
     fn doc(id: &str, texts: &[&str]) -> DocumentAst {
@@ -165,11 +203,15 @@ mod tests {
             page_count: None,
             word_count: texts.iter().map(|text| text.chars().count()).sum(),
             parser_version: "test".to_string(),
-            blocks: texts.iter().enumerate().map(|(idx, text)| {
-                BlockNode::Paragraph(simple_paragraph(&format!("{id}-p{idx}"), text))
-            }).collect()
+            blocks: texts
+                .iter()
+                .enumerate()
+                .map(|(idx, text)| {
+                    BlockNode::Paragraph(simple_paragraph(&format!("{id}-p{idx}"), text))
+                })
+                .collect(),
+            comments: vec![],
+            revisions: vec![],
         }
     }
 }
-
-

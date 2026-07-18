@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Word 修订解析模块
  * 解析 OOXML 格式中的修订（track changes）
  * 
@@ -323,7 +323,7 @@ function extractFormatFromContent(xml: string): TextFormat | undefined {
   return parseFormatProperties(rprMatch[1]);
 }
 
-function parseFormatProperties(rprXml: string): TextFormat {
+function parseFormatProperties(rprXml: string): TextFormat | undefined {
   const format: TextFormat = {};
   
   // 粗体 - 检查 w:b 元素是否存在

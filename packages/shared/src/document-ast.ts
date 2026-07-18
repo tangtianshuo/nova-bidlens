@@ -8,6 +8,8 @@ export interface DocumentAst {
   wordCount: number;
   parserVersion: string;
   blocks: BlockNode[];
+  comments?: Comment[];
+  revisions?: Revision[];
 }
 
 export type BlockNode = ParagraphNode | SectionNode | ListNode | TableNode;
@@ -45,4 +47,37 @@ export interface TableNode {
   rows: string[][];
   pageStart: number | null;
   pageEnd: number | null;
+}
+
+export interface Comment {
+  id: string;
+  author: string;
+  date: string;
+  content: string;
+  range: CommentRange;
+  replies: Comment[];
+  resolved: boolean;
+}
+
+export interface CommentRange {
+  startNodeId: string;
+  startOffset: number;
+  endNodeId: string;
+  endOffset: number;
+}
+
+export interface Revision {
+  id: string;
+  author: string;
+  date: string;
+  revisionType: 'insert' | 'delete' | 'formatChange' | 'moveFrom' | 'moveTo';
+  content: {
+    text: string;
+    format?: any;
+    position: {
+      nodeId: string;
+      offset: number;
+    };
+  };
+  accepted?: boolean;
 }

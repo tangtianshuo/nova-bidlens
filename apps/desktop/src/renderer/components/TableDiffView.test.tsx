@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TableDiffView } from './TableDiffView';
-import type { TableDiffResult } from '@bidlens/shared';
+import type { TableDiffResult } from '@bidlens/shared/types-only';
 
 describe('TableDiffView', () => {
   const tableA = {
@@ -156,4 +156,5 @@ describe('TableDiffView', () => {
     expect(screen.getByText(/有删除列/)).toBeTruthy();
   });
 });
+
 

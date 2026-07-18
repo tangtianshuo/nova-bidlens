@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { CommentHighlight } from './CommentHighlight';
-import type { ParsedComment } from '@bidlens/shared/src/parser/docx-comments.js';
-import type { ParsedRevision } from '@bidlens/shared/src/parser/docx-revisions.js';
+import type { ParsedComment, ParsedRevision } from '@bidlens/shared/types-only';
 
 // 模拟批注数据
 const mockComments: ParsedComment[] = [
@@ -252,3 +251,4 @@ describe('CommentHighlight', () => {
     }
   });
 });
+

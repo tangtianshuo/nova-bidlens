@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { ParsedComment, CommentRange } from '@bidlens/shared/src/parser/docx-comments.js';
-import type { ParsedRevision } from '@bidlens/shared/src/parser/docx-revisions.js';
+import type { ParsedComment, CommentRange } from '@bidlens/shared/types-only';
+import type { ParsedRevision } from '@bidlens/shared/types-only';
 
 export interface CommentHighlightProps {
   comments: ParsedComment[];
@@ -398,7 +398,8 @@ function extractTextFromChildren(children: React.ReactNode): string {
     return children.map(extractTextFromChildren).join('');
   }
   if (children && typeof children === 'object' && 'props' in children) {
-    return extractTextFromChildren(children.props.children);
+    return extractTextFromChildren((children as any).props.children);
   }
   return '';
 }
+

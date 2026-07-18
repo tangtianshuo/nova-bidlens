@@ -1,0 +1,1025 @@
+<!doctype html>
+<!-- BidLens V0.2.2 UI/UX Prototype v1.0 - Frozen baseline: 2026-07-18 -->
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BidLens V0.2.2 UI/UX Prototype</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-app: #f6f7f9;
+      --bg-panel: #ffffff;
+      --bg-subtle: #f0f2f5;
+      --bg-hover: #e9edf2;
+      --bg-input: #ffffff;
+      --border: #dfe3e8;
+      --border-strong: #c4cbd4;
+      --text: #17202a;
+      --text-2: #4c5968;
+      --text-3: #7c8794;
+      --accent: #315f8f;
+      --accent-hover: #274c73;
+      --accent-soft: #e9eff5;
+      --added-bg: #e5f6ed;
+      --added-border: #a9dbc0;
+      --added-text: #17633b;
+      --deleted-bg: #fce9e8;
+      --deleted-border: #efb7b4;
+      --deleted-text: #9d302c;
+      --modified-bg: #fff4d8;
+      --modified-border: #edd08b;
+      --modified-text: #805b08;
+      --span-bg: #e9efff;
+      --span-border: #b9c8f4;
+      --span-text: #3153a1;
+      --danger: #b43a35;
+      --warning: #9a6800;
+      --success: #24734a;
+      --shadow: 0 8px 24px rgba(25, 34, 45, 0.12);
+      --radius: 4px;
+      --nav-width: 280px;
+      --detail-width: 320px;
+      --font: Arial, "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+      --mono: "Cascadia Mono", "Consolas", monospace;
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg-app: #151719;
+      --bg-panel: #1d2023;
+      --bg-subtle: #25292d;
+      --bg-hover: #2d3237;
+      --bg-input: #202428;
+      --border: #343a40;
+      --border-strong: #505860;
+      --text: #eef1f4;
+      --text-2: #b8c0c8;
+      --text-3: #89939d;
+      --accent: #8baac8;
+      --accent-hover: #a5bdd5;
+      --accent-soft: #26333f;
+      --added-bg: #173a29;
+      --added-border: #2d6949;
+      --added-text: #7bd6a4;
+      --deleted-bg: #442321;
+      --deleted-border: #7f3f3b;
+      --deleted-text: #f0a09a;
+      --modified-bg: #453816;
+      --modified-border: #77632d;
+      --modified-text: #f1ce72;
+      --span-bg: #243255;
+      --span-border: #435a95;
+      --span-text: #a8bdf3;
+      --danger: #f08c86;
+      --warning: #e4bd60;
+      --success: #7bd6a4;
+      --shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      min-width: 960px;
+      min-height: 680px;
+      overflow: hidden;
+      background: var(--bg-app);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      letter-spacing: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, textarea, select { font: inherit; letter-spacing: 0; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    button:disabled { cursor: not-allowed; opacity: 0.5; }
+    .hidden { display: none !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .icon { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+    .icon.sm { width: 15px; height: 15px; }
+    .icon.lg { width: 22px; height: 22px; }
+
+    .app-shell { height: 100%; display: grid; grid-template-rows: 56px minmax(0, 1fr); }
+    .appbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 18px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      z-index: 30;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 190px; }
+    .brand-mark { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 5px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 700; }
+    .brand-name { font-size: 17px; font-weight: 700; }
+    .prototype-tag { padding: 2px 7px; border: 1px solid var(--border); border-radius: 4px; color: var(--text-3); font-size: 11px; }
+    .appbar-nav { display: flex; align-items: center; gap: 4px; }
+    .appbar-spacer { flex: 1; }
+    .protection { display: flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 12px; margin-right: 4px; }
+
+    .btn, .icon-btn {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-panel);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    }
+    .btn:hover, .icon-btn:hover { background: var(--bg-hover); border-color: var(--border-strong); color: var(--text); }
+    .btn { min-height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 6px 12px; font-weight: 600; font-size: 13px; white-space: nowrap; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .btn.danger { color: var(--danger); }
+    .btn.ghost { border-color: transparent; background: transparent; }
+    .btn.active { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); color: var(--accent); }
+    .icon-btn { width: 34px; height: 34px; display: inline-grid; place-items: center; padding: 0; }
+    .icon-btn.ghost { border-color: transparent; background: transparent; }
+    .appbar .btn { min-height: 32px; }
+
+    .view-host { min-height: 0; position: relative; overflow: hidden; }
+    .view { width: 100%; height: 100%; min-height: 0; }
+    .page-scroll { overflow: auto; }
+    .page { max-width: 1120px; min-height: 100%; margin: 0 auto; padding: 34px 36px 28px; display: flex; flex-direction: column; }
+    .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 26px; }
+    .page-title { margin: 0; font-size: 24px; line-height: 1.25; font-weight: 700; }
+    .page-meta { color: var(--text-3); font-size: 12px; margin-top: 5px; }
+
+    .compare-grid { display: grid; grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr); align-items: stretch; gap: 12px; }
+    .file-slot { min-height: 232px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); display: flex; flex-direction: column; overflow: hidden; }
+    .file-slot.dragging { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+    .slot-head { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 16px; border-bottom: 1px solid var(--border); }
+    .slot-role { font-size: 13px; font-weight: 700; }
+    .slot-content { flex: 1; display: flex; align-items: center; gap: 15px; padding: 20px; cursor: pointer; }
+    .file-glyph { width: 48px; height: 58px; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--bg-subtle); color: var(--accent); }
+    .file-info { min-width: 0; flex: 1; }
+    .file-name { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-meta { color: var(--text-3); font-size: 12px; margin-top: 5px; }
+    .file-status { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; font-size: 12px; color: var(--success); }
+    .empty-file { width: 100%; text-align: center; color: var(--text-3); }
+    .empty-file .file-glyph { margin: 0 auto 12px; }
+    .empty-file strong { display: block; color: var(--text); font-size: 14px; }
+    .swap-wrap { display: grid; place-items: center; }
+
+    .capability-band { margin-top: 16px; padding: 14px 16px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg-panel) 72%, transparent); }
+    .band-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .band-label { color: var(--text-2); font-weight: 600; margin-right: 4px; }
+    .chip { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg-panel); color: var(--text-2); font-size: 12px; }
+    .chip.on { border-color: var(--added-border); background: var(--added-bg); color: var(--added-text); }
+    .chip.off { color: var(--text-3); text-decoration: line-through; }
+    .warning-line { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; color: var(--warning); font-size: 12px; }
+    .advanced { margin-top: 18px; border-bottom: 1px solid var(--border); }
+    .advanced-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border: 0; background: transparent; cursor: pointer; font-weight: 600; text-align: left; }
+    .advanced-body { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 4px 0 18px; }
+    .setting-copy strong { display: block; font-size: 13px; }
+    .setting-copy span { display: block; margin-top: 2px; color: var(--text-3); font-size: 12px; }
+    .segmented { display: inline-flex; align-items: center; padding: 3px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg-subtle); }
+    .segment { min-width: 68px; min-height: 30px; padding: 4px 10px; border: 0; border-radius: 4px; background: transparent; color: var(--text-2); cursor: pointer; }
+    .segment.active { background: var(--bg-panel); color: var(--text); font-weight: 600; }
+    .page-actions { margin-top: auto; padding-top: 24px; display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+    .validation-hint { margin-right: auto; color: var(--text-3); font-size: 12px; }
+
+    .processing-page { max-width: 820px; }
+    .task-pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; padding: 14px 0 18px; border-bottom: 1px solid var(--border); }
+    .task-doc { min-width: 0; display: flex; align-items: center; gap: 10px; }
+    .task-doc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .phase-list { list-style: none; padding: 0; margin: 22px 0 0; border-top: 1px solid var(--border); }
+    .phase { min-height: 66px; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+    .phase-indicator { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 50%; color: var(--text-3); }
+    .phase.done .phase-indicator { border-color: var(--added-border); background: var(--added-bg); color: var(--added-text); }
+    .phase.active .phase-indicator { border-color: var(--accent); color: var(--accent); }
+    .phase-name { font-weight: 600; }
+    .phase-desc { color: var(--text-3); font-size: 12px; margin-top: 2px; }
+    .phase-state { color: var(--text-3); font-size: 12px; }
+    .phase.active .phase-state { color: var(--accent); }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .processing-footer { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; }
+    .elapsed { display: inline-flex; align-items: center; gap: 7px; color: var(--text-2); }
+
+    .history-page { max-width: 1240px; }
+    .toolbar { display: flex; align-items: center; gap: 8px; }
+    .searchbox { height: 34px; min-width: 250px; display: flex; align-items: center; gap: 7px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-input); color: var(--text-3); }
+    .searchbox input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); }
+    .history-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .data-table-wrap { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg-panel); overflow: hidden; }
+    .data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .data-table th { height: 38px; padding: 0 12px; text-align: left; color: var(--text-3); font-size: 11px; font-weight: 700; background: var(--bg-subtle); border-bottom: 1px solid var(--border); }
+    .data-table td { height: 64px; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .data-table tr:last-child td { border-bottom: 0; }
+    .data-table tbody tr { cursor: pointer; }
+    .data-table tbody tr:hover { background: var(--bg-hover); }
+    .doc-pair { min-width: 0; }
+    .doc-pair strong, .doc-pair span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .doc-pair span { color: var(--text-3); font-size: 12px; margin-top: 2px; }
+    .status-badge, .diff-badge { display: inline-flex; align-items: center; gap: 5px; min-height: 24px; padding: 2px 7px; border: 1px solid var(--border); border-radius: 5px; font-size: 11px; font-weight: 700; }
+    .status-badge.review { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+    .status-badge.done { background: var(--added-bg); color: var(--added-text); border-color: var(--added-border); }
+    .status-badge.failed { background: var(--deleted-bg); color: var(--deleted-text); border-color: var(--deleted-border); }
+    .progress-mini { display: flex; align-items: center; gap: 8px; }
+    .progress-track { width: 72px; height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); }
+    .row-actions { display: flex; justify-content: flex-end; }
+
+    .workbench { display: grid; grid-template-rows: 50px 46px minmax(0, 1fr); background: var(--bg-app); }
+    .taskbar, .filterbar { display: flex; align-items: center; min-width: 0; padding: 0 14px; background: var(--bg-panel); border-bottom: 1px solid var(--border); }
+    .taskbar { gap: 10px; }
+    .taskbar-title { min-width: 0; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+    .taskbar-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .taskbar-progress { color: var(--text-3); font-size: 12px; padding-left: 8px; border-left: 1px solid var(--border); }
+    .taskbar-spacer { flex: 1; }
+    .filterbar { gap: 7px; overflow: hidden; }
+    .filter-group { display: flex; align-items: center; gap: 4px; }
+    .filter-chip { min-height: 28px; padding: 3px 8px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text-2); cursor: pointer; font-size: 12px; white-space: nowrap; }
+    .filter-chip:hover { background: var(--bg-hover); }
+    .filter-chip.active { border-color: var(--border); background: var(--bg-subtle); color: var(--text); font-weight: 600; }
+    .filter-count { color: var(--text-3); margin-left: 3px; }
+    .filter-divider { width: 1px; height: 22px; background: var(--border); margin: 0 3px; }
+    .result-count { color: var(--text-3); font-size: 12px; white-space: nowrap; }
+    .filterbar .searchbox { min-width: 190px; margin-left: auto; height: 30px; }
+
+    .work-grid { min-height: 0; display: grid; grid-template-columns: var(--nav-width) 5px minmax(560px, 1fr) 5px var(--detail-width); }
+    .panel { min-width: 0; min-height: 0; background: var(--bg-panel); overflow: hidden; }
+    .nav-panel { border-right: 1px solid var(--border); display: grid; grid-template-rows: 42px minmax(0, 1fr); }
+    .detail-panel { border-left: 1px solid var(--border); display: grid; grid-template-rows: 42px 42px minmax(0, 1fr) auto; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 700; }
+    .resizer { background: var(--bg-app); cursor: col-resize; position: relative; }
+    .resizer:hover, .resizer.dragging { background: var(--accent-soft); }
+    .resizer::after { content: ""; position: absolute; width: 1px; height: 34px; background: var(--border-strong); left: 2px; top: calc(50% - 17px); }
+    .diff-list { overflow: auto; padding: 6px; }
+    .diff-item { width: 100%; min-height: 68px; display: grid; grid-template-columns: 4px minmax(0, 1fr) auto; gap: 9px; padding: 8px 8px 8px 6px; border: 1px solid transparent; border-radius: 5px; background: transparent; cursor: pointer; text-align: left; margin-bottom: 3px; }
+    .diff-item:hover { background: var(--bg-hover); }
+    .diff-item.selected { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); }
+    .diff-marker { width: 3px; border-radius: 2px; background: var(--modified-border); }
+    .diff-item.added .diff-marker { background: var(--added-text); }
+    .diff-item.deleted .diff-marker { background: var(--deleted-text); }
+    .diff-item.uncertain .diff-marker { background: var(--warning); }
+    .diff-content { min-width: 0; }
+    .diff-topline { display: flex; align-items: center; gap: 6px; }
+    .diff-badge { min-height: 20px; padding: 0 5px; border-radius: 4px; }
+    .diff-badge.modified { background: var(--modified-bg); color: var(--modified-text); border-color: var(--modified-border); }
+    .diff-badge.added { background: var(--added-bg); color: var(--added-text); border-color: var(--added-border); }
+    .diff-badge.deleted { background: var(--deleted-bg); color: var(--deleted-text); border-color: var(--deleted-border); }
+    .diff-badge.table { background: var(--span-bg); color: var(--span-text); border-color: var(--span-border); }
+    .diff-badge.neutral { background: var(--bg-subtle); color: var(--text-2); }
+    .diff-summary { display: block; margin-top: 5px; color: var(--text-2); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .diff-location { display: block; margin-top: 3px; color: var(--text-3); font-size: 11px; }
+    .diff-flags { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-3); }
+    .diff-flags .important { color: #b27600; fill: currentColor; }
+
+    .viewport { display: grid; grid-template-rows: 42px minmax(0, 1fr); min-width: 0; min-height: 0; background: var(--bg-app); }
+    .viewport-toolbar { display: flex; align-items: center; gap: 8px; padding: 0 10px; border-bottom: 1px solid var(--border); background: var(--bg-panel); }
+    .viewport-title { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 700; }
+    .viewport-body { min-width: 0; min-height: 0; overflow: auto; padding: 16px; }
+    .document-grid { min-height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+    .document-pane { min-width: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); overflow: hidden; }
+    .document-head { height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 12px; border-bottom: 1px solid var(--border); }
+    .document-head strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .page-label { color: var(--text-3); font-family: var(--mono); font-size: 11px; }
+    .document-content { padding: 18px 18px 28px; font-size: 14px; line-height: 1.9; }
+    .context { color: var(--text-3); margin: 0 0 14px; }
+    .current-paragraph { margin: 0; padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); color: var(--text); }
+    .context.after { margin: 14px 0 0; }
+    .removed { background: var(--deleted-bg); color: var(--deleted-text); text-decoration: line-through; text-decoration-thickness: 1px; padding: 1px 2px; }
+    .added-text { background: var(--added-bg); color: var(--added-text); text-decoration: underline; text-underline-offset: 3px; padding: 1px 2px; }
+    .source-anchor { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-left: 4px; border-radius: 50%; background: var(--span-bg); color: var(--span-text); font-size: 10px; vertical-align: text-top; cursor: pointer; }
+
+    .table-viewport { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; min-width: max-content; }
+    .table-viewport.stacked { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+    .table-viewport.stacked .table-pane { min-width: 0; }
+    .table-pane { min-width: 470px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); overflow: hidden; }
+    .table-scroll { overflow: auto; max-height: calc(100vh - 260px); }
+    .diff-table { width: 100%; min-width: 580px; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+    .diff-table th, .diff-table td { min-width: 105px; padding: 8px 9px; text-align: left; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg-panel); }
+    .diff-table th { position: sticky; top: 0; z-index: 2; background: var(--bg-subtle); color: var(--text-2); }
+    .diff-table th:first-child, .diff-table td:first-child { min-width: 42px; width: 42px; position: sticky; left: 0; z-index: 1; text-align: center; background: var(--bg-subtle); color: var(--text-3); }
+    .diff-table th:first-child { z-index: 3; }
+    .cell-deleted { background: var(--deleted-bg) !important; color: var(--deleted-text); text-decoration: line-through; }
+    .cell-added { background: var(--added-bg) !important; color: var(--added-text); text-decoration: underline; text-underline-offset: 3px; }
+    .cell-span { box-shadow: inset 0 0 0 2px var(--span-border); color: var(--span-text); }
+    .cell-selected { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+    .detail-tabs { display: flex; align-items: end; padding: 0 8px; border-bottom: 1px solid var(--border); overflow: hidden; }
+    .detail-tab { height: 41px; padding: 0 7px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-3); cursor: pointer; font-size: 11px; white-space: nowrap; }
+    .detail-tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 700; }
+    .tab-count { margin-left: 2px; color: var(--text-3); }
+    .detail-scroll { min-height: 0; overflow: auto; padding: 13px; }
+    .detail-section { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .detail-section:last-child { border-bottom: 0; }
+    .section-label { margin-bottom: 8px; color: var(--text-3); font-size: 11px; font-weight: 700; }
+    .detail-row { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text-2); font-size: 12px; }
+    .detail-row strong { color: var(--text); text-align: right; }
+    .summary-box { padding: 10px; border-left: 3px solid var(--modified-border); background: var(--modified-bg); color: var(--modified-text); font-size: 12px; line-height: 1.65; }
+    .format-change { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 8px; align-items: center; min-height: 38px; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .value-change { display: flex; align-items: center; gap: 5px; min-width: 0; }
+    .old-value { color: var(--deleted-text); text-decoration: line-through; }
+    .new-value { color: var(--added-text); }
+    .color-swatch { width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 3px; }
+    .comment-block { padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .comment-meta { display: flex; justify-content: space-between; color: var(--text-3); font-size: 11px; }
+    .comment-text { margin-top: 5px; font-size: 12px; }
+    .detail-review { padding: 12px; border-top: 1px solid var(--border); background: var(--bg-panel); }
+    .review-statuses { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .review-statuses .btn { min-width: 0; padding-inline: 6px; font-size: 11px; }
+    .review-note { width: 100%; min-height: 66px; margin-top: 9px; resize: vertical; padding: 8px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg-input); color: var(--text); }
+    .save-state { display: flex; align-items: center; gap: 5px; min-height: 20px; margin-top: 4px; color: var(--text-3); font-size: 11px; }
+
+    .modal-backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px; background: rgba(18, 24, 30, 0.45); }
+    .modal { width: min(720px, calc(100vw - 48px)); max-height: calc(100vh - 48px); display: grid; grid-template-rows: 54px minmax(0, 1fr) auto; overflow: hidden; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); box-shadow: var(--shadow); }
+    .modal.small { width: min(440px, calc(100vw - 48px)); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid var(--border); }
+    .modal-head h2 { margin: 0; font-size: 16px; }
+    .modal-body { min-height: 0; overflow: auto; padding: 18px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
+    .settings-layout { min-height: 360px; display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; }
+    .settings-nav { border-right: 1px solid var(--border); padding-right: 12px; }
+    .settings-nav button { width: 100%; min-height: 34px; padding: 5px 9px; border: 0; border-radius: 5px; background: transparent; color: var(--text-2); text-align: left; cursor: pointer; }
+    .settings-nav button.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+    .settings-section h3 { margin: 0 0 18px; font-size: 16px; }
+    .settings-row { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); }
+    .storage-meter { width: 180px; }
+    .storage-bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+    .storage-bar span { display: block; width: 27%; height: 100%; background: var(--accent); }
+    .storage-copy { margin-top: 5px; color: var(--text-3); font-size: 11px; text-align: right; }
+    .export-options { display: grid; gap: 10px; }
+    .option-row { display: flex; align-items: center; gap: 9px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+    .option-row:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+
+    .toast-stack { position: fixed; top: 66px; right: 14px; z-index: 120; width: 330px; display: grid; gap: 8px; }
+    .toast { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 9px; align-items: start; padding: 11px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel); box-shadow: var(--shadow); }
+    .toast strong { display: block; font-size: 12px; }
+    .toast span { display: block; margin-top: 2px; color: var(--text-3); font-size: 11px; }
+    .toast .icon { color: var(--success); }
+
+    .detail-overlay-open .detail-panel { display: grid !important; position: fixed; top: 102px; right: 0; bottom: 0; width: min(390px, 42vw); z-index: 50; box-shadow: var(--shadow); }
+    .detail-overlay-open .detail-resizer { display: none; }
+    .nav-collapsed { --nav-width: 52px; }
+    .nav-collapsed .diff-content, .nav-collapsed .diff-flags, .nav-collapsed .panel-head span { display: none; }
+    .nav-collapsed .diff-item { grid-template-columns: 4px 1fr; min-height: 44px; padding: 7px; }
+    .nav-collapsed .nav-panel { min-width: 52px; }
+
+    @media (max-width: 1120px) {
+      .work-grid { grid-template-columns: var(--nav-width) 5px minmax(560px, 1fr); }
+      .detail-panel, .detail-resizer { display: none; }
+      .detail-toggle { display: inline-grid !important; }
+      .filterbar .filter-group.dimensions { display: none; }
+    }
+    @media (max-width: 1024px) {
+      .page { padding-inline: 24px; }
+      .compare-grid { gap: 8px; }
+      .file-slot { min-height: 218px; }
+      .taskbar-progress { display: none; }
+      .filter-chip.optional { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+    @media (forced-colors: active) {
+      .diff-marker { border: 2px solid CanvasText; }
+      .removed { text-decoration: line-through; }
+      .added-text { text-decoration: underline; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Embedded Lucide icon subset keeps the standalone prototype offline. -->
+  <svg aria-hidden="true" class="hidden" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.5V3h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V5l8-3 8 3v8Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="m7 7-4 4 4 4M3 11h14M17 9l4 4-4 4M21 13H7"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m6 3 14 9-14 9Z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.7 2.5 17.2A2 2 0 0 0 4.2 20h15.6a2 2 0 0 0 1.7-2.8L13.7 3.7a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 5h16M7 12h10M10 19h4"/></symbol>
+    <symbol id="i-panel-left" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M14 9l-3 3 3 3"/></symbol>
+    <symbol id="i-panel-right" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18M10 9l3 3-3 3"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2.8 2.8 5.7 6.3.9-4.6 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3-4.6-4.4 6.3-.9Z"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.4 2.4 0 1 1 4.1 1.7c-.9.8-1.8 1.2-1.8 2.8M12 17h.01"/></symbol>
+    <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="m14 4 6 6-3 1-4 4-1 5-2-2-4 4-1-1 4-4-2-2 5-1 4-4Z"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16M15 4v16"/></symbol>
+    <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M12 9v12"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3Z"/></symbol>
+  </svg>
+
+  <div class="app-shell" id="appShell">
+    <header class="appbar">
+      <div class="brand">
+        <div class="brand-mark">B</div>
+        <span class="brand-name">BidLens</span>
+        <span class="prototype-tag">交互原型</span>
+      </div>
+      <nav class="appbar-nav" aria-label="全局导航">
+        <button class="btn ghost" id="navNew"><svg class="icon"><use href="#i-plus"/></svg>新建比对</button>
+        <button class="btn ghost" id="navHistory"><svg class="icon"><use href="#i-history"/></svg>最近比对</button>
+      </nav>
+      <div class="appbar-spacer"></div>
+      <div class="protection"><svg class="icon sm"><use href="#i-shield"/></svg><span>本地保护</span></div>
+      <button class="icon-btn ghost" id="themeToggle" title="切换深色模式" aria-label="切换深色模式"><svg class="icon"><use href="#i-moon"/></svg></button>
+      <button class="icon-btn ghost" id="settingsButton" title="设置" aria-label="打开设置"><svg class="icon"><use href="#i-settings"/></svg></button>
+    </header>
+
+    <main class="view-host" id="viewHost">
+      <section class="view page-scroll" id="newView">
+        <div class="page">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">新建比对</h1>
+              <div class="page-meta">文档内容仅在本机处理</div>
+            </div>
+          </div>
+
+          <div class="compare-grid">
+            <article class="file-slot" id="baselineSlot" data-side="baseline" tabindex="0">
+              <div class="slot-head">
+                <span class="slot-role">基准文档</span>
+                <button class="icon-btn ghost remove-file" data-side="baseline" aria-label="移除基准文档" title="移除"><svg class="icon sm"><use href="#i-x"/></svg></button>
+              </div>
+              <div class="slot-content" data-side="baseline">
+                <div class="file-glyph"><svg class="icon lg"><use href="#i-file"/></svg></div>
+                <div class="file-info">
+                  <div class="file-name">某市轨道交通工程招标文件_V3.docx</div>
+                  <div class="file-meta">DOCX · 18.6 MB · 326 页</div>
+                  <div class="file-status"><svg class="icon sm"><use href="#i-check"/></svg>校验通过</div>
+                </div>
+              </div>
+            </article>
+
+            <div class="swap-wrap">
+              <button class="icon-btn" id="swapFiles" title="交换两份文档" aria-label="交换基准文档和待审文档"><svg class="icon"><use href="#i-swap"/></svg></button>
+            </div>
+
+            <article class="file-slot" id="reviewSlot" data-side="review" tabindex="0">
+              <div class="slot-head">
+                <span class="slot-role">待审文档</span>
+                <button class="icon-btn ghost remove-file" data-side="review" aria-label="移除待审文档" title="移除"><svg class="icon sm"><use href="#i-x"/></svg></button>
+              </div>
+              <div class="slot-content" data-side="review">
+                <div class="file-glyph"><svg class="icon lg"><use href="#i-file"/></svg></div>
+                <div class="file-info">
+                  <div class="file-name">某市轨道交通工程招标文件_送审版.docx</div>
+                  <div class="file-meta">DOCX · 19.1 MB · 331 页</div>
+                  <div class="file-status"><svg class="icon sm"><use href="#i-check"/></svg>校验通过</div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <input class="hidden" type="file" id="baselineInput" accept=".docx,.pdf">
+          <input class="hidden" type="file" id="reviewInput" accept=".docx,.pdf">
+
+          <div class="capability-band" id="capabilityBand">
+            <div class="band-row">
+              <span class="band-label">检测维度</span>
+              <span class="chip on"><svg class="icon sm"><use href="#i-check"/></svg>正文</span>
+              <span class="chip on"><svg class="icon sm"><use href="#i-check"/></svg>表格</span>
+              <span class="chip on"><svg class="icon sm"><use href="#i-check"/></svg>格式</span>
+              <span class="chip on"><svg class="icon sm"><use href="#i-check"/></svg>批注</span>
+              <span class="chip on"><svg class="icon sm"><use href="#i-check"/></svg>修订</span>
+            </div>
+          </div>
+
+          <div class="advanced">
+            <button class="advanced-toggle" id="advancedToggle" aria-expanded="false">
+              <span>高级设置</span>
+              <svg class="icon"><use href="#i-chevron-down"/></svg>
+            </button>
+            <div class="advanced-body hidden" id="advancedBody">
+              <div class="setting-copy"><strong>匹配灵敏度</strong><span>标准适用于结构相近但措辞可能调整的文档</span></div>
+              <div class="segmented" role="group" aria-label="匹配灵敏度">
+                <button class="segment">严格</button><button class="segment active">标准</button><button class="segment">宽松</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="page-actions">
+            <span class="validation-hint" id="validationHint">两份文档已就绪</span>
+            <button class="btn primary" id="startCompare"><svg class="icon"><use href="#i-play"/></svg>开始比对</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view page-scroll hidden" id="processingView">
+        <div class="page processing-page">
+          <div class="page-head">
+            <div><h1 class="page-title">正在比对</h1><div class="page-meta">标准灵敏度</div></div>
+          </div>
+          <div class="task-pair">
+            <div class="task-doc"><svg class="icon lg"><use href="#i-file"/></svg><div><div class="task-doc-name">某市轨道交通工程招标文件_V3.docx</div><div class="file-meta">基准文档</div></div></div>
+            <svg class="icon"><use href="#i-arrow-right"/></svg>
+            <div class="task-doc"><svg class="icon lg"><use href="#i-file"/></svg><div><div class="task-doc-name">某市轨道交通工程招标文件_送审版.docx</div><div class="file-meta">待审文档</div></div></div>
+          </div>
+          <ol class="phase-list" id="phaseList">
+            <li class="phase" data-phase="0"><div class="phase-indicator">1</div><div><div class="phase-name">文件校验</div><div class="phase-desc">检查格式、大小与读取权限</div></div><span class="phase-state">等待</span></li>
+            <li class="phase" data-phase="1"><div class="phase-indicator">2</div><div><div class="phase-name">解析基准文档</div><div class="phase-desc">提取正文、表格、格式、批注与修订</div></div><span class="phase-state">等待</span></li>
+            <li class="phase" data-phase="2"><div class="phase-indicator">3</div><div><div class="phase-name">解析待审文档</div><div class="phase-desc">构建统一文档结构</div></div><span class="phase-state">等待</span></li>
+            <li class="phase" data-phase="3"><div class="phase-indicator">4</div><div><div class="phase-name">执行比对</div><div class="phase-desc">匹配结构并计算差异</div></div><span class="phase-state">等待</span></li>
+            <li class="phase" data-phase="4"><div class="phase-indicator">5</div><div><div class="phase-name">整理结果</div><div class="phase-desc">生成审核索引并保存本地快照</div></div><span class="phase-state">等待</span></li>
+          </ol>
+          <div class="warning-line"><svg class="icon sm"><use href="#i-alert"/></svg><span>检测到 2 处页码无法可靠定位，结果中将隐藏对应页码。</span></div>
+          <div class="processing-footer">
+            <div class="elapsed"><svg class="icon"><use href="#i-clock"/></svg><span>已用时间 <strong id="elapsedTime">00:00</strong></span></div>
+            <button class="btn danger" id="cancelCompare"><svg class="icon"><use href="#i-x"/></svg>取消比对</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view page-scroll hidden" id="historyView">
+        <div class="page history-page">
+          <div class="page-head">
+            <div><h1 class="page-title">最近比对</h1><div class="page-meta">6 个完整任务 · 1 个标记保留</div></div>
+            <button class="btn primary" id="historyNew"><svg class="icon"><use href="#i-plus"/></svg>新建比对</button>
+          </div>
+          <div class="history-toolbar">
+            <div class="toolbar">
+              <div class="searchbox"><svg class="icon sm"><use href="#i-search"/></svg><input id="historySearch" aria-label="搜索历史文件名" placeholder="搜索文件名"></div>
+              <select class="btn" id="historyStatus" aria-label="筛选历史状态"><option value="all">全部状态</option><option value="review">复核中</option><option value="done">已完成</option><option value="failed">失败</option></select>
+            </div>
+            <button class="icon-btn" title="更多历史操作" aria-label="更多历史操作"><svg class="icon"><use href="#i-more"/></svg></button>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead><tr><th style="width:38%">文档组合</th><th style="width:13%">状态</th><th style="width:16%">差异摘要</th><th style="width:18%">审核进度</th><th style="width:12%">最后访问</th><th style="width:46px"></th></tr></thead>
+              <tbody id="historyRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="view workbench hidden" id="resultView">
+        <div class="taskbar">
+          <div class="taskbar-title"><svg class="icon"><use href="#i-file"/></svg><span>轨道交通工程招标文件 V3 ↔ 送审版</span></div>
+          <div class="taskbar-progress" id="reviewProgress">已处理 2 / 7</div>
+          <div class="taskbar-spacer"></div>
+          <button class="icon-btn ghost detail-toggle hidden" id="detailToggle" title="打开差异详情" aria-label="打开差异详情"><svg class="icon"><use href="#i-panel-right"/></svg></button>
+          <button class="btn" id="newFromResult"><svg class="icon"><use href="#i-plus"/></svg>新建比对</button>
+          <button class="btn primary" id="exportButton"><svg class="icon"><use href="#i-download"/></svg>导出报告</button>
+        </div>
+        <div class="filterbar">
+          <div class="filter-group" id="typeFilters">
+            <button class="filter-chip active" data-filter="all">全部 <span class="filter-count">7</span></button>
+            <button class="filter-chip" data-filter="modified">修改 <span class="filter-count">3</span></button>
+            <button class="filter-chip" data-filter="added">新增 <span class="filter-count">1</span></button>
+            <button class="filter-chip" data-filter="deleted">删除 <span class="filter-count">1</span></button>
+            <button class="filter-chip optional" data-filter="table">表格 <span class="filter-count">1</span></button>
+          </div>
+          <div class="filter-divider"></div>
+          <div class="filter-group dimensions">
+            <button class="filter-chip active">正文</button><button class="filter-chip active">表格</button><button class="filter-chip active">格式</button><button class="filter-chip optional">批注</button><button class="filter-chip optional">修订</button>
+          </div>
+          <select class="filter-chip" id="reviewFilter" aria-label="审核状态筛选"><option value="all">审核状态</option><option value="unreviewed">未审核</option><option value="confirmed">已确认</option><option value="needs">待确认</option><option value="ignored">已忽略</option></select>
+          <button class="filter-chip" id="importantFilter" title="仅看重要" aria-label="仅看重要"><svg class="icon sm"><use href="#i-star"/></svg></button>
+          <span class="result-count" id="resultCount">7 / 7</span>
+          <div class="searchbox"><svg class="icon sm"><use href="#i-search"/></svg><input id="diffSearch" aria-label="搜索差异" placeholder="搜索差异"></div>
+        </div>
+        <div class="work-grid" id="workGrid">
+          <aside class="panel nav-panel" id="navPanel">
+            <div class="panel-head"><span>差异导航</span><button class="icon-btn ghost" id="collapseNav" title="折叠差异导航" aria-label="折叠差异导航"><svg class="icon sm"><use href="#i-panel-left"/></svg></button></div>
+            <div class="diff-list" id="diffList" role="listbox" aria-label="差异列表"></div>
+          </aside>
+          <div class="resizer nav-resizer" id="navResizer" role="separator" tabindex="0" aria-label="调整差异导航宽度" aria-orientation="vertical"></div>
+          <section class="viewport" id="centralViewport">
+            <div class="viewport-toolbar">
+              <button class="icon-btn ghost" id="prevDiff" title="上一项" aria-label="上一项"><svg class="icon"><use href="#i-arrow-left"/></svg></button>
+              <button class="icon-btn ghost" id="nextDiff" title="下一项" aria-label="下一项"><svg class="icon"><use href="#i-arrow-right"/></svg></button>
+              <div class="viewport-title" id="viewportTitle">3.1 资质要求</div>
+              <div class="segmented hidden" id="tableLayoutControl" aria-label="表格排列方式"><button class="segment active" data-layout="side">并排</button><button class="segment" data-layout="stacked">上下</button></div>
+              <button class="btn" id="nextUnreviewed">下一条未审核</button>
+              <button class="btn ghost" id="toggleDetails">隐藏细节</button>
+            </div>
+            <div class="viewport-body" id="viewportBody"></div>
+          </section>
+          <div class="resizer detail-resizer" id="detailResizer" role="separator" tabindex="0" aria-label="调整差异详情宽度" aria-orientation="vertical"></div>
+          <aside class="panel detail-panel" id="detailPanel">
+            <div class="panel-head"><span>差异详情</span><button class="icon-btn ghost" id="closeDetail" title="收起差异详情" aria-label="收起差异详情"><svg class="icon sm"><use href="#i-panel-right"/></svg></button></div>
+            <div class="detail-tabs" id="detailTabs">
+              <button class="detail-tab active" data-tab="detail">详情</button>
+              <button class="detail-tab" data-tab="format">格式 <span class="tab-count">2</span></button>
+              <button class="detail-tab" data-tab="comments">源批注 <span class="tab-count">1</span></button>
+              <button class="detail-tab" data-tab="revisions">修订 <span class="tab-count">1</span></button>
+            </div>
+            <div class="detail-scroll" id="detailContent"></div>
+            <div class="detail-review">
+              <div class="review-statuses" id="reviewStatuses">
+                <button class="btn active" data-status="unreviewed">未审核</button><button class="btn" data-status="confirmed">已确认</button>
+                <button class="btn" data-status="needs">待确认</button><button class="btn" data-status="ignored">已忽略</button>
+              </div>
+              <button class="btn ghost" id="importantToggle" style="width:100%; margin-top:7px"><svg class="icon"><use href="#i-star"/></svg>标记为重要</button>
+              <textarea class="review-note" id="reviewNote" placeholder="审核备注" aria-label="审核备注"></textarea>
+              <div class="save-state" id="saveState"><svg class="icon sm"><use href="#i-check"/></svg>已保存</div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop hidden" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal">
+      <div class="modal-head"><h2 id="settingsTitle">设置</h2><button class="icon-btn ghost modal-close" aria-label="关闭设置"><svg class="icon"><use href="#i-x"/></svg></button></div>
+      <div class="modal-body settings-layout">
+        <nav class="settings-nav" aria-label="设置分类"><button class="active" data-settings="appearance">外观</button><button data-settings="data">数据与隐私</button><button data-settings="about">关于</button></nav>
+        <div id="settingsContent"></div>
+      </div>
+      <div class="modal-actions"><button class="btn modal-close">完成</button></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal small">
+      <div class="modal-head"><h2 id="confirmTitle">取消比对</h2><button class="icon-btn ghost confirm-close" aria-label="关闭"><svg class="icon"><use href="#i-x"/></svg></button></div>
+      <div class="modal-body"><p style="margin:0">当前任务将终止，已选择的两份文档会保留。</p></div>
+      <div class="modal-actions"><button class="btn confirm-close">继续处理</button><button class="btn danger" id="confirmCancel">取消比对</button></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+    <div class="modal small">
+      <div class="modal-head"><h2 id="exportTitle">导出报告</h2><button class="icon-btn ghost export-close" aria-label="关闭"><svg class="icon"><use href="#i-x"/></svg></button></div>
+      <div class="modal-body">
+        <div class="section-label">格式</div>
+        <div class="segmented" id="exportFormat"><button class="segment active">HTML</button><button class="segment">Markdown</button></div>
+        <div class="section-label" style="margin-top:18px">导出范围</div>
+        <div class="export-options"><label class="option-row"><input type="radio" name="scope" checked>全部差异</label><label class="option-row"><input type="radio" name="scope">当前筛选结果</label><label class="option-row"><input type="radio" name="scope">仅重要</label><label class="option-row"><input type="radio" name="scope">仅待确认</label></div>
+      </div>
+      <div class="modal-actions"><button class="btn export-close">取消</button><button class="btn primary" id="confirmExport"><svg class="icon"><use href="#i-download"/></svg>导出</button></div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+  <div class="sr-only" id="liveRegion" aria-live="polite"></div>
+
+  <script>
+    const icon = (id, cls = '') => `<svg class="icon ${cls}"><use href="#i-${id}"/></svg>`;
+    const views = ['newView', 'processingView', 'historyView', 'resultView'];
+    const state = {
+      view: 'newView',
+      theme: 'light',
+      themeChoice: 'light',
+      files: {
+        baseline: { name: '某市轨道交通工程招标文件_V3.docx', type: 'DOCX', size: '18.6 MB', pages: '326 页' },
+        review: { name: '某市轨道交通工程招标文件_送审版.docx', type: 'DOCX', size: '19.1 MB', pages: '331 页' }
+      },
+      phase: 0,
+      timer: null,
+      elapsedTimer: null,
+      elapsed: 0,
+      filter: 'all',
+      search: '',
+      selectedId: 'd1',
+      detailTab: 'detail',
+      fineDetails: true,
+      navCollapsed: false,
+      reviewFilter: 'all',
+      importantOnly: false,
+      tableLayout: 'side'
+    };
+
+    const diffItems = [
+      { id:'d1', type:'modified', label:'修改', section:'3.1 资质要求', summary:'认证范围与投标保证金比例调整', page:'基准 p.12 · 待审 p.11', confidence:0.92, status:'unreviewed', important:true, note:'保证金比例变化需要法务确认。', format:2, comments:1, revisions:1 },
+      { id:'d2', type:'added', label:'新增', section:'4.2 防水材料', summary:'新增 SBS 防水卷材规格要求', page:'待审 p.37', confidence:0.95, status:'confirmed', important:false, note:'', format:0, comments:0, revisions:0 },
+      { id:'d3', type:'deleted', label:'删除', section:'5.1 付款条件', summary:'删除合同签订后 20% 预付款条款', page:'基准 p.48', confidence:1, status:'needs', important:true, note:'付款条件属于关键商务条款。', format:0, comments:0, revisions:1 },
+      { id:'d4', type:'table', label:'表格', section:'附表 A 材料报价清单', summary:'新增 1 行，删除 1 行，修改 3 个单元格', page:'基准 p.86 · 待审 p.89', confidence:0.91, status:'unreviewed', important:false, note:'', format:1, comments:0, revisions:0 },
+      { id:'d5', type:'modified', label:'移动', section:'6.4 工期要求', summary:'工期违约责任移动至合同专用条款', page:'基准 p.61 · 待审 p.72', confidence:0.86, status:'confirmed', important:false, note:'', format:0, comments:0, revisions:0 },
+      { id:'d6', type:'uncertain', label:'低置信', section:'8.2 争议解决', summary:'可能对应仲裁机构表述，需人工确认', page:'基准 p.93 · 待审 p.96', confidence:0.58, status:'unreviewed', important:false, note:'', format:0, comments:0, revisions:0 },
+      { id:'d7', type:'modified', label:'格式', section:'2.3 项目概况', summary:'金额段落由常规改为加粗并调整段前距', page:'基准 p.7 · 待审 p.7', confidence:0.98, status:'unreviewed', important:false, note:'', format:3, comments:0, revisions:0 }
+    ];
+
+    const historyData = [
+      { a:'某市轨道交通工程招标文件_V3.docx', b:'某市轨道交通工程招标文件_送审版.docx', status:'review', statusText:'复核中', summary:'47 项差异', progress:29, progressText:'14 / 47', time:'10 分钟前', retained:true },
+      { a:'产业园施工总承包招标文件.docx', b:'产业园施工总承包答疑修订稿.docx', status:'done', statusText:'已完成', summary:'23 项差异', progress:100, progressText:'23 / 23', time:'昨天', retained:false },
+      { a:'设备采购技术规范书.pdf', b:'设备采购技术规范书_澄清版.pdf', status:'review', statusText:'复核中', summary:'16 项差异', progress:63, progressText:'10 / 16', time:'7 月 16 日', retained:false },
+      { a:'安防系统招标要求.docx', b:'安防系统投标要求.pdf', status:'done', statusText:'已完成', summary:'31 项差异', progress:100, progressText:'31 / 31', time:'7 月 15 日', retained:false },
+      { a:'办公楼改造招标文件.docx', b:'办公楼改造招标文件_修订.docx', status:'failed', statusText:'失败', summary:'解析中断', progress:0, progressText:'—', time:'7 月 14 日', retained:false },
+      { a:'道路养护服务采购文件.docx', b:'道路养护服务采购文件_终稿.docx', status:'done', statusText:'已完成', summary:'12 项差异', progress:100, progressText:'12 / 12', time:'7 月 12 日', retained:false }
+    ];
+
+    function showView(id) {
+      views.forEach(v => document.getElementById(v).classList.toggle('hidden', v !== id));
+      state.view = id;
+      document.getElementById('navNew').classList.toggle('active', id === 'newView');
+      document.getElementById('navHistory').classList.toggle('active', id === 'historyView');
+    }
+
+    function renderFile(side) {
+      const slot = document.getElementById(side === 'baseline' ? 'baselineSlot' : 'reviewSlot');
+      const content = slot.querySelector('.slot-content');
+      const remove = slot.querySelector('.remove-file');
+      const file = state.files[side];
+      if (file) {
+        content.innerHTML = `<div class="file-glyph">${icon('file','lg')}</div><div class="file-info"><div class="file-name">${escapeHtml(file.name)}</div><div class="file-meta">${file.type} · ${file.size} · ${file.pages}</div><div class="file-status">${icon('check','sm')}校验通过</div></div>`;
+        remove.classList.remove('hidden');
+      } else {
+        content.innerHTML = `<div class="empty-file"><div class="file-glyph">${icon('plus','lg')}</div><strong>选择文档</strong><span>DOCX 或文本型 PDF</span></div>`;
+        remove.classList.add('hidden');
+      }
+      const ready = state.files.baseline && state.files.review;
+      document.getElementById('startCompare').disabled = !ready;
+      document.getElementById('validationHint').textContent = ready ? '两份文档已就绪' : '请选择两份文档';
+      renderCapabilities();
+    }
+
+    function renderCapabilities() {
+      const a = state.files.baseline?.type;
+      const b = state.files.review?.type;
+      const bothPdf = a === 'PDF' && b === 'PDF';
+      const cross = a && b && a !== b;
+      const docxPair = a === 'DOCX' && b === 'DOCX';
+      const capabilities = docxPair
+        ? [['正文',1],['表格',1],['格式',1],['批注',1],['修订',1]]
+        : bothPdf ? [['正文',1],['页码',1],['表格',0],['格式',0],['批注',0],['修订',0]]
+        : [['正文',1],['表格',0],['格式',0],['批注',0],['修订',0]];
+      document.getElementById('capabilityBand').innerHTML = `<div class="band-row"><span class="band-label">检测维度</span>${capabilities.map(([name,on])=>`<span class="chip ${on?'on':'off'}">${on?icon('check','sm'):icon('ban','sm')}${name}</span>`).join('')}</div>${cross?`<div class="warning-line">${icon('alert','sm')}<span>跨格式比对仅检测双方共同具备的正文能力。</span></div>`:''}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+
+    function fileFromInput(file) {
+      const ext = file.name.split('.').pop().toUpperCase();
+      return { name:file.name, type:ext, size:`${(file.size/1024/1024).toFixed(1)} MB`, pages:ext === 'PDF' ? '页码待解析' : '页数待解析' };
+    }
+
+    function startProcessing() {
+      if (!state.files.baseline || !state.files.review) return;
+      state.phase = 0; state.elapsed = 0;
+      showView('processingView');
+      updatePhases();
+      clearInterval(state.timer); clearInterval(state.elapsedTimer);
+      state.elapsedTimer = setInterval(() => { state.elapsed++; document.getElementById('elapsedTime').textContent = `00:${String(state.elapsed).padStart(2,'0')}`; }, 1000);
+      state.timer = setInterval(() => {
+        state.phase++;
+        if (state.phase >= 5) {
+          clearInterval(state.timer); clearInterval(state.elapsedTimer);
+          updatePhases(true);
+          setTimeout(() => { showView('resultView'); renderWorkbench(); announce('比对完成，共发现 7 项差异'); }, 350);
+        } else updatePhases();
+      }, 900);
+    }
+
+    function updatePhases(allDone = false) {
+      document.querySelectorAll('.phase').forEach((el, index) => {
+        const indicator = el.querySelector('.phase-indicator');
+        const status = el.querySelector('.phase-state');
+        el.classList.remove('done','active');
+        if (allDone || index < state.phase) { el.classList.add('done'); indicator.innerHTML = icon('check','sm'); status.textContent = '完成'; }
+        else if (index === state.phase) { el.classList.add('active'); indicator.innerHTML = icon('loader','sm spin'); status.textContent = '进行中'; }
+        else { indicator.textContent = index + 1; status.textContent = '等待'; }
+      });
+    }
+
+    function cancelTask() {
+      clearInterval(state.timer); clearInterval(state.elapsedTimer);
+      document.getElementById('confirmModal').classList.add('hidden');
+      showView('newView');
+      toast('比对已取消', '已保留两份文档，可调整后重试。');
+    }
+
+    function getFilteredItems() {
+      const term = state.search.trim().toLowerCase();
+      return diffItems.filter(item =>
+        (state.filter === 'all' || item.type === state.filter) &&
+        (state.reviewFilter === 'all' || item.status === state.reviewFilter) &&
+        (!state.importantOnly || item.important) &&
+        (!term || `${item.section} ${item.summary} ${item.note}`.toLowerCase().includes(term))
+      );
+    }
+
+    function renderDiffList() {
+      const items = getFilteredItems();
+      if (!items.some(i => i.id === state.selectedId) && items[0]) state.selectedId = items[0].id;
+      const list = document.getElementById('diffList');
+      list.innerHTML = items.map(item => `<button class="diff-item ${item.type} ${item.id === state.selectedId ? 'selected' : ''}" data-id="${item.id}" role="option" aria-selected="${item.id === state.selectedId}"><span class="diff-marker"></span><span class="diff-content"><span class="diff-topline"><span class="diff-badge ${item.type === 'table' ? 'table' : item.type === 'uncertain' ? 'neutral' : item.type}">${item.label}</span></span><span class="diff-summary">${escapeHtml(item.summary)}</span><span class="diff-location">${escapeHtml(item.page)}</span></span><span class="diff-flags">${item.important ? icon('star','sm important') : ''}${item.status === 'confirmed' ? icon('check','sm') : item.status === 'needs' ? icon('help','sm') : item.status === 'ignored' ? icon('ban','sm') : ''}</span></button>`).join('');
+      list.querySelectorAll('.diff-item').forEach(button => button.addEventListener('click', () => selectDiff(button.dataset.id)));
+      document.getElementById('resultCount').textContent = `${items.length} / ${diffItems.length}`;
+    }
+
+    function selectDiff(id) {
+      state.selectedId = id;
+      state.detailTab = 'detail';
+      renderWorkbench();
+    }
+
+    function currentItem() { return diffItems.find(i => i.id === state.selectedId) || diffItems[0]; }
+
+    function renderWorkbench() {
+      renderDiffList();
+      const item = currentItem();
+      document.getElementById('viewportTitle').textContent = item.section;
+      const layoutControl = document.getElementById('tableLayoutControl');
+      layoutControl.classList.toggle('hidden', item.type !== 'table');
+      layoutControl.querySelectorAll('[data-layout]').forEach(button => button.classList.toggle('active', button.dataset.layout === state.tableLayout));
+      document.getElementById('viewportBody').innerHTML = item.type === 'table' ? renderTableViewport() : renderTextViewport(item);
+      document.getElementById('viewportBody').querySelectorAll('.source-anchor').forEach(a => a.addEventListener('click', () => { state.detailTab = a.dataset.tab; renderDetail(); }));
+      renderDetail();
+      renderReview();
+      const processed = diffItems.filter(i => i.status !== 'unreviewed').length;
+      document.getElementById('reviewProgress').textContent = `已处理 ${processed} / ${diffItems.length}`;
+    }
+
+    function renderTextViewport(item) {
+      const details = state.fineDetails;
+      const base = item.id === 'd3'
+        ? `<span class="removed">合同签订后 7 个工作日内，甲方支付合同总价的 20% 作为预付款。</span>`
+        : item.id === 'd2' ? `<span style="color:var(--text-3)">（无对应内容）</span>`
+        : item.id === 'd7' ? `本项目最高投标限价为人民币 <span class="removed">28,500 万元</span>。`
+        : `供应商须具备 ${details ? '<span class="removed">ISO 9001</span>' : 'ISO 9001'} 认证，且近三年内无重大安全事故记录。投标保证金为合同金额的 ${details ? '<span class="removed">3%</span>' : '3%'}。`;
+      const review = item.id === 'd3'
+        ? `<span style="color:var(--text-3)">（待审文档已删除此条款）</span>`
+        : item.id === 'd2' ? `<span class="added-text">新增防水卷材 SBS 规格要求：厚度 ≥4mm，拉力 ≥800N/50mm，延伸率 ≥40%。</span>`
+        : item.id === 'd7' ? `本项目最高投标限价为人民币 <strong class="added-text">28,500 万元</strong>。`
+        : `供应商须具备 ${details ? '<span class="added-text">ISO 9001 与 ISO 14001</span>' : 'ISO 9001 与 ISO 14001'} 认证，且近三年内无重大安全事故记录。投标保证金为合同金额的 ${details ? '<span class="added-text">5%</span>' : '5%'}。<button class="source-anchor" data-tab="comments" title="查看源文档批注">1</button>`;
+      return `<div class="document-grid"><article class="document-pane"><div class="document-head"><strong>${escapeHtml(state.files.baseline?.name || '基准文档')}</strong><span class="page-label">p.12</span></div><div class="document-content"><p class="context">投标人应完整阅读招标文件，并按要求提交相关证明材料。</p><p class="current-paragraph">${base}</p><p class="context after">相关证书应在投标截止日期前持续有效。</p></div></article><article class="document-pane"><div class="document-head"><strong>${escapeHtml(state.files.review?.name || '待审文档')}</strong><span class="page-label">p.11</span></div><div class="document-content"><p class="context">投标人应完整阅读招标文件，并按要求提交相关证明材料。</p><p class="current-paragraph">${review}</p><p class="context after">相关证书应在投标截止日期前持续有效。<button class="source-anchor" data-tab="revisions" title="查看修订">R</button></p></div></article></div>`;
+    }
+
+    function renderTableViewport() {
+      const baseRows = [
+        ['1','钢材 HRB400','Φ12-25mm','吨','4,200'],['2','水泥 P.O 42.5','散装','吨','480'],['3','铝合金型材','6063-T5','吨','18,500'],['4','商品混凝土 C30','泵送','m³','380']
+      ];
+      const reviewRows = [
+        ['1','钢材 HRB400','Φ12-25mm','吨','4,500'],['2','水泥 P.O 42.5','散装','吨','480'],['3','防水卷材 SBS','4mm','m²','85'],['—','—','—','—','—'],['4','商品混凝土 C30','泵送','m³','395']
+      ];
+      const table = (title, rows, side) => `<div class="table-pane"><div class="document-head"><strong>${title}</strong><span class="page-label">${side === 'base' ? '基准' : '待审'}</span></div><div class="table-scroll"><table class="diff-table"><thead><tr><th>#</th><th>材料名称</th><th>规格型号</th><th>单位</th><th>单价（元）</th></tr></thead><tbody>${rows.map((r,ri)=>`<tr>${r.map((c,ci)=>{let cls=''; if(side==='base' && ri===0 && ci===4) cls='cell-deleted cell-selected'; if(side==='review' && ri===0 && ci===4) cls='cell-added cell-selected'; if(side==='base' && ri===2) cls='cell-deleted'; if(side==='review' && ri===2) cls='cell-added'; if(side==='review' && ri===3) cls=''; if((side==='base' && ri===3 && ci===4)||(side==='review' && ri===4 && ci===4)) cls += side==='base'?' cell-deleted':' cell-added'; return `<td class="${cls}">${c}</td>`;}).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+      return `<div class="table-viewport ${state.tableLayout === 'stacked' ? 'stacked' : ''}">${table('附表 A · 基准文档',baseRows,'base')}${table('附表 A · 待审文档',reviewRows,'review')}</div>`;
+    }
+
+    function renderDetail() {
+      const item = currentItem();
+      document.querySelectorAll('.detail-tab').forEach(tab => { tab.classList.toggle('active', tab.dataset.tab === state.detailTab); if(tab.dataset.tab === 'format') tab.querySelector('.tab-count').textContent = item.format; if(tab.dataset.tab === 'comments') tab.querySelector('.tab-count').textContent = item.comments; if(tab.dataset.tab === 'revisions') tab.querySelector('.tab-count').textContent = item.revisions; });
+      const target = document.getElementById('detailContent');
+      if (state.detailTab === 'format') target.innerHTML = renderFormat(item);
+      else if (state.detailTab === 'comments') target.innerHTML = renderComments(item);
+      else if (state.detailTab === 'revisions') target.innerHTML = renderRevisions(item);
+      else target.innerHTML = `<div class="detail-section"><div class="section-label">匹配信息</div><div class="detail-row"><span>变化类型</span><strong>${item.label}</strong></div><div class="detail-row"><span>置信度</span><strong>${Math.round(item.confidence*100)}%</strong></div><div class="detail-row"><span>位置</span><strong>${escapeHtml(item.page)}</strong></div></div><div class="detail-section"><div class="section-label">差异摘要</div><div class="summary-box">${escapeHtml(item.summary)}。${item.type === 'modified' ? '属于实质性条款变化，建议结合招标要求复核。' : ''}</div></div>${item.type === 'table' ? '<div class="detail-section"><div class="section-label">当前单元格</div><div class="detail-row"><span>基准值</span><strong class="old-value">4,200</strong></div><div class="detail-row"><span>待审值</span><strong class="new-value">4,500</strong></div><div class="detail-row"><span>变化</span><strong>+7.1%</strong></div></div>' : ''}`;
+    }
+
+    function renderFormat(item) {
+      if (!item.format) return `<div class="detail-section"><div class="section-label">格式</div><p style="color:var(--text-3);font-size:12px">已提取，当前差异项没有格式变化。</p></div>`;
+      return `<div class="detail-section"><div class="section-label">文字格式 · ${item.format}</div><div class="format-change"><span>字重</span><span class="value-change"><span class="old-value">常规</span>${icon('arrow-right','sm')}<strong class="new-value">粗体</strong></span></div><div class="format-change"><span>字号</span><span class="value-change"><span class="old-value">12 pt</span>${icon('arrow-right','sm')}<strong class="new-value">14 pt</strong></span></div><div class="format-change"><span>颜色</span><span class="value-change"><span class="color-swatch" style="background:#17202a"></span>${icon('arrow-right','sm')}<span class="color-swatch" style="background:#9d302c"></span></span></div></div><div class="detail-section"><div class="section-label">段落格式</div><div class="detail-row"><span>段前距</span><strong>0 pt → 6 pt</strong></div></div>`;
+    }
+
+    function renderComments(item) {
+      if (!item.comments) return `<div class="detail-section"><div class="section-label">源文档批注</div><p style="color:var(--text-3);font-size:12px">已提取，当前差异项没有批注变化。</p></div>`;
+      return `<div class="detail-section"><div class="section-label">待审文档新增 · 1</div><div class="comment-block"><div class="comment-meta"><strong>张工</strong><span>2026-07-16 14:32</span></div><div class="comment-text">ISO 14001 为本轮答疑新增要求，请确认资格审查口径。</div></div></div><div class="detail-section"><div class="detail-row"><span>源文档状态</span><strong>未解决</strong></div><p style="color:var(--text-3);font-size:11px">源文档批注为只读，不会写回 DOCX。</p></div>`;
+    }
+
+    function renderRevisions(item) {
+      if (!item.revisions) return `<div class="detail-section"><div class="section-label">修订</div><p style="color:var(--text-3);font-size:12px">已提取，当前差异项没有修订变化。</p></div>`;
+      return `<div class="detail-section"><div class="section-label">待审文档修订 · 1</div><div class="comment-block"><div class="comment-meta"><strong>李律师 · 插入</strong><span>2026-07-16 09:18</span></div><div class="comment-text"><span class="added-text">与 ISO 14001</span></div></div></div><div class="detail-section"><div class="detail-row"><span>原始接受状态</span><strong>待处理</strong></div><p style="color:var(--text-3);font-size:11px">BidLens 不接受或拒绝 Word 修订。</p></div>`;
+    }
+
+    function renderReview() {
+      const item = currentItem();
+      document.querySelectorAll('#reviewStatuses .btn').forEach(btn => btn.classList.toggle('active', btn.dataset.status === item.status));
+      const importantButton = document.getElementById('importantToggle');
+      importantButton.classList.toggle('active', item.important);
+      importantButton.innerHTML = `${icon('star')} ${item.important ? '已标记为重要' : '标记为重要'}`;
+      document.getElementById('reviewNote').value = item.note;
+      document.getElementById('saveState').innerHTML = `${icon('check','sm')}已保存`;
+    }
+
+    function moveSelection(delta, unreviewedOnly = false) {
+      const list = unreviewedOnly ? diffItems.filter(i => i.status === 'unreviewed') : getFilteredItems();
+      if (!list.length) return;
+      let index = list.findIndex(i => i.id === state.selectedId);
+      index = index < 0 ? 0 : (index + delta + list.length) % list.length;
+      selectDiff(list[index].id);
+      document.querySelector(`.diff-item[data-id="${state.selectedId}"]`)?.scrollIntoView({block:'nearest'});
+    }
+
+    function renderHistory() {
+      const term = document.getElementById('historySearch')?.value.toLowerCase() || '';
+      const status = document.getElementById('historyStatus')?.value || 'all';
+      const rows = historyData.filter(r => (status === 'all' || r.status === status) && `${r.a} ${r.b}`.toLowerCase().includes(term));
+      document.getElementById('historyRows').innerHTML = rows.map((r,i) => `<tr data-index="${i}" tabindex="0"><td><div class="doc-pair"><strong>${r.retained ? icon('pin','sm') : ''}${escapeHtml(r.a)}</strong><span>${escapeHtml(r.b)}</span></div></td><td><span class="status-badge ${r.status}">${r.statusText}</span></td><td>${r.summary}</td><td><div class="progress-mini"><div class="progress-track"><div class="progress-fill" style="width:${r.progress}%"></div></div><span>${r.progressText}</span></div></td><td style="color:var(--text-3);font-size:12px">${r.time}</td><td><div class="row-actions"><button class="icon-btn ghost" aria-label="更多操作">${icon('more')}</button></div></td></tr>`).join('');
+      document.querySelectorAll('#historyRows tr').forEach(row => row.addEventListener('click', e => { if(e.target.closest('.icon-btn')) return; showView('resultView'); renderWorkbench(); }));
+    }
+
+    function renderSettings(tab = 'appearance') {
+      document.querySelectorAll('.settings-nav button').forEach(btn => btn.classList.toggle('active', btn.dataset.settings === tab));
+      const content = document.getElementById('settingsContent');
+      if (tab === 'data') content.innerHTML = `<section class="settings-section"><h3>数据与隐私</h3><div class="settings-row"><div class="setting-copy"><strong>本地内容保护</strong><span>Windows 安全存储可用</span></div><span class="status-badge done">已启用</span></div><div class="settings-row"><div class="setting-copy"><strong>存储占用</strong><span>6 个完整任务，1 个标记保留</span></div><div class="storage-meter"><div class="storage-bar"><span></span></div><div class="storage-copy">276 MB / 1 GB</div></div></div><div class="settings-row"><div class="setting-copy"><strong>完整任务上限</strong><span>超过后按最久未访问清理</span></div><select class="btn"><option>20 个</option><option>10 个</option><option>50 个</option></select></div><div class="settings-row"><div class="setting-copy"><strong>数据清理</strong><span>当前任务与标记保留任务不会被清理</span></div><button class="btn">清理可清理数据</button></div><div class="settings-row"><div class="setting-copy"><strong>全部历史</strong><span>删除快照、审核记录、备份与相关密钥材料</span></div><button class="btn danger">清空全部历史</button></div></section>`;
+      else if (tab === 'about') content.innerHTML = `<section class="settings-section"><h3>关于</h3><div class="settings-row"><span>BidLens</span><strong>0.2.2 Prototype</strong></div><div class="settings-row"><span>Rust 引擎</span><strong>0.2.2 · 协议 1</strong></div><div class="settings-row"><span>数据 Schema</span><strong>1</strong></div><div class="settings-row"><span>支持平台</span><strong>Windows 10/11 x64</strong></div><div class="settings-row"><span>开源许可</span><button class="btn">查看许可</button></div></section>`;
+      else content.innerHTML = `<section class="settings-section"><h3>外观</h3><div class="settings-row"><div class="setting-copy"><strong>主题</strong><span>切换后立即应用</span></div><div class="segmented" id="themeSegments"><button class="segment ${state.themeChoice==='system'?'active':''}" data-theme-choice="system">跟随系统</button><button class="segment ${state.themeChoice==='light'?'active':''}" data-theme-choice="light">浅色</button><button class="segment ${state.themeChoice==='dark'?'active':''}" data-theme-choice="dark">深色</button></div></div></section>`;
+      content.querySelectorAll('[data-theme-choice]').forEach(btn => btn.addEventListener('click', () => setTheme(btn.dataset.themeChoice)));
+    }
+
+    function setTheme(theme) {
+      state.themeChoice = theme;
+      state.theme = theme === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme;
+      document.documentElement.dataset.theme = state.theme;
+      const toggle = document.getElementById('themeToggle');
+      toggle.innerHTML = icon(state.theme === 'dark' ? 'sun' : 'moon');
+      toggle.title = state.theme === 'dark' ? '切换浅色模式' : '切换深色模式';
+      renderSettings('appearance');
+    }
+
+    function toast(title, message) {
+      const stack = document.getElementById('toastStack');
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.innerHTML = `${icon('check')}<div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span></div><button class="icon-btn ghost" aria-label="关闭通知">${icon('x','sm')}</button>`;
+      stack.prepend(el);
+      el.querySelector('button').addEventListener('click', () => el.remove());
+      while(stack.children.length > 3) stack.lastElementChild.remove();
+      setTimeout(() => el.remove(), 5000);
+    }
+
+    function announce(text) { document.getElementById('liveRegion').textContent = text; }
+
+    function bindModal(id, closeSelector) {
+      const modal = document.getElementById(id);
+      document.querySelectorAll(closeSelector).forEach(btn => btn.addEventListener('click', () => modal.classList.add('hidden')));
+      modal.addEventListener('click', e => { if(e.target === modal) modal.classList.add('hidden'); });
+    }
+
+    document.getElementById('navNew').addEventListener('click', () => showView('newView'));
+    document.getElementById('navHistory').addEventListener('click', () => { showView('historyView'); renderHistory(); });
+    document.getElementById('historyNew').addEventListener('click', () => showView('newView'));
+    document.getElementById('newFromResult').addEventListener('click', () => showView('newView'));
+    document.getElementById('themeToggle').addEventListener('click', () => setTheme(state.theme === 'light' ? 'dark' : 'light'));
+    document.getElementById('settingsButton').addEventListener('click', () => { renderSettings(); document.getElementById('settingsModal').classList.remove('hidden'); });
+    document.querySelectorAll('.settings-nav button').forEach(btn => btn.addEventListener('click', () => renderSettings(btn.dataset.settings)));
+    document.getElementById('advancedToggle').addEventListener('click', e => { const open = e.currentTarget.getAttribute('aria-expanded') === 'true'; e.currentTarget.setAttribute('aria-expanded', String(!open)); document.getElementById('advancedBody').classList.toggle('hidden', open); e.currentTarget.querySelector('use').setAttribute('href', open ? '#i-chevron-down' : '#i-chevron-up'); });
+    document.querySelectorAll('.segment').forEach(btn => btn.addEventListener('click', () => { const group = btn.closest('.segmented'); group.querySelectorAll('.segment').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }));
+    document.querySelectorAll('.slot-content').forEach(el => el.addEventListener('click', () => document.getElementById(el.dataset.side === 'baseline' ? 'baselineInput' : 'reviewInput').click()));
+    document.querySelectorAll('.file-slot').forEach(slot => {
+      slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('dragging'); });
+      slot.addEventListener('dragleave', () => slot.classList.remove('dragging'));
+      slot.addEventListener('drop', e => { e.preventDefault(); slot.classList.remove('dragging'); const file=e.dataTransfer.files[0]; if(file){ state.files[slot.dataset.side]=fileFromInput(file); renderFile(slot.dataset.side); } });
+    });
+    document.getElementById('baselineInput').addEventListener('change', e => { if(e.target.files[0]) { state.files.baseline = fileFromInput(e.target.files[0]); renderFile('baseline'); } });
+    document.getElementById('reviewInput').addEventListener('change', e => { if(e.target.files[0]) { state.files.review = fileFromInput(e.target.files[0]); renderFile('review'); } });
+    document.querySelectorAll('.remove-file').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); state.files[btn.dataset.side] = null; renderFile(btn.dataset.side); }));
+    document.getElementById('swapFiles').addEventListener('click', () => { [state.files.baseline,state.files.review] = [state.files.review,state.files.baseline]; renderFile('baseline'); renderFile('review'); });
+    document.getElementById('startCompare').addEventListener('click', startProcessing);
+    document.getElementById('cancelCompare').addEventListener('click', () => document.getElementById('confirmModal').classList.remove('hidden'));
+    document.getElementById('confirmCancel').addEventListener('click', cancelTask);
+    document.getElementById('historySearch').addEventListener('input', renderHistory);
+    document.getElementById('historyStatus').addEventListener('change', renderHistory);
+    document.getElementById('typeFilters').addEventListener('click', e => { const btn=e.target.closest('[data-filter]'); if(!btn)return; state.filter=btn.dataset.filter; document.querySelectorAll('#typeFilters .filter-chip').forEach(b=>b.classList.toggle('active',b===btn)); renderWorkbench(); });
+    document.getElementById('reviewFilter').addEventListener('change', e => { state.reviewFilter=e.target.value; renderWorkbench(); });
+    document.getElementById('importantFilter').addEventListener('click', e => { state.importantOnly=!state.importantOnly; e.currentTarget.classList.toggle('active',state.importantOnly); renderWorkbench(); });
+    document.getElementById('diffSearch').addEventListener('input', e => { state.search=e.target.value; renderWorkbench(); });
+    document.getElementById('prevDiff').addEventListener('click', () => moveSelection(-1));
+    document.getElementById('nextDiff').addEventListener('click', () => moveSelection(1));
+    document.getElementById('nextUnreviewed').addEventListener('click', () => moveSelection(1,true));
+    document.getElementById('toggleDetails').addEventListener('click', e => { state.fineDetails=!state.fineDetails; e.currentTarget.textContent=state.fineDetails?'隐藏细节':'显示细节'; renderWorkbench(); });
+    document.getElementById('tableLayoutControl').addEventListener('click', e => { const button=e.target.closest('[data-layout]'); if(!button)return; state.tableLayout=button.dataset.layout; renderWorkbench(); });
+    document.getElementById('detailTabs').addEventListener('click', e => { const tab=e.target.closest('[data-tab]'); if(!tab)return; state.detailTab=tab.dataset.tab; renderDetail(); });
+    document.getElementById('reviewStatuses').addEventListener('click', e => { const btn=e.target.closest('[data-status]'); if(!btn)return; currentItem().status=btn.dataset.status; renderWorkbench(); announce(`审核状态已更新为${btn.textContent}`); });
+    document.getElementById('importantToggle').addEventListener('click', () => { currentItem().important=!currentItem().important; renderWorkbench(); });
+    let noteTimer;
+    document.getElementById('reviewNote').addEventListener('input', e => { currentItem().note=e.target.value; document.getElementById('saveState').innerHTML=`${icon('loader','sm spin')}正在保存`; clearTimeout(noteTimer); noteTimer=setTimeout(()=>{ document.getElementById('saveState').innerHTML=`${icon('check','sm')}已保存`; },650); });
+    document.getElementById('collapseNav').addEventListener('click', () => { state.navCollapsed=!state.navCollapsed; document.getElementById('appShell').classList.toggle('nav-collapsed',state.navCollapsed); });
+    document.getElementById('detailToggle').addEventListener('click', () => document.getElementById('appShell').classList.add('detail-overlay-open'));
+    document.getElementById('closeDetail').addEventListener('click', () => document.getElementById('appShell').classList.remove('detail-overlay-open'));
+    document.getElementById('exportButton').addEventListener('click', () => document.getElementById('exportModal').classList.remove('hidden'));
+    document.getElementById('confirmExport').addEventListener('click', () => { document.getElementById('exportModal').classList.add('hidden'); toast('报告已生成','BidLens-比对报告.html'); });
+    bindModal('settingsModal','.modal-close'); bindModal('confirmModal','.confirm-close'); bindModal('exportModal','.export-close');
+
+    function setupResizer(id, variable, min, max, invert=false) {
+      const el=document.getElementById(id);
+      const resize=(clientX)=>{ const value=invert?window.innerWidth-clientX:clientX; document.documentElement.style.setProperty(variable,`${Math.max(min,Math.min(max,value))}px`); };
+      el.addEventListener('pointerdown',e=>{ el.setPointerCapture(e.pointerId); el.classList.add('dragging'); const move=ev=>resize(ev.clientX); const up=()=>{el.classList.remove('dragging');el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);};el.addEventListener('pointermove',move);el.addEventListener('pointerup',up); });
+      el.addEventListener('keydown',e=>{ if(!['ArrowLeft','ArrowRight'].includes(e.key))return; e.preventDefault(); const current=parseInt(getComputedStyle(document.documentElement).getPropertyValue(variable)); const delta=(e.key==='ArrowRight'?10:-10)*(invert?-1:1); document.documentElement.style.setProperty(variable,`${Math.max(min,Math.min(max,current+delta))}px`); });
+    }
+    setupResizer('navResizer','--nav-width',240,360,false); setupResizer('detailResizer','--detail-width',280,420,true);
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { document.querySelectorAll('.modal-backdrop').forEach(m=>m.classList.add('hidden')); document.getElementById('appShell').classList.remove('detail-overlay-open'); }
+      if (e.ctrlKey && e.key.toLowerCase()==='f' && state.view==='resultView') { e.preventDefault(); document.getElementById('diffSearch').focus(); }
+      if (state.view==='resultView' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
+        if(e.key==='ArrowDown'){e.preventDefault();moveSelection(1);} if(e.key==='ArrowUp'){e.preventDefault();moveSelection(-1);}
+        if(e.code==='Space' && document.activeElement.closest('.diff-item')){e.preventDefault();currentItem().important=!currentItem().important;renderWorkbench();}
+      }
+    });
+
+    renderFile('baseline'); renderFile('review'); renderHistory(); renderWorkbench(); showView('newView');
+  </script>
+</body>
+</html>

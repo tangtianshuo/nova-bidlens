@@ -241,7 +241,12 @@ pub fn simple_paragraph(id: &str, text: &str) -> ParagraphNode {
 }
 
 /// Create a ParagraphNode with a single run and page info.
-pub fn paragraph_with_pages(id: &str, text: &str, page_start: usize, page_end: usize) -> ParagraphNode {
+pub fn paragraph_with_pages(
+    id: &str,
+    text: &str,
+    page_start: usize,
+    page_end: usize,
+) -> ParagraphNode {
     ParagraphNode {
         id: id.to_string(),
         runs: vec![RunNode {
@@ -457,13 +462,17 @@ mod tests {
                     cells: vec![
                         TableCell {
                             id: "cell-1".to_string(),
-                            content: vec![BlockNode::Paragraph(simple_paragraph("p-1", "Header 1"))],
+                            content: vec![BlockNode::Paragraph(simple_paragraph(
+                                "p-1", "Header 1",
+                            ))],
                             span: None,
                             properties: None,
                         },
                         TableCell {
                             id: "cell-2".to_string(),
-                            content: vec![BlockNode::Paragraph(simple_paragraph("p-2", "Header 2"))],
+                            content: vec![BlockNode::Paragraph(simple_paragraph(
+                                "p-2", "Header 2",
+                            ))],
                             span: None,
                             properties: None,
                         },
@@ -495,7 +504,8 @@ mod tests {
         };
 
         let json = serde_json::to_string_pretty(&table).expect("Failed to serialize TableNode");
-        let deserialized: TableNode = serde_json::from_str(&json).expect("Failed to deserialize TableNode");
+        let deserialized: TableNode =
+            serde_json::from_str(&json).expect("Failed to deserialize TableNode");
         assert_eq!(table, deserialized);
     }
 
@@ -532,13 +542,17 @@ mod tests {
                         cells: vec![
                             TableCell {
                                 id: "c-1".to_string(),
-                                content: vec![BlockNode::Paragraph(simple_paragraph("cp-1", "Cell A"))],
+                                content: vec![BlockNode::Paragraph(simple_paragraph(
+                                    "cp-1", "Cell A",
+                                ))],
                                 span: None,
                                 properties: None,
                             },
                             TableCell {
                                 id: "c-2".to_string(),
-                                content: vec![BlockNode::Paragraph(simple_paragraph("cp-2", "Cell B"))],
+                                content: vec![BlockNode::Paragraph(simple_paragraph(
+                                    "cp-2", "Cell B",
+                                ))],
                                 span: Some(CellSpan {
                                     row_span: 1,
                                     col_span: 2,
@@ -560,7 +574,8 @@ mod tests {
 
         // Serialize the entire document
         let json = serde_json::to_string_pretty(&doc).expect("Failed to serialize DocumentAst");
-        let deserialized: DocumentAst = serde_json::from_str(&json).expect("Failed to deserialize DocumentAst");
+        let deserialized: DocumentAst =
+            serde_json::from_str(&json).expect("Failed to deserialize DocumentAst");
         assert_eq!(doc, deserialized);
 
         // Verify paragraphs function still works
@@ -671,7 +686,8 @@ mod tests {
         };
 
         let json = serde_json::to_string_pretty(&comment).expect("Failed to serialize Comment");
-        let deserialized: Comment = serde_json::from_str(&json).expect("Failed to deserialize Comment");
+        let deserialized: Comment =
+            serde_json::from_str(&json).expect("Failed to deserialize Comment");
         assert_eq!(comment, deserialized);
     }
 
@@ -721,8 +737,10 @@ mod tests {
             resolved: true,
         };
 
-        let json = serde_json::to_string_pretty(&comment).expect("Failed to serialize Comment with replies");
-        let deserialized: Comment = serde_json::from_str(&json).expect("Failed to deserialize Comment with replies");
+        let json = serde_json::to_string_pretty(&comment)
+            .expect("Failed to serialize Comment with replies");
+        let deserialized: Comment =
+            serde_json::from_str(&json).expect("Failed to deserialize Comment with replies");
         assert_eq!(comment, deserialized);
         assert_eq!(deserialized.replies.len(), 2);
         assert_eq!(deserialized.replies[0].author, "Bob");
@@ -849,7 +867,8 @@ mod tests {
         };
 
         let json = serde_json::to_string_pretty(&revision).expect("Failed to serialize Revision");
-        let deserialized: Revision = serde_json::from_str(&json).expect("Failed to deserialize Revision");
+        let deserialized: Revision =
+            serde_json::from_str(&json).expect("Failed to deserialize Revision");
         assert_eq!(revision, deserialized);
     }
 
@@ -986,43 +1005,40 @@ mod tests {
                 BlockNode::Paragraph(simple_paragraph("p-2", "Main content here")),
                 BlockNode::Paragraph(simple_paragraph("p-3", "Conclusion")),
             ],
-            comments: vec![
-                Comment {
-                    id: "c-1".to_string(),
-                    author: "Reviewer".to_string(),
-                    date: "2025-01-15T10:00:00Z".to_string(),
-                    content: "Please expand this section.".to_string(),
-                    range: CommentRange {
-                        start_node_id: "p-2".to_string(),
-                        start_offset: 0,
-                        end_node_id: "p-2".to_string(),
-                        end_offset: 18,
-                    },
-                    replies: vec![],
-                    resolved: false,
+            comments: vec![Comment {
+                id: "c-1".to_string(),
+                author: "Reviewer".to_string(),
+                date: "2025-01-15T10:00:00Z".to_string(),
+                content: "Please expand this section.".to_string(),
+                range: CommentRange {
+                    start_node_id: "p-2".to_string(),
+                    start_offset: 0,
+                    end_node_id: "p-2".to_string(),
+                    end_offset: 18,
                 },
-            ],
-            revisions: vec![
-                Revision {
-                    id: "r-1".to_string(),
-                    author: "Editor".to_string(),
-                    date: "2025-01-15T11:00:00Z".to_string(),
-                    revision_type: RevisionType::Insert,
-                    content: RevisionContent {
-                        text: "new ".to_string(),
-                        format: None,
-                        position: RevisionPosition {
-                            node_id: "p-2".to_string(),
-                            offset: 0,
-                        },
+                replies: vec![],
+                resolved: false,
+            }],
+            revisions: vec![Revision {
+                id: "r-1".to_string(),
+                author: "Editor".to_string(),
+                date: "2025-01-15T11:00:00Z".to_string(),
+                revision_type: RevisionType::Insert,
+                content: RevisionContent {
+                    text: "new ".to_string(),
+                    format: None,
+                    position: RevisionPosition {
+                        node_id: "p-2".to_string(),
+                        offset: 0,
                     },
-                    accepted: Some(true),
                 },
-            ],
+                accepted: Some(true),
+            }],
         };
 
         let json = serde_json::to_string_pretty(&doc).expect("Failed to serialize DocumentAst");
-        let deserialized: DocumentAst = serde_json::from_str(&json).expect("Failed to deserialize DocumentAst");
+        let deserialized: DocumentAst =
+            serde_json::from_str(&json).expect("Failed to deserialize DocumentAst");
         assert_eq!(doc, deserialized);
 
         // Verify comments and revisions are preserved
@@ -1031,7 +1047,10 @@ mod tests {
         assert!(!deserialized.comments[0].resolved);
 
         assert_eq!(deserialized.revisions.len(), 1);
-        assert_eq!(deserialized.revisions[0].revision_type, RevisionType::Insert);
+        assert_eq!(
+            deserialized.revisions[0].revision_type,
+            RevisionType::Insert
+        );
         assert_eq!(deserialized.revisions[0].accepted, Some(true));
     }
 
@@ -1065,9 +1084,7 @@ mod tests {
             page_count: Some(10),
             word_count: 5000,
             parser_version: "0.3.0".to_string(),
-            blocks: vec![
-                BlockNode::Paragraph(simple_paragraph("p-1", "Content")),
-            ],
+            blocks: vec![BlockNode::Paragraph(simple_paragraph("p-1", "Content"))],
             comments: vec![
                 Comment {
                     id: "c-1".to_string(),
@@ -1157,7 +1174,8 @@ mod tests {
         };
 
         let json = serde_json::to_string_pretty(&doc).expect("Failed to serialize DocumentAst");
-        let deserialized: DocumentAst = serde_json::from_str(&json).expect("Failed to deserialize DocumentAst");
+        let deserialized: DocumentAst =
+            serde_json::from_str(&json).expect("Failed to deserialize DocumentAst");
         assert_eq!(doc, deserialized);
 
         // Verify all comments and revisions are preserved
@@ -1167,12 +1185,20 @@ mod tests {
         assert!(deserialized.comments[1].resolved);
 
         assert_eq!(deserialized.revisions.len(), 3);
-        assert_eq!(deserialized.revisions[0].revision_type, RevisionType::Insert);
-        assert_eq!(deserialized.revisions[1].revision_type, RevisionType::Delete);
-        assert_eq!(deserialized.revisions[2].revision_type, RevisionType::FormatChange);
+        assert_eq!(
+            deserialized.revisions[0].revision_type,
+            RevisionType::Insert
+        );
+        assert_eq!(
+            deserialized.revisions[1].revision_type,
+            RevisionType::Delete
+        );
+        assert_eq!(
+            deserialized.revisions[2].revision_type,
+            RevisionType::FormatChange
+        );
         assert_eq!(deserialized.revisions[0].accepted, Some(true));
         assert_eq!(deserialized.revisions[1].accepted, Some(false));
         assert_eq!(deserialized.revisions[2].accepted, None);
     }
-
 }

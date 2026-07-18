@@ -1,14 +1,31 @@
 {
   "name": "@bidlens/shared",
-  "version": "0.1.0",
+  "version": "0.2.2",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./types-only": {
+      "types": "./dist/types-only.d.ts",
+      "import": "./dist/types-only.js",
+      "require": "./dist/cjs/types-only.js"
+    }
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@types/pdf-parse": "^1.1.5",
     "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "docx4js": "^3.3.0",
+    "pdf-parse": "^2.4.5"
   }
 }

@@ -1,0 +1,223 @@
+{
+  "_doc": "Canonical fixture for TS/Rust JSON round-trip testing. Field names use snake_case for Rust serde compatibility. TypeScript code must map camelCase <-> snake_case.",
+  "documentAst": {
+    "id": "doc-a-001",
+    "filename": "基准版.docx",
+    "sha256": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "page_count": 3,
+    "word_count": 1500,
+    "parser_version": "0.2.2",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "id": "p-001",
+        "runs": [
+          {
+            "id": "r-001",
+            "text": "投标人应提供有效的营业执照副本",
+            "format": {
+              "bold": false,
+              "italic": false,
+              "underline": false,
+              "font_family": "宋体",
+              "font_size": 12.0,
+              "color": "#000000",
+              "background_color": null,
+              "strikethrough": false
+            }
+          }
+        ],
+        "page_start": 1,
+        "page_end": 1,
+        "paragraph_format": {
+          "alignment": "justify",
+          "indent_left": 0.0,
+          "indent_right": 0.0,
+          "indent_first_line": 2.0,
+          "line_spacing": 1.5,
+          "space_before": 0.0,
+          "space_after": 0.0
+        }
+      },
+      {
+        "type": "paragraph",
+        "id": "p-002",
+        "runs": [
+          {
+            "id": "r-002",
+            "text": "本项目不接受联合体投标",
+            "format": null
+          }
+        ],
+        "page_start": 1,
+        "page_end": 1,
+        "paragraph_format": null
+      },
+      {
+        "type": "table",
+        "id": "t-001",
+        "rows": [
+          {
+            "id": "tr-001",
+            "cells": [
+              { "id": "tc-001", "content": [{"type": "paragraph", "id": "tcp-001", "runs": [{"id": "tcr-001", "text": "序号", "format": null}], "page_start": null, "page_end": null, "paragraph_format": null}], "span": null, "properties": null },
+              { "id": "tc-002", "content": [{"type": "paragraph", "id": "tcp-002", "runs": [{"id": "tcr-002", "text": "评审项目", "format": null}], "page_start": null, "page_end": null, "paragraph_format": null}], "span": null, "properties": null },
+              { "id": "tc-003", "content": [{"type": "paragraph", "id": "tcp-003", "runs": [{"id": "tcr-003", "text": "分值", "format": null}], "page_start": null, "page_end": null, "paragraph_format": null}], "span": null, "properties": null }
+            ],
+            "row_type": "header"
+          },
+          {
+            "id": "tr-002",
+            "cells": [
+              { "id": "tc-004", "content": [{"type": "paragraph", "id": "tcp-004", "runs": [{"id": "tcr-004", "text": "1", "format": null}], "page_start": null, "page_end": null, "paragraph_format": null}], "span": null, "properties": null },
+              { "id": "tc-005", "content": [{"type": "paragraph", "id": "tcp-005", "runs": [{"id": "tcr-005", "text": "技术方案", "format": null}], "page_start": null, "page_end": null, "paragraph_format": null}], "span": null, "properties": null },
+              { "id": "tc-006", "content": [{"type": "paragraph", "id": "tcp-006", "runs": [{"id": "tcr-006", "text": "40", "format": null}], "page_start": null, "page_end": null, "paragraph_format": null}], "span": null, "properties": null }
+            ],
+            "row_type": "body"
+          }
+        ],
+        "page_start": 2,
+        "page_end": 2,
+        "properties": null
+      }
+    ],
+    "comments": [
+      {
+        "id": "c-001",
+        "author": "张三",
+        "date": "2026-07-15T10:00:00Z",
+        "content": "此处需要确认",
+        "range": {
+          "start_node_id": "p-001",
+          "start_offset": 0,
+          "end_node_id": "p-001",
+          "end_offset": 4
+        },
+        "replies": [],
+        "resolved": false
+      }
+    ],
+    "revisions": [
+      {
+        "id": "rev-001",
+        "author": "李四",
+        "date": "2026-07-15T11:00:00Z",
+        "revision_type": "insert",
+        "content": {
+          "text": "有效",
+          "format": null,
+          "position": {
+            "node_id": "p-001",
+            "offset": 4
+          }
+        },
+        "accepted": true
+      }
+    ]
+  },
+  "diffAst": {
+    "task_id": "task-001",
+    "doc_a_id": "doc-a-001",
+    "doc_b_id": "doc-b-001",
+    "generated_at": "2026-07-18T12:00:00Z",
+    "items": [
+      {
+        "match_id": "m-001",
+        "match_type": "modified",
+        "confidence": 0.85,
+        "similarity": 0.85,
+        "source_a": "投标人应提供有效的营业执照副本",
+        "source_b": "投标人须提供有效的营业执照副本",
+        "node_ids_a": ["p-001"],
+        "node_ids_b": ["p-001"],
+        "diff_detail": [
+          { "kind": "same", "text": "投标人" },
+          { "kind": "removed", "text": "应" },
+          { "kind": "added", "text": "须" },
+          { "kind": "same", "text": "提供有效的营业执照副本" }
+        ],
+        "summary": "措辞变更: 应→须",
+        "block_type": "paragraph"
+      },
+      {
+        "match_id": "m-002",
+        "match_type": "deleted",
+        "confidence": 1.0,
+        "similarity": 0.0,
+        "source_a": "本项目不接受联合体投标",
+        "source_b": null,
+        "node_ids_a": ["p-002"],
+        "node_ids_b": [],
+        "diff_detail": [],
+        "summary": "基准文档中删除",
+        "block_type": "paragraph"
+      },
+      {
+        "match_id": "m-003",
+        "match_type": "added",
+        "confidence": 1.0,
+        "similarity": 0.0,
+        "source_a": null,
+        "source_b": "投标保证金为人民币伍万元整",
+        "node_ids_a": [],
+        "node_ids_b": ["p-003"],
+        "diff_detail": [],
+        "summary": "待审文档中新增",
+        "block_type": "paragraph"
+      }
+    ],
+    "summary": {
+      "identical": 0,
+      "modified": 1,
+      "added": 1,
+      "deleted": 1,
+      "moved": 0,
+      "split": 0,
+      "merged": 0,
+      "uncertain": 0
+    }
+  },
+  "fieldMapping": {
+    "_doc": "TypeScript camelCase -> Rust snake_case mapping reference",
+    "taskId": "task_id",
+    "docAId": "doc_a_id",
+    "docBId": "doc_b_id",
+    "generatedAt": "generated_at",
+    "matchId": "match_id",
+    "matchType": "match_type",
+    "sourceA": "source_a",
+    "sourceB": "source_b",
+    "nodeIdsA": "node_ids_a",
+    "nodeIdsB": "node_ids_b",
+    "diffDetail": "diff_detail",
+    "blockType": "block_type",
+    "tableA": "table_a",
+    "tableB": "table_b",
+    "tableDiff": "table_diff",
+    "formatDiff": "format_diff",
+    "reviewAnnotationId": "review_annotation_id",
+    "pageCount": "page_count",
+    "wordCount": "word_count",
+    "parserVersion": "parser_version",
+    "pageStart": "page_start",
+    "pageEnd": "page_end",
+    "startNodeId": "start_node_id",
+    "startOffset": "start_offset",
+    "endNodeId": "end_node_id",
+    "endOffset": "end_offset",
+    "revisionType": "revision_type",
+    "rowSpan": "row_span",
+    "colSpan": "col_span",
+    "rowType": "row_type",
+    "fontFamily": "font_family",
+    "fontSize": "font_size",
+    "backgroundColor": "background_color",
+    "indentLeft": "indent_left",
+    "indentRight": "indent_right",
+    "indentFirstLine": "indent_first_line",
+    "lineSpacing": "line_spacing",
+    "spaceBefore": "space_before",
+    "spaceAfter": "space_after",
+    "similarityThreshold": "similarity_threshold"
+  }
+}

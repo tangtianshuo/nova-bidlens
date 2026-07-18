@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { FormatDiffPanel } from './FormatDiffPanel';
-import type { FormatDiffResult } from '@bidlens/shared';
+import type { FormatDiffResult } from '@bidlens/shared/types-only';
 
 describe('FormatDiffPanel', () => {
   const mockFormatDiff: FormatDiffResult = {
@@ -198,3 +198,4 @@ describe('FormatDiffPanel', () => {
     expect(paragraphGroupButton.textContent).toContain('2');
   });
 });
+

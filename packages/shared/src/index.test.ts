@@ -5,7 +5,7 @@ import { BIDLENS_VERSION } from './index';
 
 describe('BIDLENS_VERSION', () => {
   it('matches the workspace package version', () => {
-    expect(BIDLENS_VERSION).toBe('0.1.0');
+    expect(BIDLENS_VERSION).toBe('0.2.2');
   });
 });
 

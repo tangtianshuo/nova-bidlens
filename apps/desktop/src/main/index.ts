@@ -1,34 +1,123 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, Menu } from 'electron';
 import path from 'node:path';
-import { registerCompareHandlers } from './ipc/compare-handlers';
+import {
+  registerCompareHandlers,
+  setPersistenceDeps,
+  shutdownCompareServices,
+} from './ipc/compare-handlers';
+import { registerHistoryHandlers } from './ipc/history-handlers';
+import { registerSettingsHandlers } from './ipc/settings-handlers';
+import { registerAnnotationHandlers } from './ipc/annotation-handlers';
+import { PersistenceManager } from './services/persistence';
 
 const isDev = !app.isPackaged;
 
+// Global persistence manager
+let persistence: PersistenceManager | null = null;
+let shutdownStarted = false;
+
 function createWindow() {
+  console.log('[Main] Creating window, isDev:', isDev);
+  console.log('[Main] __dirname:', __dirname);
+
+  const preloadPath = path.join(__dirname, '../preload/index.js');
+  console.log('[Main] Preload path:', preloadPath);
+
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
+    minWidth: 1024,
+    minHeight: 700,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#ffffff',
+      symbolColor: '#17202a',
+      height: 38,
+    },
+    autoHideMenuBar: true,
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
 
+  // The renderer owns the product title bar; never expose Electron's menu bar.
+  win.setMenuBarVisibility(false);
+  win.setAutoHideMenuBar(true);
+
+  // Initialize persistence layer
+  persistence = new PersistenceManager();
+  const dbResult = persistence.initialize();
+  if (!dbResult.healthy) {
+    console.error('[Main] Database health issue:', dbResult.corruptionError);
+  }
+
+  // Wire persistence dependencies to compare handlers
+  const persistenceDeps = {
+    taskRepo: persistence.taskRepo,
+    snapshotRepo: persistence.snapshotRepo,
+    annotationRepo: persistence.annotationRepo,
+    retentionService: persistence.retentionService,
+    db: persistence.db,
+  };
+
+  // Set persistence deps for compare handlers
+  setPersistenceDeps(persistenceDeps);
+
+  // Register all IPC handlers
   registerCompareHandlers(win);
 
+  registerHistoryHandlers({
+    ...persistenceDeps,
+  });
+
+  registerSettingsHandlers({
+    db: persistence.db,
+    retentionService: persistence.retentionService,
+  });
+
+  registerAnnotationHandlers({
+    annotationRepo: persistence.annotationRepo,
+    taskRepo: persistence.taskRepo,
+  });
+
+  // Listen for console messages from renderer
+  win.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[Renderer ${level}] ${message} (${sourceId}:${line})`);
+  });
+
   if (isDev) {
+    console.log('[Main] Loading dev URL: http://127.0.0.1:5173');
     win.loadURL('http://127.0.0.1:5173');
-    win.webContents.openDevTools();
   } else {
-    win.loadFile(path.join(__dirname, '../renderer/index.html'));
+    const indexPath = path.join(__dirname, '../renderer/index.html');
+    console.log('[Main] Loading file:', indexPath);
+    win.loadFile(indexPath);
   }
 }
 
 app.whenReady().then(createWindow);
 
+// Prevent the native File/Edit/View menu from appearing above the product UI.
+Menu.setApplicationMenu(null);
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', (event) => {
+  if (shutdownStarted) return;
+  shutdownStarted = true;
+  event.preventDefault();
+
+  void shutdownCompareServices().finally(async () => {
+    if (persistence) {
+      await persistence.shutdown();
+      persistence = null;
+    }
+    app.quit();
+  });
 });
 
 app.on('activate', () => {

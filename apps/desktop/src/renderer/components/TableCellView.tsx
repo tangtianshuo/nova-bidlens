@@ -1,5 +1,5 @@
-import type { CellChangeType, CellDiff, TableDiffResult } from '@bidlens/shared';
-import { getCellChangeColor, getCellDiffTooltip } from '@bidlens/shared';
+import type { CellChangeType, CellDiff, TableDiffResult } from '@bidlens/shared/types-only';
+import { getCellChangeColor, getCellDiffTooltip } from '@bidlens/shared/types-only';
 import { useState } from 'react';
 
 export interface ParsedNestedTable {
@@ -232,3 +232,4 @@ function NestedTableView({ table, diff }: { table: ParsedNestedTable; diff?: Tab
 function getTooltipText(diff: CellDiff): string {
   return getCellDiffTooltip(diff);
 }
+

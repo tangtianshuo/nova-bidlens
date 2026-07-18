@@ -1,0 +1,59 @@
+appId: com.bidlens.desktop
+productName: BidLens
+directories:
+  buildResources: build
+  output: dist-electron
+files:
+  - dist/main/**/*
+  - dist/preload/**/*
+  - dist/renderer/**/*
+  - package.json
+  - node_modules/**/*
+asarUnpack:
+  - node_modules/**/better-sqlite3/**/*
+npmRebuild: true
+afterPack: scripts/copy-native-runtime.cjs
+win:
+  signAndEditExecutable: false
+  target:
+    - target: nsis
+      arch:
+        - x64
+  electronLanguages:
+    - zh-CN
+    - en-US
+  extraResources:
+    - from: ../../bidlens-engine/target/release/bidlens-engine.exe
+      to: engine/bidlens-engine.exe
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: BidLens
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  extraResources:
+    - from: ../../bidlens-engine/target/release/bidlens-engine
+      to: engine/bidlens-engine
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  category: Office
+  extraResources:
+    - from: ../../bidlens-engine/target/release/bidlens-engine
+      to: engine/bidlens-engine
+asar: true
+# Re-enable together with executable signing; unsigned Windows builds are locked
+# by endpoint protection while electron-builder rewrites the executable.
+disableAsarIntegrity: true
+compression: maximum
+# 移除不必要的组件以减小包体积
+removePackageScripts: true
