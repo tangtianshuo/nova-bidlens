@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { evaluatePhase0Gate, type Phase0Evidence } from '../../scripts/v03/model-feasibility/phase0_gate';
+import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { buildPhase0Evidence, evaluatePhase0Gate, type Phase0Evidence } from '../../scripts/v03/model-feasibility/phase0_gate';
 
 const passing: Phase0Evidence = {
   legal: { redistributionApproved: true, reviewer: 'LEGAL-123', reviewedAt: '2026-07-19T00:00:00Z' },
@@ -47,5 +50,61 @@ describe('V0.3 Phase 0 gate', () => {
     const evidence = structuredClone(passing);
     mutator(evidence);
     expect(evaluatePhase0Gate(evidence).failures).toContain(expectedFailure);
+  });
+});
+
+function writeJson(path: string, data: unknown): void {
+  writeFileSync(path, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+function scaffoldFixtures(root: string, overrides?: { modelPatch?: Record<string, unknown> }): void {
+  mkdirSync(join(root, 'scripts/v03/model-feasibility'), { recursive: true });
+  mkdirSync(join(root, '.artifacts/v03/results'), { recursive: true });
+  writeJson(join(root, 'scripts/v03/model-feasibility/legal-decision.json'), {
+    redistributionApproved: true, reviewer: 'LEGAL-123', reviewedAt: '2026-07-19T00:00:00Z',
+  });
+  writeJson(join(root, '.artifacts/v03/results/gold-summary.json'), { pairCount: 40, relationCount: 3500 });
+  writeJson(join(root, '.artifacts/v03/results/bge-m3-int8.json'), {
+    dimension: 1024,
+    referenceCosines: [0.991, 0.992],
+    peakRssBytes: 1_800_000_000,
+    ...(overrides?.modelPatch ?? {}),
+  });
+  writeJson(join(root, '.artifacts/v03/results/jaccard-baseline.json'), {
+    f1: 0.62, obviousErrorRate: 0.07, datasetHash: 'deadbeef',
+  });
+}
+
+describe('buildPhase0Evidence', () => {
+  it('reads peakRssBytes from bge-m3-int8.json', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'phase0-'));
+    scaffoldFixtures(root);
+    const evidence = await buildPhase0Evidence(root);
+    expect(evidence.model.peakWorkingSetBytes).toBe(1_800_000_000);
+    expect(evaluatePhase0Gate(evidence).status).toBe('pass');
+  });
+
+  it('does not read bge-m3-int8-process.json', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'phase0-'));
+    scaffoldFixtures(root);
+    writeJson(join(root, '.artifacts/v03/results/bge-m3-int8-process.json'), { peakWorkingSetBytes: 999 });
+    const evidence = await buildPhase0Evidence(root);
+    expect(evidence.model.peakWorkingSetBytes).toBe(1_800_000_000);
+  });
+
+  it('maps fields from all four JSON sources', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'phase0-'));
+    scaffoldFixtures(root);
+    const evidence = await buildPhase0Evidence(root);
+    expect(evidence.legal.redistributionApproved).toBe(true);
+    expect(evidence.dataset).toEqual({ pairCount: 40, relationCount: 3500 });
+    expect(evidence.model.dimension).toBe(1024);
+    expect(evidence.model.minimumReferenceCosine).toBe(0.991);
+    expect(evidence.baseline).toEqual({ f1: 0.62, obviousErrorRate: 0.07, datasetHash: 'deadbeef' });
+  });
+
+  it('propagates file-not-found errors', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'phase0-'));
+    await expect(buildPhase0Evidence(root)).rejects.toThrow();
   });
 });

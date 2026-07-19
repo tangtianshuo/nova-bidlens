@@ -814,23 +814,19 @@ Expected for the artifact selected for production:
 - Every row norm is in `[0.999, 1.001]`.
 - FP32 reference cosine is at least `0.999` for every probe sentence.
 - INT8 reference cosine is at least `0.98` for every probe sentence.
-- Fresh-process peak RSS, measured in the next step, remains below 2,147,483,648 bytes.
+- In-process peak RSS, measured in the next step, remains below 2,147,483,648 bytes.
 
-- [ ] **Step 7: Measure true child-process peak RSS**
+- [ ] **Step 7: Confirm in-process peak RSS measurement**
 
-Use PowerShell to launch each benchmark and poll `PeakWorkingSet64` until exit:
+`benchmark_model.py` contains an in-process `RssSampler` that polls `psutil.Process().memory_info().rss` every 5 ms throughout the entire sampler run — covering tokenizer construction and encoding plus ONNX session creation and inference — and records the peak in the `peakRssBytes` field of the benchmark report (`bge-m3-int8.json`). This value is the **sole** gate evidence for peak working set. The `buildPhase0Evidence` function in `phase0_gate.ts` reads `peakRssBytes` directly from `bge-m3-int8.json`; it does **not** read any other memory file.
+
+Confirm the Step 6 benchmark report contains a finite `peakRssBytes` below 2,147,483,648:
 
 ```powershell
-$python = Resolve-Path 'scripts/v03/model-feasibility/.venv/Scripts/python.exe'
-$args = @('scripts/v03/model-feasibility/benchmark_model.py','--tokenizer-dir','.artifacts/v03/bge-m3-source/onnx','--model','.artifacts/v03/bge-m3-int8/model.onnx','--output','.artifacts/v03/results/bge-m3-int8-rss.json','--reference-report','.artifacts/v03/results/bge-m3-fp32.json')
-$process = Start-Process -FilePath $python -ArgumentList $args -WindowStyle Hidden -PassThru
-$peak = 0L
-while (-not $process.HasExited) { $process.Refresh(); $peak = [Math]::Max($peak, $process.PeakWorkingSet64); Start-Sleep -Milliseconds 100 }
-@{ peakWorkingSetBytes = $peak; exitCode = $process.ExitCode } | ConvertTo-Json | Set-Content .artifacts/v03/results/bge-m3-int8-process.json
-if ($process.ExitCode -ne 0 -or $peak -ge 2147483648) { exit 1 }
+node -e "const r=JSON.parse(require('fs').readFileSync('.artifacts/v03/results/bge-m3-int8.json','utf-8')); if(!(r.peakRssBytes>0&&r.peakRssBytes<2147483648)){console.error('FAIL',r.peakRssBytes);process.exit(1)} console.log('peakRssBytes',r.peakRssBytes,'OK')"
 ```
 
-Expected: exit code 0 and peak working set below 2GB.
+Expected: prints `peakRssBytes <value> OK` and exits 0.
 
 - [ ] **Step 8: Commit Task 5 tooling**
 
@@ -1038,7 +1034,10 @@ Create `tests/v03/phase0-gate.test.ts`:
 
 ```typescript
 import { describe, expect, it } from 'vitest';
-import { evaluatePhase0Gate, type Phase0Evidence } from '../../scripts/v03/model-feasibility/phase0_gate';
+import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { buildPhase0Evidence, evaluatePhase0Gate, type Phase0Evidence } from '../../scripts/v03/model-feasibility/phase0_gate';
 
 const passing: Phase0Evidence = {
   legal: { redistributionApproved: true, reviewer: 'LEGAL-123', reviewedAt: '2026-07-19T00:00:00Z' },
@@ -1070,6 +1069,62 @@ describe('V0.3 Phase 0 gate', () => {
     expect(evaluatePhase0Gate(evidence).failures).toContain('gold dataset requires at least 3000 relations');
   });
 });
+
+function writeJson(path: string, data: unknown): void {
+  writeFileSync(path, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+function scaffoldFixtures(root: string, overrides?: { modelPatch?: Record<string, unknown> }): void {
+  mkdirSync(join(root, 'scripts/v03/model-feasibility'), { recursive: true });
+  mkdirSync(join(root, '.artifacts/v03/results'), { recursive: true });
+  writeJson(join(root, 'scripts/v03/model-feasibility/legal-decision.json'), {
+    redistributionApproved: true, reviewer: 'LEGAL-123', reviewedAt: '2026-07-19T00:00:00Z',
+  });
+  writeJson(join(root, '.artifacts/v03/results/gold-summary.json'), { pairCount: 40, relationCount: 3500 });
+  writeJson(join(root, '.artifacts/v03/results/bge-m3-int8.json'), {
+    dimension: 1024,
+    referenceCosines: [0.991, 0.992],
+    peakRssBytes: 1_800_000_000,
+    ...(overrides?.modelPatch ?? {}),
+  });
+  writeJson(join(root, '.artifacts/v03/results/jaccard-baseline.json'), {
+    f1: 0.62, obviousErrorRate: 0.07, datasetHash: 'deadbeef',
+  });
+}
+
+describe('buildPhase0Evidence', () => {
+  it('reads peakRssBytes from bge-m3-int8.json', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'phase0-'));
+    scaffoldFixtures(root);
+    const evidence = await buildPhase0Evidence(root);
+    expect(evidence.model.peakWorkingSetBytes).toBe(1_800_000_000);
+    expect(evaluatePhase0Gate(evidence).status).toBe('pass');
+  });
+
+  it('does not read bge-m3-int8-process.json', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'phase0-'));
+    scaffoldFixtures(root);
+    writeJson(join(root, '.artifacts/v03/results/bge-m3-int8-process.json'), { peakWorkingSetBytes: 999 });
+    const evidence = await buildPhase0Evidence(root);
+    expect(evidence.model.peakWorkingSetBytes).toBe(1_800_000_000);
+  });
+
+  it('maps fields from all four JSON sources', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'phase0-'));
+    scaffoldFixtures(root);
+    const evidence = await buildPhase0Evidence(root);
+    expect(evidence.legal.redistributionApproved).toBe(true);
+    expect(evidence.dataset).toEqual({ pairCount: 40, relationCount: 3500 });
+    expect(evidence.model.dimension).toBe(1024);
+    expect(evidence.model.minimumReferenceCosine).toBe(0.991);
+    expect(evidence.baseline).toEqual({ f1: 0.62, obviousErrorRate: 0.07, datasetHash: 'deadbeef' });
+  });
+
+  it('propagates file-not-found errors', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'phase0-'));
+    await expect(buildPhase0Evidence(root)).rejects.toThrow();
+  });
+});
 ```
 
 - [ ] **Step 2: Run the tests and verify RED**
@@ -1094,6 +1149,26 @@ export interface Phase0Evidence {
   baseline: { f1: number; obviousErrorRate: number; datasetHash: string };
 }
 
+export async function buildPhase0Evidence(root: string): Promise<Phase0Evidence> {
+  const { readFile } = await import('node:fs/promises');
+  const { resolve } = await import('node:path');
+  const readJson = async (relative: string) => JSON.parse(await readFile(resolve(root, relative), 'utf-8')) as any;
+  const legal = await readJson('scripts/v03/model-feasibility/legal-decision.json');
+  const gold = await readJson('.artifacts/v03/results/gold-summary.json');
+  const model = await readJson('.artifacts/v03/results/bge-m3-int8.json');
+  const baseline = await readJson('.artifacts/v03/results/jaccard-baseline.json');
+  return {
+    legal,
+    dataset: { pairCount: gold.pairCount, relationCount: gold.relationCount },
+    model: {
+      dimension: model.dimension,
+      minimumReferenceCosine: Math.min(...model.referenceCosines),
+      peakWorkingSetBytes: model.peakRssBytes,
+    },
+    baseline: { f1: baseline.f1, obviousErrorRate: baseline.obviousErrorRate, datasetHash: baseline.datasetHash },
+  };
+}
+
 export function evaluatePhase0Gate(evidence: Phase0Evidence): { status: 'pass' | 'fail'; failures: string[] } {
   const failures: string[] = [];
   if (!evidence.legal.redistributionApproved || !evidence.legal.reviewer || !evidence.legal.reviewedAt) {
@@ -1112,31 +1187,17 @@ export function evaluatePhase0Gate(evidence: Phase0Evidence): { status: 'pass' |
 }
 
 if (process.argv[1]?.endsWith('phase0_gate.ts')) {
-  const { readFileSync } = await import('node:fs');
-  const root = new URL('../../../', import.meta.url);
-  const readJson = (relative: string) => JSON.parse(readFileSync(new URL(relative, root), 'utf-8')) as any;
-  const legal = readJson('scripts/v03/model-feasibility/legal-decision.json');
-  const gold = readJson('.artifacts/v03/results/gold-summary.json');
-  const model = readJson('.artifacts/v03/results/bge-m3-int8.json');
-  const processReport = readJson('.artifacts/v03/results/bge-m3-int8-process.json');
-  const baseline = readJson('.artifacts/v03/results/jaccard-baseline.json');
-  const evidence: Phase0Evidence = {
-    legal,
-    dataset: { pairCount: gold.pairCount, relationCount: gold.relationCount },
-    model: {
-      dimension: model.dimension,
-      minimumReferenceCosine: Math.min(...model.referenceCosines),
-      peakWorkingSetBytes: processReport.peakWorkingSetBytes,
-    },
-    baseline: { f1: baseline.f1, obviousErrorRate: baseline.obviousErrorRate, datasetHash: baseline.datasetHash },
-  };
+  const { fileURLToPath } = await import('node:url');
+  const { dirname, resolve } = await import('node:path');
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+  const evidence = await buildPhase0Evidence(root);
   const result = evaluatePhase0Gate(evidence);
   console.log(JSON.stringify({ ...result, evidence }, null, 2));
   if (result.status === 'fail') process.exitCode = 1;
 }
 ```
 
-Keep file reading out of `evaluatePhase0Gate` so unit tests remain deterministic.
+`buildPhase0Evidence` reads `peakRssBytes` directly from `bge-m3-int8.json`. The `bge-m3-int8-process.json` file is no longer read by the gate. Keep file reading out of `evaluatePhase0Gate` so unit tests remain deterministic.
 
 - [ ] **Step 4: Run the tests and verify GREEN**
 
@@ -1146,7 +1207,7 @@ Run:
 pnpm exec vitest run tests/v03/phase0-gate.test.ts tests/v03/evaluate-gold.test.ts
 ```
 
-Expected: 8 tests PASS.
+Expected: 19 tests PASS (10 `evaluatePhase0Gate` + 4 `buildPhase0Evidence` + 5 evaluate-gold).
 
 - [ ] **Step 5: Commit Task 7**
 
@@ -1278,7 +1339,7 @@ Required evidence:
 
 - The Phase 0 gate reports PASS with zero failures.
 - BGE-M3 INT8 parity is at least 0.98 against the pinned reference path.
-- Peak child-process working set is below 2GB.
+- Peak in-process RSS is below 2GB.
 - Private gold data has at least 30 pairs and 3,000 adjudicated relations.
 - The current Jaccard baseline is recorded against the same dataset hash.
 - No model weights, virtual environments, generated benchmark outputs, or private gold documents are tracked.

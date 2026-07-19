@@ -5,6 +5,26 @@ export interface Phase0Evidence {
   baseline: { f1: number; obviousErrorRate: number; datasetHash: string };
 }
 
+export async function buildPhase0Evidence(root: string): Promise<Phase0Evidence> {
+  const { readFile } = await import('node:fs/promises');
+  const { resolve } = await import('node:path');
+  const readJson = async (relative: string) => JSON.parse(await readFile(resolve(root, relative), 'utf-8')) as any;
+  const legal = await readJson('scripts/v03/model-feasibility/legal-decision.json');
+  const gold = await readJson('.artifacts/v03/results/gold-summary.json');
+  const model = await readJson('.artifacts/v03/results/bge-m3-int8.json');
+  const baseline = await readJson('.artifacts/v03/results/jaccard-baseline.json');
+  return {
+    legal,
+    dataset: { pairCount: gold.pairCount, relationCount: gold.relationCount },
+    model: {
+      dimension: model.dimension,
+      minimumReferenceCosine: Math.min(...model.referenceCosines),
+      peakWorkingSetBytes: model.peakRssBytes,
+    },
+    baseline: { f1: baseline.f1, obviousErrorRate: baseline.obviousErrorRate, datasetHash: baseline.datasetHash },
+  };
+}
+
 export function evaluatePhase0Gate(evidence: Phase0Evidence): { status: 'pass' | 'fail'; failures: string[] } {
   const failures: string[] = [];
   if (!evidence.legal.redistributionApproved || !evidence.legal.reviewer || evidence.legal.reviewer === 'unassigned' || !evidence.legal.reviewedAt) {
@@ -23,24 +43,10 @@ export function evaluatePhase0Gate(evidence: Phase0Evidence): { status: 'pass' |
 }
 
 if (process.argv[1]?.endsWith('phase0_gate.ts')) {
-  const { readFileSync } = await import('node:fs');
-  const root = new URL('../../../', import.meta.url);
-  const readJson = (relative: string) => JSON.parse(readFileSync(new URL(relative, root), 'utf-8')) as any;
-  const legal = readJson('scripts/v03/model-feasibility/legal-decision.json');
-  const gold = readJson('.artifacts/v03/results/gold-summary.json');
-  const model = readJson('.artifacts/v03/results/bge-m3-int8.json');
-  const processReport = readJson('.artifacts/v03/results/bge-m3-int8-process.json');
-  const baseline = readJson('.artifacts/v03/results/jaccard-baseline.json');
-  const evidence: Phase0Evidence = {
-    legal,
-    dataset: { pairCount: gold.pairCount, relationCount: gold.relationCount },
-    model: {
-      dimension: model.dimension,
-      minimumReferenceCosine: Math.min(...model.referenceCosines),
-      peakWorkingSetBytes: processReport.peakWorkingSetBytes,
-    },
-    baseline: { f1: baseline.f1, obviousErrorRate: baseline.obviousErrorRate, datasetHash: baseline.datasetHash },
-  };
+  const { fileURLToPath } = await import('node:url');
+  const { dirname, resolve } = await import('node:path');
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+  const evidence = await buildPhase0Evidence(root);
   const result = evaluatePhase0Gate(evidence);
   console.log(JSON.stringify({ ...result, evidence }, null, 2));
   if (result.status === 'fail') process.exitCode = 1;
