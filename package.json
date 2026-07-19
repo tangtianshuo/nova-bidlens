@@ -10,7 +10,10 @@
     "test:ts": "pnpm --filter @bidlens/shared test && pnpm --filter @bidlens/desktop test",
     "test:rust": "cargo test --manifest-path bidlens-engine/Cargo.toml",
     "test:integration": "vitest run tests/integration",
-    "test:e2e": "vitest run tests/e2e"
+    "test:e2e": "vitest run tests/e2e",
+    "test:v03:metrics": "vitest run tests/v03/evaluate-gold.test.ts tests/v03/jaccard-baseline.test.ts tests/v03/phase0-gate.test.ts",
+    "test:v03:baseline": "tsx scripts/v03/model-feasibility/run_jaccard_baseline.ts",
+    "test:v03:phase0": "pnpm test:v03:metrics && pnpm test:v03:baseline && tsx scripts/v03/model-feasibility/phase0_gate.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
