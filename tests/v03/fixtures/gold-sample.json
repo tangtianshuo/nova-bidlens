@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "annotation": {
+    "independentAnnotators": 2,
+    "adjudication": "third-reviewer"
+  },
+  "pairs": [
+    {
+      "pairId": "sample-001",
+      "docA": "fixtures/sample-001-a.ast.json",
+      "docB": "fixtures/sample-001-b.ast.json",
+      "relations": [
+        { "nodeIdsA": ["a-1"], "nodeIdsB": ["b-2"], "matchType": "moved" },
+        { "nodeIdsA": ["a-2"], "nodeIdsB": ["b-3", "b-4"], "matchType": "split" }
+      ],
+      "forbiddenRelations": [
+        { "nodeIdsA": ["a-3"], "nodeIdsB": ["b-5"] }
+      ]
+    }
+  ]
+}
