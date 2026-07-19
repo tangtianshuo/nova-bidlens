@@ -25,6 +25,23 @@
    Light Theme (default)
    ============================================================ */
 :root {
+  /* Spacing scale and responsive layout contract */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --layout-page-x: var(--space-6);
+  --layout-page-y: var(--space-6);
+  --layout-panel: var(--space-4);
+  --layout-control-gap: var(--space-2);
+  --layout-section-gap: var(--space-5);
+  --layout-dialog-x: var(--space-6);
+  --layout-dialog-y: var(--space-5);
+
   /* Backgrounds */
   --color-bg: #ffffff;
   --color-bg-subtle: #f0f2f5;
@@ -40,6 +57,8 @@
   --color-text: #17202a;
   --color-text-secondary: #4c5968;
   --color-text-muted: #7c8794;
+  --color-disabled-bg: #eef0f2;
+  --color-disabled-text: #65717e;
 
   /* Accent */
   --color-accent: #315f8f;
@@ -94,6 +113,8 @@
   --color-text: #eef1f4;
   --color-text-secondary: #b8c0c8;
   --color-text-muted: #89939d;
+  --color-disabled-bg: #292e33;
+  --color-disabled-text: #aab2bb;
 
   /* Accent */
   --color-accent: #8baac8;
@@ -151,6 +172,127 @@ body {
   background-color: var(--color-bg-muted);
   color: var(--color-text);
   min-height: 100vh;
+}
+
+.app-page {
+  width: 100%;
+  margin-inline: auto;
+  padding: var(--layout-page-y) var(--layout-page-x);
+}
+
+.app-page[data-width="standard"] {
+  max-width: 1240px;
+}
+
+.app-page[data-width="narrow"] {
+  max-width: 1120px;
+}
+
+.responsive-file-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--layout-panel);
+}
+
+.history-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.history-table-scroll {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.history-table-scroll > table {
+  min-width: 880px;
+}
+
+.history-table-scroll th,
+.history-table-scroll td {
+  padding-inline: var(--layout-panel);
+}
+
+.workbench-taskbar,
+.workbench-filterbar {
+  padding-inline: var(--space-4);
+  gap: var(--layout-control-gap);
+}
+
+.workbench-filterbar {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.workbench-filterbar > * {
+  flex-shrink: 0;
+}
+
+.settings-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+@media (max-width: 1280px) {
+  :root {
+    --layout-page-x: var(--space-5);
+    --layout-page-y: var(--space-5);
+    --layout-panel: var(--space-3);
+    --layout-section-gap: var(--space-4);
+    --layout-dialog-x: var(--space-5);
+  }
+
+  .workbench-filterbar .dimensions {
+    display: none;
+  }
+}
+
+@media (max-width: 1080px) {
+  :root {
+    --layout-page-x: var(--space-4);
+    --layout-page-y: var(--space-4);
+    --layout-panel: var(--space-2);
+    --layout-control-gap: var(--space-1);
+    --layout-dialog-x: var(--space-4);
+    --layout-dialog-y: var(--space-4);
+  }
+
+  .history-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .history-toolbar-search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .workbench-taskbar .optional-label {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .responsive-file-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .responsive-file-grid .file-swap {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .responsive-file-grid .file-swap button {
+    transform: rotate(90deg);
+  }
+
+  .settings-theme-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ============================================================

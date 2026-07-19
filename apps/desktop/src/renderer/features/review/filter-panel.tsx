@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { Search, Star } from 'lucide-react';
+import { Eye, EyeOff, Search, Star } from 'lucide-react';
 import type { MatchType, ReviewStatus } from '@bidlens/shared/types-only';
 import { cn } from '../../lib/utils';
 
@@ -43,6 +43,7 @@ interface FilterBarProps {
   onFiltersChange: (filters: FilterState) => void;
   totalCount: number;
   filteredCount: number;
+  hiddenIdenticalCount?: number;
   className?: string;
 }
 
@@ -51,6 +52,7 @@ export function FilterBar({
   onFiltersChange,
   totalCount,
   filteredCount,
+  hiddenIdenticalCount = 0,
   className,
 }: FilterBarProps) {
   const updateFilter = useCallback(
@@ -75,10 +77,10 @@ export function FilterBar({
       {/* Type filter chips */}
       <div className="flex items-center gap-1">
         <button
-          onClick={() => updateFilter({ matchTypes: new Set() })}
+          onClick={() => updateFilter({ matchTypes: new Set(), hideIdentical: false })}
           className={cn(
             'min-h-7 px-2 text-xs rounded-[var(--radius-sm)] border border-transparent transition-colors whitespace-nowrap',
-            filters.matchTypes.size === 0
+            filters.matchTypes.size === 0 && !filters.hideIdentical
               ? 'border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text)] font-semibold'
               : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
           )}
@@ -103,6 +105,21 @@ export function FilterBar({
           );
         })}
       </div>
+
+      <button
+        onClick={() => updateFilter({ hideIdentical: !filters.hideIdentical })}
+        aria-pressed={filters.hideIdentical}
+        title={filters.hideIdentical ? '显示相同项' : '隐藏相同项'}
+        className={cn(
+          'flex min-h-7 items-center gap-1 px-2 text-xs rounded-[var(--radius-sm)] border border-transparent transition-colors whitespace-nowrap',
+          filters.hideIdentical
+            ? 'border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text)] font-semibold'
+            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
+        )}
+      >
+        {filters.hideIdentical ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+        <span>{filters.hideIdentical ? '显示相同项' : '隐藏相同项'}</span>
+      </button>
 
       {/* Divider */}
       <div className="w-px h-[22px] bg-[var(--color-border)] mx-0.5" />
@@ -154,10 +171,13 @@ export function FilterBar({
       {/* Result count */}
       <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">
         {filteredCount} / {totalCount}
+        {filters.hideIdentical && hiddenIdenticalCount > 0 && (
+          <>（已隐藏 {hiddenIdenticalCount} 条相同项）</>
+        )}
       </span>
 
       {/* Search */}
-      <div className="flex items-center gap-1.5 h-7 min-w-[190px] ml-auto px-2.5 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-bg-input)] text-[var(--color-text-muted)]">
+      <div className="ml-auto flex h-7 min-w-[150px] max-w-[240px] flex-1 items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-input)] px-2.5 text-[var(--color-text-muted)]">
         <Search className="h-3.5 w-3.5 flex-shrink-0" />
         <input
           value={filters.searchQuery}

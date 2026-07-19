@@ -3,36 +3,56 @@
  * Matches V0.2.2 prototype: format selection (HTML/Markdown), scope options.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Download } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogBody, DialogTitle } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 
 type ExportFormat = 'html' | 'markdown';
-type ExportScope = 'all' | 'filtered' | 'important' | 'needs-confirmation';
+type ExportScope = 'all' | 'current_filter' | 'important' | 'needs-confirmation';
 
 interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onExport: (format: ExportFormat, scope: ExportScope) => void;
+  onExport: (format: ExportFormat, scope: ExportScope) => Promise<void>;
 }
 
 export function ExportDialog({ open, onOpenChange, onExport }: ExportDialogProps) {
   const [format, setFormat] = useState<ExportFormat>('html');
   const [scope, setScope] = useState<ExportScope>('all');
+  const [isExporting, setIsExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleExport = useCallback(() => {
-    onExport(format, scope);
-    onOpenChange(false);
+  useEffect(() => {
+    if (open) setError(null);
+  }, [open]);
+
+  const handleExport = useCallback(async () => {
+    setIsExporting(true);
+    setError(null);
+    try {
+      await onExport(format, scope);
+      onOpenChange(false);
+    } catch (exportError) {
+      // Cancelling the native save dialog is a normal user action, not an error.
+      const message = exportError instanceof Error ? exportError.message : '';
+      if (/export cancelled/i.test(message)) return;
+      setError(message || '报告导出失败');
+    } finally {
+      setIsExporting(false);
+    }
   }, [format, scope, onExport, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[440px]">
-        <DialogTitle>导出报告</DialogTitle>
+        <DialogHeader>
+          <DialogTitle>导出报告</DialogTitle>
+        </DialogHeader>
 
+        <DialogBody>
         {/* Format selection */}
-        <div className="mt-4">
+        <div>
           <div className="text-[11px] font-bold text-[var(--color-text-muted)] mb-2">格式</div>
           <div className="inline-flex items-center p-[3px] border border-[var(--color-border)] rounded bg-[var(--color-bg-subtle)]">
             {(['html', 'markdown'] as const).map((opt) => (
@@ -57,7 +77,7 @@ export function ExportDialog({ open, onOpenChange, onExport }: ExportDialogProps
           <div className="grid gap-2.5">
             {([
               { value: 'all', label: '全部差异' },
-              { value: 'filtered', label: '当前筛选结果' },
+              { value: 'current_filter', label: '当前筛选结果' },
               { value: 'important', label: '仅重要' },
               { value: 'needs-confirmation', label: '仅待确认' },
             ] as const).map(({ value, label }) => (
@@ -84,15 +104,21 @@ export function ExportDialog({ open, onOpenChange, onExport }: ExportDialogProps
         </div>
 
         {/* Actions */}
+        {error && (
+          <p role="alert" className="mt-4 text-sm text-[var(--color-danger-text)]">
+            {error}
+          </p>
+        )}
         <div className="mt-4 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={isExporting}>
             取消
           </Button>
-          <Button onClick={handleExport}>
+          <Button onClick={() => { void handleExport(); }} disabled={isExporting}>
             <Download className="h-3.5 w-3.5" />
-            导出
+            {isExporting ? '正在导出...' : '导出'}
           </Button>
         </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

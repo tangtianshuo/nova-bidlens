@@ -11,6 +11,7 @@ import { cn } from '../../lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Badge } from '../../components/ui/badge';
 import { InlineDiff } from './inline-diff';
+import { formatDiffSummary, resolveTextDiffTokens } from './diff-presentation';
 
 interface DetailTabsProps {
   item: DiffItem;
@@ -36,6 +37,13 @@ function getCapabilityState(capabilities: CapabilityResult[], dimension: string)
   return capabilities.find((c) => c.dimension === dimension)?.state ?? 'unsupported';
 }
 
+function getTabState(tab: TabDef, capabilities: CapabilityResult[]): string {
+  // Text detail is rendered locally from engine tokens or source text, so it is
+  // available independently of the optional document capability dimensions.
+  if (tab.id === 'detail') return 'supported';
+  return getCapabilityState(capabilities, tab.dimension);
+}
+
 function CapabilityBadge({ state }: { state: string }) {
   if (state === 'supported') return null;
   if (state === 'unsupported') {
@@ -56,23 +64,23 @@ function CapabilityBadge({ state }: { state: string }) {
 }
 
 function DetailContent({ item }: { item: DiffItem }) {
-  if (!item.diffDetail || item.diffDetail.length === 0) {
+  const tokens = resolveTextDiffTokens(item);
+  if (tokens.length === 0) {
     return (
-      <div className="p-4 text-sm text-[var(--color-text-muted)]">
-        无详细差异信息
+      <div className="space-y-2 p-4 text-sm text-[var(--color-text-muted)]">
+        <p>{item.matchType === 'identical' ? '内容一致，无需展示字符级差异。' : '当前差异缺少可用于字符级对比的正文内容。'}</p>
+        <p className="text-xs">可在中央文档视图中检查结构或表格变化。</p>
       </div>
     );
   }
 
   return (
     <div className="p-4 space-y-4">
-      <InlineDiff tokens={item.diffDetail} />
+      <InlineDiff tokens={tokens} />
 
-      {item.summary && (
-        <div className="text-xs text-[var(--color-text-muted)] border-t border-[var(--color-border)] pt-3">
-          <strong>摘要:</strong> {item.summary}
-        </div>
-      )}
+      <div className="border-t border-[var(--color-border)] pt-3 text-xs text-[var(--color-text-muted)]">
+        <strong>摘要：</strong>{formatDiffSummary(item)}
+      </div>
     </div>
   );
 }
@@ -137,7 +145,7 @@ export function DetailTabs({ item, capabilities, className }: DetailTabsProps) {
     >
       <TabsList className="border-b border-[var(--color-border)] rounded-none bg-transparent px-2" style={{ height: 42 }}>
         {TABS.map((tab) => {
-          const state = getCapabilityState(capabilities, tab.dimension);
+          const state = getTabState(tab, capabilities);
           const Icon = tab.icon;
           return (
             <TabsTrigger
@@ -145,7 +153,7 @@ export function DetailTabs({ item, capabilities, className }: DetailTabsProps) {
               value={tab.id}
               className={cn(
                 'rounded-none border-0 border-b-2 border-transparent text-[11px] gap-1 data-[state=active]:border-[var(--color-accent)] data-[state=active]:font-bold data-[state=active]:text-[var(--color-text)]',
-                state === 'unsupported' && 'opacity-50'
+                state === 'unsupported' && 'cursor-not-allowed text-[var(--color-disabled-text)]'
               )}
               style={{ height: 41, padding: '0 7px' }}
               disabled={state === 'unsupported'}

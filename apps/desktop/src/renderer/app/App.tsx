@@ -43,9 +43,6 @@ function ResultView() {
   const result = useResultStore((s) => s.result);
   const selectedItemId = useResultStore((s) => s.selectedItemId);
   const selectItem = useResultStore((s) => s.selectItem);
-  const selectNext = useResultStore((s) => s.selectNext);
-  const selectPrevious = useResultStore((s) => s.selectPrevious);
-  const selectNextUnreviewed = useResultStore((s) => s.selectNextUnreviewed);
   const upsertAnnotation = useResultStore((s) => s.upsertAnnotation);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
@@ -69,9 +66,6 @@ function ResultView() {
         selectedItemId={selectedItemId}
         filters={filters}
         onSelectItem={selectItem}
-        onSelectNext={selectNext}
-        onSelectPrevious={selectPrevious}
-        onSelectNextUnreviewed={selectNextUnreviewed}
         onFiltersChange={setFilters}
         onSaveAnnotation={(matchId, updates) => { void saveAnnotation(matchId, updates); }}
       />

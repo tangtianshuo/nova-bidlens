@@ -22,6 +22,8 @@ import { Input } from '../../components/ui/input';
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogBody,
   DialogTitle,
   DialogDescription,
 } from '../../components/ui/dialog';
@@ -322,7 +324,7 @@ export function HistoryView() {
   // -- Loading state --
   if (loading) {
     return (
-      <div className="flex flex-1 flex-col p-6">
+      <div className="app-page flex flex-1 flex-col" data-width="standard">
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div
@@ -338,7 +340,7 @@ export function HistoryView() {
   // -- Empty state --
   if (items.length === 0 && !error) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-8">
+      <div className="app-page flex flex-1 flex-col items-center justify-center" data-width="standard">
         <Clock className="h-12 w-12 text-[var(--color-text-muted)]" />
         <h2 className="mt-4 text-lg font-medium text-[var(--color-text)]">
           暂无比对记录
@@ -355,7 +357,7 @@ export function HistoryView() {
   }
 
   return (
-    <div className="flex flex-1 flex-col p-6 mx-auto w-full" style={{ maxWidth: 1240 }}>
+    <div className="app-page flex flex-1 flex-col" data-width="standard">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-[var(--color-text)]">
@@ -382,9 +384,9 @@ export function HistoryView() {
       )}
 
       {/* Toolbar: search, filter, sort */}
-      <div className="mt-4 flex items-center gap-3">
+      <div className="history-toolbar mt-[var(--layout-section-gap)]">
         {/* Search */}
-        <div className="relative flex-1 max-w-sm">
+        <div className="history-toolbar-search relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <input
             type="text"
@@ -472,26 +474,26 @@ export function HistoryView() {
       </div>
 
       {/* Table */}
-      <div className="mt-2 overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)]">
+      <div className="history-table-scroll mt-2 rounded-[var(--radius-md)] border border-[var(--color-border)]">
         <table className="w-full" style={{ tableLayout: 'fixed' }}>
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-subtle)]" style={{ height: 38 }}>
-              <th className="px-4 text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '38%' }}>
+              <th className="text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '31%' }}>
                 文档对
               </th>
-              <th className="px-4 text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '13%' }}>
+              <th className="text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '10%' }}>
                 状态
               </th>
-              <th className="px-4 text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '16%' }}>
+              <th className="text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '14%' }}>
                 差异摘要
               </th>
-              <th className="px-4 text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '18%' }}>
+              <th className="text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '16%' }}>
                 审阅进度
               </th>
-              <th className="px-4 text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '12%' }}>
+              <th className="text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '13%' }}>
                 最后访问
               </th>
-              <th className="px-4" style={{ width: 46 }} />
+              <th style={{ width: 144 }} />
             </tr>
           </thead>
           <tbody>
@@ -523,57 +525,69 @@ export function HistoryView() {
       {/* Delete confirmation dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
-          <DialogTitle>删除比对记录</DialogTitle>
-          <DialogDescription>
-            确定要删除此比对记录吗？此操作不可撤销。
-          </DialogDescription>
-          <div className="mt-4 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setDeleteDialogOpen(false)}>
-              取消
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteTargetId && handleDelete(deleteTargetId)}
-            >
-              删除
-            </Button>
-          </div>
+          <DialogHeader>
+            <DialogTitle>删除比对记录</DialogTitle>
+            <DialogDescription>
+              确定要删除此比对记录吗？此操作不可撤销。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setDeleteDialogOpen(false)}>
+                取消
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteTargetId && handleDelete(deleteTargetId)}
+              >
+                删除
+              </Button>
+            </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
 
       {/* Clear history confirmation dialog */}
       <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
         <DialogContent>
-          <DialogTitle>清空历史记录</DialogTitle>
-          <DialogDescription>
-            确定要清空所有未保留的比对记录吗？已标记为"保留"的记录不会被删除。此操作不可撤销。
-          </DialogDescription>
-          <div className="mt-4 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setClearDialogOpen(false)}>
-              取消
-            </Button>
-            <Button variant="destructive" onClick={handleClearHistory}>
-              清空
-            </Button>
-          </div>
+          <DialogHeader>
+            <DialogTitle>清空历史记录</DialogTitle>
+            <DialogDescription>
+              确定要清空所有未保留的比对记录吗？已标记为"保留"的记录不会被删除。此操作不可撤销。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setClearDialogOpen(false)}>
+                取消
+              </Button>
+              <Button variant="destructive" onClick={handleClearHistory}>
+                清空
+              </Button>
+            </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
 
       {/* File relocation dialog */}
       <Dialog open={relocateDialogOpen} onOpenChange={setRelocateDialogOpen}>
         <DialogContent>
-          <DialogTitle>源文件未找到</DialogTitle>
-          <DialogDescription>
-            {relocateError || '原始比对文件已被移动或删除，请重新选择文件位置。'}
-          </DialogDescription>
-          <div className="mt-4 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setRelocateDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleSelectRelocateFiles}>
-              选择文件
-            </Button>
-          </div>
+          <DialogHeader>
+            <DialogTitle>源文件未找到</DialogTitle>
+            <DialogDescription>
+              {relocateError || '原始比对文件已被移动或删除，请重新选择文件位置。'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setRelocateDialogOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={handleSelectRelocateFiles}>
+                选择文件
+              </Button>
+            </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
     </div>
@@ -614,7 +628,7 @@ function HistoryRow({ item, onOpen, onRetain, onDelete, onRecompare }: HistoryRo
     >
       {/* Document pair */}
       <td
-        className="cursor-pointer px-4 py-3"
+        className="cursor-pointer py-3"
         onClick={onOpen}
         role="button"
         tabIndex={0}
@@ -625,13 +639,13 @@ function HistoryRow({ item, onOpen, onRetain, onDelete, onRecompare }: HistoryRo
           }
         }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <FileText className="h-4 w-4 text-[var(--color-text-muted)]" />
-          <div>
-            <div className="text-sm font-medium text-[var(--color-text)]">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-[var(--color-text)]">
               {item.docAFilename}
             </div>
-            <div className="text-xs text-[var(--color-text-muted)]">
+            <div className="truncate text-xs text-[var(--color-text-muted)]">
               vs {item.docBFilename}
             </div>
           </div>
@@ -644,17 +658,17 @@ function HistoryRow({ item, onOpen, onRetain, onDelete, onRecompare }: HistoryRo
       </td>
 
       {/* Status */}
-      <td className="px-4 py-3">
+      <td className="py-3">
         <Badge variant={statusBadgeVariant} className="text-[11px] font-bold">{statusLabel}</Badge>
       </td>
 
       {/* Diff summary */}
-      <td className="px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+      <td className="py-3 text-sm text-[var(--color-text-secondary)]">
         {item.diffSummary}
       </td>
 
       {/* Review progress */}
-      <td className="px-4 py-3">
+      <td className="py-3">
         <div className="flex items-center gap-2">
           <div className="overflow-hidden rounded-full bg-[var(--color-bg-muted)]" style={{ width: 72, height: 5 }}>
             <div
@@ -674,12 +688,12 @@ function HistoryRow({ item, onOpen, onRetain, onDelete, onRecompare }: HistoryRo
       </td>
 
       {/* Last accessed */}
-      <td className="px-4 py-3 text-sm text-[var(--color-text-muted)]">
+      <td className="py-3 text-sm text-[var(--color-text-muted)]">
         {formatRelativeTime(item.lastAccessedAt)}
       </td>
 
       {/* Actions */}
-      <td className="px-4 py-3">
+      <td className="py-3">
         <div className="flex items-center gap-1">
           {/* Retain toggle */}
           <Button

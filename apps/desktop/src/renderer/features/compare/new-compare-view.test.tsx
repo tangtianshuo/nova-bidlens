@@ -29,8 +29,10 @@ describe('NewCompareView', () => {
   });
 
   it('renders the description', () => {
-    render(<NewCompareView />);
+    const { container } = render(<NewCompareView />);
     expect(screen.getByText('文档内容仅在本机处理')).toBeDefined();
+    expect(container.querySelector('.app-page[data-width="narrow"]')).not.toBeNull();
+    expect(container.querySelector('.responsive-file-grid')).not.toBeNull();
   });
 
   it('renders baseline slot label', () => {

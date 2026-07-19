@@ -316,8 +316,9 @@ interface ClearHistoryResponse {
 interface ExportReportRequest {
   taskId: string;
   format: 'html' | 'markdown';
-  scope: 'all' | 'important' | 'needs-confirmation';
+  scope: 'all' | 'current_filter' | 'important' | 'needs-confirmation';
   includeIdentical: boolean;
+  matchIds?: string[]; // scope 为 current_filter 时传入当前可见差异 ID
 }
 ```
 

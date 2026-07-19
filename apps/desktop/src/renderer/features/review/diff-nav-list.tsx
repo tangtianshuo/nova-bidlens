@@ -8,6 +8,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Flag, Check, AlertTriangle, EyeOff, Circle } from 'lucide-react';
 import type { DiffItem, ReviewAnnotation, MatchType } from '@bidlens/shared/types-only';
 import { cn } from '../../lib/utils';
+import { formatDiffSummary } from './diff-presentation';
 
 interface DiffNavListProps {
   items: DiffItem[];
@@ -30,10 +31,10 @@ const MATCH_TYPE_COLORS: Record<MatchType, string> = {
 
 const MATCH_TYPE_BADGE_STYLES: Record<MatchType, { bg: string; color: string; border: string; label: string }> = {
   identical: { bg: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', border: 'var(--color-border)', label: '相同' },
-  modified: { bg: 'var(--color-modified-bg)', color: 'var(--color-modified-text)', border: 'var(--color-modified-border)', label: '修改' },
-  added: { bg: 'var(--color-added-bg)', color: 'var(--color-added-text)', border: 'var(--color-added-border)', label: '新增' },
-  deleted: { bg: 'var(--color-deleted-bg)', color: 'var(--color-deleted-text)', border: 'var(--color-deleted-border)', label: '删除' },
-  moved: { bg: 'var(--color-modified-bg)', color: 'var(--color-modified-text)', border: 'var(--color-modified-border)', label: '移动' },
+  modified: { bg: 'var(--color-modified-bg)', color: 'var(--color-modified)', border: 'var(--color-modified-border)', label: '修改' },
+  added: { bg: 'var(--color-added-bg)', color: 'var(--color-added)', border: 'var(--color-added-border)', label: '新增' },
+  deleted: { bg: 'var(--color-deleted-bg)', color: 'var(--color-deleted)', border: 'var(--color-deleted-border)', label: '删除' },
+  moved: { bg: 'var(--color-modified-bg)', color: 'var(--color-modified)', border: 'var(--color-modified-border)', label: '移动' },
   split: { bg: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', border: 'var(--color-border)', label: '拆分' },
   merged: { bg: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', border: 'var(--color-border)', label: '合并' },
   uncertain: { bg: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', border: 'var(--color-border)', label: '低置信' },
@@ -118,7 +119,7 @@ const DiffNavItem = memo(function DiffNavItem({
         </div>
         {/* Summary */}
         <div className="mt-1 text-xs text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">
-          {item.summary || item.sourceA?.slice(0, 50) || '无文本'}
+          {formatDiffSummary(item)}
         </div>
         {/* Location */}
         <div className="mt-0.5 text-[11px] text-[var(--color-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap">

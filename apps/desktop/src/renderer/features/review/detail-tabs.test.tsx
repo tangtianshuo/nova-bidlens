@@ -72,9 +72,14 @@ describe('DetailTabs', () => {
     expect(container.textContent).toContain('测试摘要');
   });
 
-  it('shows empty message when diffDetail is empty', () => {
+  it('generates inline detail when diffDetail is empty but source text exists', () => {
     render(<DetailTabs item={makeItem({ diffDetail: [] })} capabilities={FULL_CAPABILITIES} />);
-    expect(screen.getByText('无详细差异信息')).toBeTruthy();
+    expect(screen.getByTestId('inline-diff').textContent).toContain('2 tokens');
+  });
+
+  it('shows a useful message when no text is available for character comparison', () => {
+    render(<DetailTabs item={makeItem({ sourceA: null, sourceB: null, diffDetail: [] })} capabilities={FULL_CAPABILITIES} />);
+    expect(screen.getByText('当前差异缺少可用于字符级对比的正文内容。')).toBeTruthy();
   });
 
   it('renders inline diff when tokens exist', () => {
@@ -97,6 +102,14 @@ describe('DetailTabs', () => {
     ];
     render(<DetailTabs item={makeItem()} capabilities={caps} />);
     expect(screen.getAllByText('不支持').length).toBe(3);
+  });
+
+  it('keeps detail available when the engine returns no capabilities', () => {
+    render(<DetailTabs item={makeItem()} capabilities={[]} />);
+
+    expect(screen.getByRole('button', { name: '详情' })).not.toBeDisabled();
+    expect(screen.getByTestId('inline-diff')).toBeTruthy();
+    expect(screen.getAllByText('不支持')).toHaveLength(3);
   });
 
   it('shows "降级" badge for degraded capabilities', () => {

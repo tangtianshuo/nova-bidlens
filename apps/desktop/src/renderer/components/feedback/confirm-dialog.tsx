@@ -3,6 +3,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogHeader,
+  DialogBody,
   DialogTitle,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -45,21 +47,25 @@ export function ConfirmDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
-        <DialogTitle>{title}</DialogTitle>
-        {description && <DialogDescription>{description}</DialogDescription>}
-        {children && <div className="py-2">{children}</div>}
-        <div className="flex justify-end gap-2 pt-4">
-          <Button variant="secondary" size="sm" onClick={handleCancel}>
-            {cancelLabel}
-          </Button>
-          <Button
-            variant={variant === 'destructive' ? 'destructive' : 'primary'}
-            size="sm"
-            onClick={handleConfirm}
-          >
-            {confirmLabel}
-          </Button>
-        </div>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          {description && <DialogDescription>{description}</DialogDescription>}
+        </DialogHeader>
+        <DialogBody>
+          {children && <div className="py-2">{children}</div>}
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="secondary" size="sm" onClick={handleCancel}>
+              {cancelLabel}
+            </Button>
+            <Button
+              variant={variant === 'destructive' ? 'destructive' : 'primary'}
+              size="sm"
+              onClick={handleConfirm}
+            >
+              {confirmLabel}
+            </Button>
+          </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

@@ -31,7 +31,8 @@ export function registerAnnotationHandlers(deps: {
 
     // Update task's review progress
     const progress = annotationRepo.countByStatus(request.taskId);
-    taskRepo.updateReviewProgress(request.taskId, progress);
+    const total = taskRepo.getDiffItemCount(request.taskId) ?? progress.total;
+    taskRepo.updateReviewProgress(request.taskId, { ...progress, total });
 
     return annotation;
   });

@@ -5,6 +5,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { FileText, Plus, Download, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 import type { CompareResult, ReviewAnnotation, DiffItem, ReviewStatus } from '@bidlens/shared/types-only';
 import { WorkbenchLayout } from './workbench-layout';
 import { DiffNavList } from './diff-nav-list';
@@ -13,6 +14,7 @@ import { DiffViewport } from './diff-viewport';
 import { DetailTabs } from './detail-tabs';
 import { ReviewControls } from './review-controls';
 import { ExportDialog } from './export-dialog';
+import { formatDiffSummary } from './diff-presentation';
 import { Button } from '../../components/ui/button';
 import { IconButton } from '../../components/ui/icon-button';
 import { Tooltip } from '../../components/ui/tooltip';
@@ -22,9 +24,6 @@ interface ReviewWorkbenchProps {
   selectedItemId: string | null;
   filters: FilterState;
   onSelectItem: (matchId: string | null) => void;
-  onSelectNext: () => void;
-  onSelectPrevious: () => void;
-  onSelectNextUnreviewed: () => void;
   onFiltersChange: (filters: FilterState) => void;
   onSaveAnnotation: (matchId: string, updates: Partial<Pick<ReviewAnnotation, 'status' | 'important' | 'note'>>) => void;
   onNewCompare?: () => void;
@@ -35,9 +34,6 @@ export function ReviewWorkbench({
   selectedItemId,
   filters,
   onSelectItem,
-  onSelectNext,
-  onSelectPrevious,
-  onSelectNextUnreviewed,
   onFiltersChange,
   onSaveAnnotation,
   onNewCompare,
@@ -51,6 +47,16 @@ export function ReviewWorkbench({
     () => applyFilters(result.diffAst.items, filters, annotationMap),
     [result.diffAst.items, filters, annotationMap]
   );
+
+  const hiddenIdenticalCount = useMemo(() => {
+    if (!filters.hideIdentical) return 0;
+    const itemsIncludingIdentical = applyFilters(
+      result.diffAst.items,
+      { ...filters, hideIdentical: false },
+      annotationMap
+    );
+    return itemsIncludingIdentical.length - filteredItems.length;
+  }, [annotationMap, filteredItems.length, filters, result.diffAst.items]);
 
   const selectedItem = useMemo(
     () => (selectedItemId ? result.diffAst.items.find((i) => i.matchId === selectedItemId) ?? null : null),
@@ -90,24 +96,62 @@ export function ReviewWorkbench({
 
   const [exportOpen, setExportOpen] = useState(false);
 
-  const handleExport = useCallback((format: 'html' | 'markdown', scope: string) => {
-    // TODO: wire to main process export handler
-    console.log('Export:', { format, scope });
-  }, []);
+  const handleSelectNext = useCallback(() => {
+    if (filteredItems.length === 0) return;
+    const nextIndex = selectedIndex < 0 ? 0 : Math.min(selectedIndex + 1, filteredItems.length - 1);
+    onSelectItem(filteredItems[nextIndex].matchId);
+  }, [filteredItems, onSelectItem, selectedIndex]);
+
+  const handleSelectPrevious = useCallback(() => {
+    if (filteredItems.length === 0) return;
+    const previousIndex = selectedIndex < 0
+      ? filteredItems.length - 1
+      : Math.max(selectedIndex - 1, 0);
+    onSelectItem(filteredItems[previousIndex].matchId);
+  }, [filteredItems, onSelectItem, selectedIndex]);
+
+  const handleSelectNextUnreviewed = useCallback(() => {
+    if (filteredItems.length === 0) return;
+    const startIndex = selectedIndex < 0 ? 0 : selectedIndex + 1;
+    for (let offset = 0; offset < filteredItems.length; offset++) {
+      const item = filteredItems[(startIndex + offset) % filteredItems.length];
+      const annotation = annotationMap.get(item.matchId);
+      if (!annotation || annotation.status === 'unreviewed') {
+        onSelectItem(item.matchId);
+        return;
+      }
+    }
+  }, [annotationMap, filteredItems, onSelectItem, selectedIndex]);
+
+  const handleExport = useCallback(async (
+    format: 'html' | 'markdown',
+    scope: 'all' | 'current_filter' | 'important' | 'needs-confirmation',
+  ) => {
+    const exported = await window.bidlens.exportReport({
+      taskId: result.taskId,
+      format,
+      scope,
+      includeIdentical: !filters.hideIdentical,
+      matchIds: scope === 'current_filter' ? filteredItems.map((item) => item.matchId) : undefined,
+    });
+    toast.success(`报告已导出，共 ${exported.itemCount} 条`, {
+      description: exported.filePath,
+    });
+  }, [filteredItems, filters.hideIdentical, result.taskId]);
 
   // Taskbar content (row 1)
   const taskbar = (
     <>
-      <div className="flex items-center gap-2 min-w-0 font-bold">
+      <div className="flex min-w-0 items-center gap-2 font-bold">
         <FileText className="h-4 w-4 flex-shrink-0" />
         <span className="truncate">{result.docA.filename} ↔ {result.docB.filename}</span>
       </div>
-      <div className="text-xs text-[var(--color-text-muted)] pl-2 border-l border-[var(--color-border)]" style={{ whiteSpace: 'nowrap' }}>
+      <div className="optional-label border-l border-[var(--color-border)] pl-2 text-xs text-[var(--color-text-muted)]" style={{ whiteSpace: 'nowrap' }}>
         已处理 {reviewedCount} / {result.diffAst.items.length}
       </div>
       <div className="flex-1" />
       {onNewCompare && (
-        <Button variant="secondary" size="sm" onClick={onNewCompare}>
+        <Button variant="secondary" size="sm" onClick={onNewCompare} className="optional-label">
           <Plus className="h-3.5 w-3.5" />
           新建比对
         </Button>
@@ -126,6 +170,7 @@ export function ReviewWorkbench({
       onFiltersChange={onFiltersChange}
       totalCount={result.diffAst.items.length}
       filteredCount={filteredItems.length}
+      hiddenIdenticalCount={hiddenIdenticalCount}
     />
   );
 
@@ -148,7 +193,7 @@ export function ReviewWorkbench({
           <IconButton
             icon={<ChevronLeft className="h-4 w-4" />}
             tooltip="上一项"
-            onClick={onSelectPrevious}
+            onClick={handleSelectPrevious}
             disabled={filteredItems.length === 0}
             aria-label="上一项"
           />
@@ -157,20 +202,20 @@ export function ReviewWorkbench({
           <IconButton
             icon={<ChevronRight className="h-4 w-4" />}
             tooltip="下一项"
-            onClick={onSelectNext}
+            onClick={handleSelectNext}
             disabled={filteredItems.length === 0}
             aria-label="下一项"
           />
         </Tooltip>
         <div className="flex-1 min-w-0 truncate text-xs font-bold">
-          {selectedItem?.summary || ''}
+          {selectedItem ? formatDiffSummary(selectedItem) : ''}
         </div>
-        <Button variant="ghost" size="sm" onClick={onSelectNextUnreviewed} className="text-xs">
+        <Button variant="ghost" size="sm" onClick={handleSelectNextUnreviewed} className="text-xs">
           下一条未审核
         </Button>
       </div>
       {/* Viewport body */}
-      <div className="overflow-auto p-4">
+      <div className="overflow-auto p-[var(--layout-panel)]">
         <DiffViewport selectedItem={selectedItem} />
       </div>
     </div>
@@ -186,7 +231,7 @@ export function ReviewWorkbench({
             capabilities={result.capabilities}
             className="flex-1"
           />
-          <div className="p-3 border-t border-[var(--color-border)] bg-[var(--color-bg)]">
+          <div className="border-t border-[var(--color-border)] bg-[var(--color-bg)] p-[var(--layout-panel)]">
             <ReviewControls
               matchId={selectedItem.matchId}
               annotation={selectedAnnotation}

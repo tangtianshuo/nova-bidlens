@@ -17,6 +17,7 @@ import type {
   CancelCompareResponse,
   SelectFileResponse,
   DiffItem,
+  ExportRequest,
 } from '@bidlens/shared';
 import { TaskOrchestrator } from '../services/task-orchestrator.js';
 import { validateFile } from '../services/file-validator.js';
@@ -219,8 +220,8 @@ export function registerCompareHandlers(window: BrowserWindow): void {
   });
 
   // --- Export ---
-  ipcMain.handle('export:report', async (_event, request: { taskId: string; format: 'html' | 'markdown'; scope: string; includeIdentical: boolean }) => {
-    const { taskId, format, scope, includeIdentical } = request;
+  ipcMain.handle('export:report', async (_event, request: ExportRequest) => {
+    const { taskId, format, scope, includeIdentical, matchIds } = request;
     if (!persistenceDeps) throw new Error('Persistence not initialized');
 
     const task = persistenceDeps.taskRepo.getById(taskId);
@@ -234,7 +235,10 @@ export function registerCompareHandlers(window: BrowserWindow): void {
     // Filter items by scope
     let items = diffAst.items;
     if (!includeIdentical) items = items.filter((i: DiffItem) => i.matchType !== 'identical');
-    if (scope === 'important') {
+    if (scope === 'current_filter') {
+      const visibleIds = new Set(matchIds ?? []);
+      items = items.filter((i: DiffItem) => visibleIds.has(i.matchId));
+    } else if (scope === 'important') {
       const importantIds = new Set(annotations.filter((a: ReviewAnnotation) => a.important).map((a: ReviewAnnotation) => a.matchId));
       items = items.filter((i: DiffItem) => importantIds.has(i.matchId));
     } else if (scope === 'needs-confirmation') {
@@ -247,7 +251,8 @@ export function registerCompareHandlers(window: BrowserWindow): void {
     const report = createFullFidelityReport({ ...diffAst, items });
 
     const ext = format === 'html' ? 'html' : 'md';
-    const defaultName = `比对报告_${task.doc_a_filename ?? taskId}.${ext}`;
+    const sourceName = task.doc_a_filename ? path.parse(task.doc_a_filename).name : taskId;
+    const defaultName = `比对报告_${sourceName}.${ext}`;
 
     const result = await dialog.showSaveDialog(window, {
       defaultPath: defaultName,

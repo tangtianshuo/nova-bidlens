@@ -26,6 +26,13 @@ vi.mock('../../features/settings/settings-dialog', () => ({
 describe('TopBar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (window as any).bidlens = {
+      windowMinimize: vi.fn().mockResolvedValue(undefined),
+      windowMaximize: vi.fn().mockResolvedValue(undefined),
+      windowClose: vi.fn().mockResolvedValue(undefined),
+      windowIsMaximized: vi.fn().mockResolvedValue(false),
+      onMaximizeChanged: vi.fn().mockReturnValue(() => {}),
+    };
   });
 
   it('renders the brand name', () => {

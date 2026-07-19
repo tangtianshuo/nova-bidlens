@@ -152,7 +152,7 @@ describe('HistoryView', () => {
     });
 
     it('displays tasks after loading', async () => {
-      await renderAndWaitForData();
+      const { container } = await renderAndWaitForData();
       // Check that the table has 3 rows
       const rows = getDataRows();
       expect(rows.length).toBe(3);
@@ -161,6 +161,8 @@ describe('HistoryView', () => {
       expect(table.textContent).toContain('招标文件A.docx');
       expect(table.textContent).toContain('技术规范V2.docx');
       expect(table.textContent).toContain('合同模板.docx');
+      expect(container.querySelector('.app-page[data-width="standard"]')).not.toBeNull();
+      expect(container.querySelector('.history-table-scroll')).not.toBeNull();
     });
 
     it('displays error banner on load failure', async () => {

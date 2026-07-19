@@ -46,6 +46,7 @@ export class Docx4jsParser implements DocumentParser {
         switch (type) {
           case 'p': {
             // 段落
+            if (this.isInsideTable(props?.node)) break;
             const text = this.extractText(children);
             if (text.trim()) {
               // 检查是否是标题
@@ -176,20 +177,32 @@ export class Docx4jsParser implements DocumentParser {
     }
   }
 
-  private extractText(children: any[]): string {
-    if (!children) return '';
-    if (Array.isArray(children)) {
-      return children.map(child => {
-        if (typeof child === 'string') return child;
-        if (child?.props?.children) return this.extractText(child.props.children);
-        if (child?.type === 't' && child?.props?.children) {
-          return String(child.props.children);
-        }
-        return '';
-      }).join('');
+  private extractText(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string' || typeof value === 'number') return String(value);
+    if (Array.isArray(value)) return value.map((child) => this.extractText(child)).join('');
+    if (typeof value === 'object') {
+      const renderedNode = value as {
+        children?: unknown;
+        props?: { children?: unknown };
+      };
+      if (renderedNode.children !== undefined) {
+        return this.extractText(renderedNode.children);
+      }
+      if (renderedNode.props?.children !== undefined) {
+        return this.extractText(renderedNode.props.children);
+      }
     }
-    if (typeof children === 'string') return children;
     return '';
+  }
+
+  private isInsideTable(node: unknown): boolean {
+    let current = node as { name?: string; parent?: unknown } | null | undefined;
+    while (current) {
+      if (current.name === 'w:tbl' || current.name === 'w:tc') return true;
+      current = current.parent as typeof current;
+    }
+    return false;
   }
 
   private extractComment(props: any, children: any[]): Comment | null {

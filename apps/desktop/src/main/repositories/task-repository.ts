@@ -122,6 +122,15 @@ export class TaskRepository {
   }
 
   /**
+   * Return the authoritative number of diff items stored for a task.
+   */
+  getDiffItemCount(taskId: string): number | null {
+    const row = this.getById(taskId);
+    if (!row?.diff_summary_json) return null;
+    return sumDiffSummary(JSON.parse(row.diff_summary_json) as Record<string, number>);
+  }
+
+  /**
    * List all tasks with optional search and status filter.
    */
   list(options?: {
@@ -266,16 +275,22 @@ export class TaskRepository {
    * Convert a database row to a TaskSummary.
    */
   private rowToSummary(row: TaskRow): TaskSummary {
+    const diffSummary = row.diff_summary_json ? JSON.parse(row.diff_summary_json) as Record<string, number> : {};
+    const storedProgress = row.review_progress_json
+      ? JSON.parse(row.review_progress_json) as { total: number; reviewed: number; important: number }
+      : { total: 0, reviewed: 0, important: 0 };
+
     return {
       taskId: row.id,
       displayName: row.display_name,
       status: row.status as TaskStatus,
       docAFilename: row.doc_a_filename,
       docBFilename: row.doc_b_filename,
-      diffSummary: row.diff_summary_json ? JSON.parse(row.diff_summary_json) : {},
-      reviewProgress: row.review_progress_json
-        ? JSON.parse(row.review_progress_json)
-        : { total: 0, reviewed: 0, important: 0 },
+      diffSummary,
+      reviewProgress: {
+        ...storedProgress,
+        total: row.diff_summary_json ? sumDiffSummary(diffSummary) : storedProgress.total,
+      },
       lastAccessedAt: row.last_accessed_at,
       retained: row.retained === 1,
       startedAt: row.started_at,
@@ -283,4 +298,8 @@ export class TaskRepository {
       durationMs: row.duration_ms ?? undefined,
     };
   }
+}
+
+function sumDiffSummary(summary: Record<string, number>): number {
+  return Object.values(summary).reduce((total, count) => total + count, 0);
 }

@@ -42,10 +42,11 @@ describe('applyFilters', () => {
     expect(result.find((i) => i.matchId === 'm4')).toBeUndefined();
   });
 
-  it('shows identical items when hideIdentical is false', () => {
+  it('shows identical items when explicitly disabled', () => {
     const filters: FilterState = { ...DEFAULT_FILTERS, hideIdentical: false };
     const result = applyFilters(items, filters, new Map());
     expect(result.length).toBe(5);
+    expect(result.find((i) => i.matchId === 'm4')).toBeDefined();
   });
 
   it('filters by match type', () => {
@@ -122,7 +123,7 @@ describe('FilterBar', () => {
     const onChange = vi.fn();
     render(
       <FilterBar
-        filters={DEFAULT_FILTERS}
+        filters={{ ...DEFAULT_FILTERS, hideIdentical: false }}
         onFiltersChange={onChange}
         totalCount={10}
         filteredCount={8}
@@ -155,6 +156,54 @@ describe('FilterBar', () => {
       />
     );
     expect(screen.getByText('3 / 10')).toBeTruthy();
+  });
+
+  it('explains how many identical items are hidden', () => {
+    const onChange = vi.fn();
+    render(
+      <FilterBar
+        filters={{ ...DEFAULT_FILTERS, hideIdentical: true }}
+        onFiltersChange={onChange}
+        totalCount={67}
+        filteredCount={8}
+        hiddenIdenticalCount={59}
+      />
+    );
+    expect(screen.getByText('8 / 67（已隐藏 59 条相同项）')).toBeTruthy();
+  });
+
+  it('toggles the identical-item filter explicitly', () => {
+    const onChange = vi.fn();
+    render(
+      <FilterBar
+        filters={{ ...DEFAULT_FILTERS, hideIdentical: false }}
+        onFiltersChange={onChange}
+        totalCount={67}
+        filteredCount={67}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '隐藏相同项' }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ hideIdentical: true }));
+  });
+
+  it('makes the all filter restore identical items', () => {
+    const onChange = vi.fn();
+    render(
+      <FilterBar
+        filters={{ ...DEFAULT_FILTERS, hideIdentical: true, matchTypes: new Set(['modified']) }}
+        onFiltersChange={onChange}
+        totalCount={67}
+        filteredCount={8}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /全部/ }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      hideIdentical: false,
+      matchTypes: expect.any(Set),
+    }));
+    expect(onChange.mock.calls[0][0].matchTypes.size).toBe(0);
   });
 
   it('calls onFiltersChange when search changes', () => {

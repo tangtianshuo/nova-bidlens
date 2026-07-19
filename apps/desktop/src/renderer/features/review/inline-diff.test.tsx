@@ -49,7 +49,8 @@ describe('InlineDiff', () => {
     ];
     render(<InlineDiff tokens={tokens} />);
     const added = screen.getByText('new');
-    expect(added.className).toContain('bg-[var(--color-diff-added)]');
+    expect(added.className).toContain('bg-[var(--color-added-bg)]');
+    expect(added.className).toContain('text-[var(--color-added)]');
   });
 
   it('renders removed tokens with line-through', () => {
@@ -109,5 +110,19 @@ describe('InlineDiff', () => {
     render(<InlineDiff tokens={tokens} />);
     expect(screen.getAllByText('+2').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('-3').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('separates replacement text into baseline and review rows', () => {
+    const tokens: TextDiffToken[] = [
+      { kind: 'same', text: '签约日期：202' },
+      { kind: 'removed', text: '6' },
+      { kind: 'added', text: '5' },
+      { kind: 'same', text: '-5-21' },
+    ];
+
+    render(<InlineDiff tokens={tokens} />);
+
+    expect(screen.getByLabelText('基准文本').textContent).toBe('签约日期：2026-5-21');
+    expect(screen.getByLabelText('送审文本').textContent).toBe('签约日期：2025-5-21');
   });
 });

@@ -55,12 +55,33 @@ function DiffTokenSpan({ token }: { token: TextDiffToken }) {
     <span
       className={cn(
         'px-0.5 rounded-sm',
-        token.kind === 'added' && 'bg-[var(--color-diff-added)] text-[var(--color-diff-added-fg)]',
-        token.kind === 'removed' && 'bg-[var(--color-diff-removed)] text-[var(--color-diff-removed-fg)] line-through'
+        token.kind === 'added' && 'bg-[var(--color-added-bg)] text-[var(--color-added)]',
+        token.kind === 'removed' && 'bg-[var(--color-deleted-bg)] text-[var(--color-deleted)] line-through'
       )}
     >
       {token.text}
     </span>
+  );
+}
+
+function DiffTokenLine({
+  tokens,
+  side,
+}: {
+  tokens: TextDiffToken[];
+  side: 'baseline' | 'review';
+}) {
+  const excludedKind = side === 'baseline' ? 'added' : 'removed';
+
+  return (
+    <div
+      className="min-w-0 whitespace-pre-wrap break-words text-sm leading-relaxed font-[var(--font-body)]"
+      aria-label={side === 'baseline' ? '基准文本' : '送审文本'}
+    >
+      {tokens.map((token, i) => (
+        token.kind === excludedKind ? null : <DiffTokenSpan key={i} token={token} />
+      ))}
+    </div>
   );
 }
 
@@ -81,12 +102,12 @@ function DiffSummaryBadge({ tokens }: { tokens: TextDiffToken[] }) {
   return (
     <div className="flex items-center gap-1.5">
       {summary.added > 0 && (
-        <Badge variant="default" className="text-xs bg-[var(--color-diff-added)] text-[var(--color-diff-added-fg)]">
+        <Badge variant="default" className="bg-[var(--color-added-bg)] text-xs text-[var(--color-added)]">
           +{summary.added}
         </Badge>
       )}
       {summary.removed > 0 && (
-        <Badge variant="default" className="text-xs bg-[var(--color-diff-removed)] text-[var(--color-diff-removed-fg)]">
+        <Badge variant="default" className="bg-[var(--color-deleted-bg)] text-xs text-[var(--color-deleted)]">
           -{summary.removed}
         </Badge>
       )}
@@ -101,6 +122,8 @@ function DiffSummaryBadge({ tokens }: { tokens: TextDiffToken[] }) {
 export function InlineDiff({ tokens, className, defaultHideDetails = false }: InlineDiffProps) {
   const [hideDetails, setHideDetails] = useState(defaultHideDetails);
   const isLong = useMemo(() => countChars(tokens) > LONG_PARAGRAPH_THRESHOLD, [tokens]);
+  const summary = useMemo(() => computeSummary(tokens), [tokens]);
+  const isReplacement = summary.added > 0 && summary.removed > 0;
 
   if (!tokens || tokens.length === 0) {
     return (
@@ -135,6 +158,17 @@ export function InlineDiff({ tokens, className, defaultHideDetails = false }: In
       {hideDetails ? (
         <div className="text-sm text-[var(--color-text-muted)]">
           <DiffSummaryBadge tokens={tokens} />
+        </div>
+      ) : isReplacement ? (
+        <div
+          className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 rounded-sm border border-[var(--color-border)] p-3"
+          role="group"
+          aria-label="替换差异"
+        >
+          <span className="text-xs font-medium text-[var(--color-text-muted)]">基准</span>
+          <DiffTokenLine tokens={tokens} side="baseline" />
+          <span className="text-xs font-medium text-[var(--color-text-muted)]">送审</span>
+          <DiffTokenLine tokens={tokens} side="review" />
         </div>
       ) : (
         <div

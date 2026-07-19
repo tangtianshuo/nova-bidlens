@@ -132,12 +132,12 @@ export function NewCompareView() {
 
   return (
     <div className="flex flex-1 overflow-auto">
-      <div className="mx-auto flex min-h-full w-full flex-col" style={{ maxWidth: 1120, padding: '34px 36px 28px' }}>
-        <div className="mb-6">
+      <div className="app-page flex min-h-full flex-col" data-width="narrow">
+        <div className="mb-[var(--layout-section-gap)]">
           <h1 className="text-2xl font-semibold text-[var(--color-text)]">新建比对</h1>
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">文档内容仅在本机处理</p>
         </div>
-        <div className="grid grid-cols-[minmax(0,1fr)_44px_minmax(0,1fr)] items-stretch gap-4">
+        <div className="responsive-file-grid">
           {/* Baseline slot */}
           <FileSlotCard
             label="基准文档"
@@ -148,7 +148,7 @@ export function NewCompareView() {
           />
 
           {/* Swap button */}
-          <div className="flex items-center pt-8">
+          <div className="file-swap flex items-center pt-8">
             <IconButton
               icon={<ArrowLeftRight className="h-4 w-4" />}
               tooltip="交换文档"
@@ -167,7 +167,7 @@ export function NewCompareView() {
           />
         </div>
 
-        <div className="mt-4 border-y border-[var(--color-border)] px-4 py-3.5" style={{ background: 'color-mix(in srgb, var(--color-bg) 72%, transparent)' }}>
+        <div className="mt-[var(--layout-panel)] border-y border-[var(--color-border)] px-[var(--layout-panel)] py-3" style={{ background: 'color-mix(in srgb, var(--color-bg) 72%, transparent)' }}>
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="mr-1 font-semibold text-[var(--color-text-secondary)]">检测维度</span>
             {['正文', '表格', '格式', '批注', '修订'].map((dimension) => (
@@ -179,7 +179,7 @@ export function NewCompareView() {
         </div>
 
         {/* Advanced settings */}
-        <div className="mt-5 border-b border-[var(--color-border)] pb-3">
+        <div className="mt-[var(--layout-section-gap)] border-b border-[var(--color-border)] pb-3">
           <button
             className="flex w-full items-center gap-1.5 py-2.5 text-xs font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] cursor-pointer"
             onClick={() => setShowAdvanced(!showAdvanced)}
@@ -188,7 +188,7 @@ export function NewCompareView() {
             高级设置
           </button>
           {showAdvanced && (
-            <div className="flex items-center justify-between gap-3 pb-4 pt-1">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 pt-1">
               <div><strong className="block text-sm text-[var(--color-text)]">匹配灵敏度</strong><span className="text-xs text-[var(--color-text-muted)]">标准适用于结构相近但措辞可能调整的文档</span></div>
               <div className="inline-flex items-center p-[3px] border border-[var(--color-border)] rounded-[5px] bg-[var(--color-bg-subtle)]">
                 {(['strict', 'standard', 'loose'] as const).map((opt) => (
@@ -211,7 +211,7 @@ export function NewCompareView() {
         </div>
 
         {/* Start button */}
-        <div className="mt-auto flex items-center gap-2.5 pt-6">
+        <div className="mt-auto flex flex-wrap items-center gap-2.5 pt-[var(--layout-section-gap)]">
           <span className="mr-auto text-xs text-[var(--color-text-muted)]">{canStart ? '两份文档已就绪' : '请选择两份文档'}</span>
           <Button
             variant="primary"
@@ -271,20 +271,20 @@ function FileSlotCard({ label, slot, onSelect, onClear, onDropFile }: FileSlotCa
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="flex min-h-12 items-center justify-between border-b border-[var(--color-border)] px-4">
+      <div className="flex min-h-12 items-center justify-between border-b border-[var(--color-border)] px-[var(--layout-panel)]">
         <span className="text-sm font-semibold text-[var(--color-text)]">{label}</span>
         {hasFile && <button onClick={onClear} className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-muted)]" aria-label={`移除${label}`}><Trash2 className="h-4 w-4" /></button>}
       </div>
       <button
         onClick={onSelect}
         className={cn(
-          'flex w-full items-center gap-3.5 p-5 text-left transition-colors cursor-pointer',
+          'flex w-full items-center gap-3.5 p-[var(--layout-panel)] text-left transition-colors cursor-pointer',
           hasFile
             ? 'bg-[var(--color-bg-subtle)]'
             : 'hover:bg-[var(--color-bg-hover)]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]'
         )}
-        style={{ minHeight: 232 }}
+        style={{ minHeight: 'clamp(176px, 26vh, 232px)' }}
         aria-label={hasFile ? `已选择: ${slot.name}` : `选择${label}`}
       >
         {hasFile ? (
@@ -315,7 +315,7 @@ function FileSlotCard({ label, slot, onSelect, onClear, onDropFile }: FileSlotCa
           </>
         )}
       </button>
-      {slot.error && <FieldError message={slot.error} className="px-4 pb-3" />}
+      {slot.error && <FieldError message={slot.error} className="px-[var(--layout-panel)] pb-3" />}
     </article>
   );
 }

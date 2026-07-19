@@ -49,6 +49,7 @@ apps/desktop/
 | TypeScript | 5.x | 类型系统 |
 | Zustand | 5.x | 状态管理 |
 | TanStack Query | 5.x | 异步状态 |
+| diff | 8.x | Renderer 字符级文本差异回退 |
 | TailwindCSS | 4.x | 样式 |
 | shadcn/ui | - | UI组件库 |
 | Vitest | 3.x | 测试 |
@@ -291,6 +292,30 @@ pnpm vitest run apps/desktop/src/renderer/components/TableDiffView.test.tsx
 - Renderer owns the product title bar and uses a drag region for frameless/hidden-titlebar windows.
 - Electron's native application menu is disabled; product commands belong in the renderer top bar.
 - Development tools are opt-in and must never open automatically with the application.
+
+## 四点六、间距与响应式布局
+
+- Renderer spacing follows the 4px scale defined in `src/renderer/styles/globals.css`: `--space-1` through `--space-8`.
+- Page shells use `.app-page` and the responsive `--layout-page-*` variables instead of fixed page padding.
+- Panel and dialog content use `--layout-panel` and `--layout-dialog-*`; avoid new inline pixel padding or margin unless the value is intrinsic to a fixed-format control.
+- At widths below 1280px, secondary filters may collapse; below 1080px, toolbars may wrap and optional labels may hide while icon commands remain available.
+- Tables and wide document content own their horizontal scrolling. The application shell must not create page-level horizontal overflow.
+- Validate UI changes at 1280x800, 1024x700, and a 760px equivalent viewport for high-scaling behavior.
+
+## 四点七、差异详情呈现
+
+- Prefer engine-provided `DiffItem.diffDetail` tokens when available.
+- When tokens are absent but `sourceA` or `sourceB` contains text, Renderer uses the `diff` package to generate character-level fallback tokens.
+- Text detail is a local presentation capability and remains available even when the engine returns an empty `capabilities` array. Only format, comment, and revision tabs are capability-gated.
+- Replacement diffs render baseline and review text on separate rows so dense numeric changes cannot visually concatenate.
+- Inputs above 20,000 combined characters use a bounded common-prefix/common-suffix fallback to avoid blocking the UI thread.
+
+## 四点八、审阅筛选语义
+
+- `全部` must show every result item, including `identical` items. It also clears match-type filtering and disables `hideIdentical`.
+- Identical items are hidden by default to keep the review queue focused, with an explicit control to show them again.
+- When identical items are hidden, the result count must state how many matching identical items were excluded by that filter.
+- Virtualized navigation may render only viewport rows in the DOM, but its item count must always use the complete filtered collection.
 
 ### 4.1 开发服务器配置
 

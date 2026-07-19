@@ -256,6 +256,34 @@ describe('Persistence Layer', () => {
       expect(tasks).toHaveLength(2);
     });
 
+    it('should derive review total from the diff summary', () => {
+      const now = new Date().toISOString();
+      taskRepo.save({
+        id: 'task-1',
+        displayName: 'Task 1',
+        status: 'ready',
+        docAFilename: 'a.docx',
+        docBFilename: 'b.docx',
+        docAHash: 'hash-a',
+        docBHash: 'hash-b',
+        options: {},
+        diffSummary: {
+          identical: 26, modified: 5, added: 0, deleted: 0,
+          moved: 0, split: 0, merged: 0, uncertain: 0,
+        },
+        reviewProgress: { total: 1, reviewed: 1, important: 1 },
+        startedAt: now,
+        lastAccessedAt: now,
+      });
+
+      expect(taskRepo.getDiffItemCount('task-1')).toBe(31);
+      expect(taskRepo.getSummary('task-1')?.reviewProgress).toEqual({
+        total: 31,
+        reviewed: 1,
+        important: 1,
+      });
+    });
+
     it('should delete task', () => {
       taskRepo.save({
         id: 'task-1',

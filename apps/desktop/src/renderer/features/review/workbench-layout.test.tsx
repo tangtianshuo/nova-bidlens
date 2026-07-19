@@ -34,11 +34,16 @@ describe('WorkbenchLayout', () => {
   beforeEach(cleanup);
 
   it('renders taskbar, filterbar, nav, and viewport', () => {
-    render(<WorkbenchLayout {...defaultProps} />);
+    const { container } = render(<WorkbenchLayout {...defaultProps} />);
     expect(screen.getByText('Taskbar')).toBeTruthy();
     expect(screen.getByText('Filterbar')).toBeTruthy();
     expect(screen.getByText('Nav Panel')).toBeTruthy();
     expect(screen.getByText('Viewport')).toBeTruthy();
+    expect(container.querySelector('.workbench-taskbar')).not.toBeNull();
+    expect(container.querySelector('.workbench-filterbar')).not.toBeNull();
+
+    const workGrid = container.querySelector('.grid.min-h-0') as HTMLElement;
+    expect(workGrid.style.gridTemplateColumns).toContain('minmax(0, 1fr)');
   });
 
   it('renders detail panel when window is wide enough', () => {

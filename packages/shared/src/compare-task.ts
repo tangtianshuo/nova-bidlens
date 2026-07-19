@@ -167,6 +167,7 @@ export interface ExportRequest {
   format: ExportFormat;
   scope: ExportScope;
   includeIdentical: boolean;
+  matchIds?: string[];
 }
 
 export interface ExportResult {

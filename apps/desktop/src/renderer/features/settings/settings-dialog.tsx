@@ -5,6 +5,8 @@ import { getThemePreference, setThemePreference, type Theme } from '../../lib/th
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogBody,
   DialogTitle,
 } from '../../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -26,10 +28,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogTitle>设置</DialogTitle>
+      <DialogContent className="min-h-[360px] max-h-[calc(100vh-32px)] max-w-lg overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>设置</DialogTitle>
+        </DialogHeader>
 
-        <Tabs defaultValue="appearance">
+        <DialogBody className="min-h-[280px]">
+        <Tabs defaultValue="appearance" className="flex min-h-[240px] flex-col">
           <TabsList>
             <TabsTrigger value="appearance">外观</TabsTrigger>
             <TabsTrigger value="data">数据与隐私</TabsTrigger>
@@ -44,7 +49,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
                 选择应用的外观主题
               </p>
-              <div className="mt-3 flex gap-2">
+              <div className="settings-theme-grid mt-3">
                 <ThemeOption
                   icon={<Monitor className="h-4 w-4" />}
                   label="跟随系统"
@@ -137,6 +142,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </div>
           </TabsContent>
         </Tabs>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );
@@ -154,9 +160,9 @@ function ThemeOption({ icon, label, active, onClick }: ThemeOptionProps) {
     <button
       onClick={onClick}
       className={cn(
-        'flex flex-col items-center gap-1.5 rounded-[var(--radius-md)] border px-4 py-3 text-sm transition-colors',
+        'flex min-w-0 flex-col items-center gap-1.5 rounded-[var(--radius-md)] border px-3 py-3 text-sm transition-colors',
         active
-          ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+          ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
           : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)]'
       )}
     >

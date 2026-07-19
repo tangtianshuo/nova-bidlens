@@ -63,4 +63,26 @@ describe('Docx4jsParser', () => {
       expect(docx4jsParser.id).toBe('docx4js');
     });
   });
+
+  describe('docx4js render tree compatibility', () => {
+    it('extracts nested text from rendered children', () => {
+      const rendered = [{
+        type: 'r',
+        props: {},
+        children: [{ type: 't', props: {}, children: ['合同金额', '658000元'] }],
+      }];
+
+      expect((parser as unknown as { extractText: (value: unknown) => string }).extractText(rendered))
+        .toBe('合同金额658000元');
+    });
+
+    it('recognizes paragraphs nested inside tables', () => {
+      const table = { name: 'w:tbl', parent: null };
+      const cell = { name: 'w:tc', parent: table };
+      const paragraph = { name: 'w:p', parent: cell };
+
+      expect((parser as unknown as { isInsideTable: (value: unknown) => boolean })
+        .isInsideTable(paragraph)).toBe(true);
+    });
+  });
 });

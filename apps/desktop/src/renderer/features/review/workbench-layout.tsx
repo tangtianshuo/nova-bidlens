@@ -142,7 +142,7 @@ export function WorkbenchLayout({
       style={{ gridTemplateRows: '50px 46px minmax(0, 1fr)' }}
     >
       {/* Row 1: Taskbar */}
-      <div className="flex items-center gap-2.5 px-3.5 bg-[var(--color-bg)] border-b border-[var(--color-border)]" style={{ minHeight: 50 }}>
+      <div className="workbench-taskbar flex min-w-0 items-center bg-[var(--color-bg)] border-b border-[var(--color-border)]" style={{ minHeight: 50 }}>
         {taskbar}
         <div className="flex-1" />
         {/* Detail toggle (visible when detail panel is hidden) */}
@@ -159,7 +159,7 @@ export function WorkbenchLayout({
       </div>
 
       {/* Row 2: Filter bar */}
-      <div className="flex items-center gap-[7px] px-3.5 bg-[var(--color-bg)] border-b border-[var(--color-border)] overflow-hidden" style={{ minHeight: 46 }}>
+      <div className="workbench-filterbar flex items-center bg-[var(--color-bg)] border-b border-[var(--color-border)]" style={{ minHeight: 46 }}>
         {filterbar}
       </div>
 
@@ -167,7 +167,7 @@ export function WorkbenchLayout({
       <div
         className="grid min-h-0 overflow-hidden"
         style={{
-          gridTemplateColumns: `${navWidth}px 5px minmax(560px, 1fr) 5px ${showRight ? sizes.right : 0}px`,
+          gridTemplateColumns: `${navWidth}px 5px minmax(0, 1fr) 5px ${showRight ? sizes.right : 0}px`,
         }}
       >
         {/* Nav panel */}
@@ -259,7 +259,7 @@ export function WorkbenchLayout({
         >
           <div
             className="absolute top-[98px] right-0 bottom-0 bg-[var(--color-bg)] border-l border-[var(--color-border)]"
-            style={{ width: 'min(390px, 42vw)', boxShadow: 'var(--shadow)' }}
+            style={{ width: 'min(390px, calc(100vw - 48px))', boxShadow: 'var(--shadow)' }}
           >
             {/* Close button */}
             <div className="flex items-center justify-between px-3 border-b border-[var(--color-border)]" style={{ height: 42, fontSize: 12, fontWeight: 700 }}>

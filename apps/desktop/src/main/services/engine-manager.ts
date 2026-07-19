@@ -8,7 +8,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { app } from 'electron';
-import type { DocumentAst } from '@bidlens/shared';
+import type { BlockNode, Comment, DocumentAst, Revision } from '@bidlens/shared';
 import type { DiffAst } from '@bidlens/shared';
 
 // --- JSON-RPC types ---
@@ -48,6 +48,194 @@ export interface CompareRequest {
   docA: DocumentAst;
   docB: DocumentAst;
   options?: { similarity_threshold?: number };
+}
+
+interface EngineRunNode {
+  id: string;
+  text: string;
+  format: null;
+}
+
+interface EngineParagraphNode {
+  type: 'paragraph';
+  id: string;
+  runs: EngineRunNode[];
+  page_start: number | null;
+  page_end: number | null;
+  paragraph_format: null;
+}
+
+interface EngineTableNode {
+  type: 'table';
+  id: string;
+  rows: Array<{
+    id: string;
+    cells: Array<{
+      id: string;
+      content: EngineParagraphNode[];
+      span: null;
+      properties: null;
+    }>;
+    row_type: 'header' | 'body';
+  }>;
+  page_start: number | null;
+  page_end: number | null;
+  properties: null;
+}
+
+type EngineBlockNode = EngineParagraphNode | EngineTableNode;
+
+interface EngineComment {
+  id: string;
+  author: string;
+  date: string;
+  content: string;
+  range: {
+    start_node_id: string;
+    start_offset: number;
+    end_node_id: string;
+    end_offset: number;
+  };
+  replies: EngineComment[];
+  resolved: boolean;
+}
+
+interface EngineRevision {
+  id: string;
+  author: string;
+  date: string;
+  revision_type: 'insert' | 'delete' | 'format_change' | 'move_from' | 'move_to';
+  content: {
+    text: string;
+    format: null;
+    position: { node_id: string; offset: number };
+  };
+  accepted: boolean | null;
+}
+
+interface EngineDocumentAst {
+  id: string;
+  filename: string;
+  sha256: string;
+  page_count: number | null;
+  word_count: number;
+  parser_version: string;
+  blocks: EngineBlockNode[];
+  comments: EngineComment[];
+  revisions: EngineRevision[];
+}
+
+function toEngineParagraph(
+  id: string,
+  text: string,
+  pageStart: number | null,
+  pageEnd: number | null,
+): EngineParagraphNode {
+  return {
+    type: 'paragraph',
+    id,
+    runs: [{ id: `${id}-run-0`, text, format: null }],
+    page_start: pageStart,
+    page_end: pageEnd,
+    paragraph_format: null,
+  };
+}
+
+function toEngineBlocks(blocks: BlockNode[]): EngineBlockNode[] {
+  return blocks.flatMap((block): EngineBlockNode[] => {
+    switch (block.type) {
+      case 'paragraph':
+        return [toEngineParagraph(block.id, block.text, block.pageStart, block.pageEnd)];
+      case 'section':
+        return [
+          toEngineParagraph(`${block.id}-heading`, block.title, block.pageStart, block.pageEnd),
+          ...toEngineBlocks(block.children),
+        ];
+      case 'list':
+        return block.items.map((item) =>
+          toEngineParagraph(item.id, item.text, item.pageStart, item.pageEnd),
+        );
+      case 'table':
+        return [{
+          type: 'table',
+          id: block.id,
+          rows: block.rows.map((row, rowIndex) => ({
+            id: `${block.id}-row-${rowIndex}`,
+            row_type: rowIndex === 0 ? 'header' : 'body',
+            cells: row.map((text, cellIndex) => {
+              const cellId = `${block.id}-row-${rowIndex}-cell-${cellIndex}`;
+              return {
+                id: cellId,
+                content: [toEngineParagraph(`${cellId}-paragraph`, text, null, null)],
+                span: null,
+                properties: null,
+              };
+            }),
+          })),
+          page_start: block.pageStart,
+          page_end: block.pageEnd,
+          properties: null,
+        }];
+    }
+  });
+}
+
+function toEngineComment(comment: Comment): EngineComment {
+  return {
+    id: comment.id,
+    author: comment.author,
+    date: comment.date,
+    content: comment.content,
+    range: {
+      start_node_id: comment.range.startNodeId,
+      start_offset: comment.range.startOffset,
+      end_node_id: comment.range.endNodeId,
+      end_offset: comment.range.endOffset,
+    },
+    replies: comment.replies.map(toEngineComment),
+    resolved: comment.resolved,
+  };
+}
+
+const REVISION_TYPES: Record<Revision['revisionType'], EngineRevision['revision_type']> = {
+  insert: 'insert',
+  delete: 'delete',
+  formatChange: 'format_change',
+  moveFrom: 'move_from',
+  moveTo: 'move_to',
+};
+
+function toEngineRevision(revision: Revision): EngineRevision {
+  return {
+    id: revision.id,
+    author: revision.author,
+    date: revision.date,
+    revision_type: REVISION_TYPES[revision.revisionType],
+    content: {
+      text: revision.content.text,
+      format: null,
+      position: {
+        node_id: revision.content.position.nodeId,
+        offset: revision.content.position.offset,
+      },
+    },
+    accepted: revision.accepted ?? null,
+  };
+}
+
+/** Convert the shared AST into the Rust engine's JSON transport contract. */
+export function toEngineDocumentAst(document: DocumentAst): EngineDocumentAst {
+  return {
+    id: document.id,
+    filename: document.filename,
+    sha256: document.sha256,
+    page_count: document.pageCount,
+    word_count: document.wordCount,
+    parser_version: document.parserVersion,
+    blocks: toEngineBlocks(document.blocks),
+    comments: (document.comments ?? []).map(toEngineComment),
+    revisions: (document.revisions ?? []).map(toEngineRevision),
+  };
 }
 
 export type ProgressCallback = (phase: string, current: number, total: number, message: string) => void;
@@ -252,8 +440,8 @@ export class EngineManager {
       const result = (await this.sendRequest(
         'compare',
         {
-          doc_a: request.docA,
-          doc_b: request.docB,
+          doc_a: toEngineDocumentAst(request.docA),
+          doc_b: toEngineDocumentAst(request.docB),
           options: request.options ?? {},
         },
         ENGINE_REQUEST_TIMEOUT_MS
