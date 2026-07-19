@@ -125,7 +125,7 @@ onnx==1.22.0
 onnxruntime==1.27.0
 psutil==7.2.2
 pytest==9.1.1
-tokenizers==0.23.1
+tokenizers==0.22.2
 transformers==5.14.1
 ```
 
