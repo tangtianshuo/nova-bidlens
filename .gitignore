@@ -61,3 +61,4 @@ apps/*/vitest.config.js
 tests/v03/private-gold/
 scripts/v03/model-feasibility/.venv/
 scripts/v03/model-feasibility/__pycache__/
+tests/v03/__pycache__/

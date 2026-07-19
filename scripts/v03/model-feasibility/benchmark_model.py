@@ -37,7 +37,12 @@ def ort_embeddings(model_path: Path, encoded) -> np.ndarray:
 
 
 def cosine_rows(left: np.ndarray, right: np.ndarray) -> list[float]:
-    return np.sum(left * right, axis=1).astype(float).tolist()
+    if left.shape != right.shape:
+        raise ValueError(f"reference/candidate shape mismatch: {left.shape} vs {right.shape}")
+    values = np.sum(left * right, axis=1).astype(float)
+    if not np.all(np.isfinite(values)):
+        raise ValueError("non-finite cosine similarity detected")
+    return values.tolist()
 
 
 def benchmark(tokenizer_dir: Path, model_path: Path, output: Path, reference_report: Path | None) -> None:
