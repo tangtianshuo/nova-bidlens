@@ -1,11 +1,32 @@
 import { createHash } from 'node:crypto';
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { cpus, platform } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { evaluateRelations, validateGoldDataset, type PredictedRelation } from './evaluate_gold';
+
+export interface ExitResult { exitCode: number | null; signal: NodeJS.Signals | null; }
+
+export function awaitChildExit(child: ChildProcess): Promise<ExitResult> {
+  return new Promise((resolve, reject) => {
+    child.on('close', (code, signal) => resolve({ exitCode: code, signal }));
+    child.on('error', (err) => reject(err));
+  });
+}
+
+export function assertCleanExit(result: ExitResult): void {
+  if (result.exitCode !== 0) {
+    throw new Error(`engine exited with code ${result.exitCode}`);
+  }
+}
+
+export function assertNoStderr(diagnostic: string): void {
+  if (diagnostic) {
+    throw new Error(`engine stderr: ${diagnostic}`);
+  }
+}
 
 interface Pair { pairId: string; docA: string; docB: string; }
 interface Dataset { schemaVersion: number; pairs: Pair[]; }
@@ -65,11 +86,15 @@ async function main(): Promise<void> {
     await mkdir(dirname(outputPath), { recursive: true });
     await writeFile(outputPath, JSON.stringify(output, null, 2), 'utf-8');
     await request(lineIterator, child.stdin, 'shutdown', {}, `baseline-${++id}`);
-  } finally {
+    lines.close();
+    const exit = awaitChildExit(child);
+    assertCleanExit(await exit);
+    assertNoStderr(Buffer.concat(stderr).toString('utf-8').trim());
+  } catch (err) {
     lines.close();
     if (!child.killed) child.kill();
-    const diagnostic = Buffer.concat(stderr).toString('utf-8').trim();
-    if (diagnostic) throw new Error(`engine stderr: ${diagnostic}`);
+    await awaitChildExit(child);
+    throw err;
   }
 }
 
