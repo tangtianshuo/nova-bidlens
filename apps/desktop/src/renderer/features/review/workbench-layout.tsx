@@ -1,26 +1,24 @@
 /**
- * P4-08: Resizable/collapsible workbench panels.
- * Three-panel layout: left navigation, center viewport, right details.
- * Panel sizes persist to localStorage.
+ * Workbench layout matching V0.2.2 prototype.
+ * 3-row grid: taskbar (50px) | filterbar (46px) | work-grid (1fr)
+ * Work-grid: 5-column CSS Grid with resizable nav and detail panels.
  */
 
 import { useState, useCallback, useEffect } from 'react';
 import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { Button } from '../../components/ui/button';
+import { IconButton } from '../../components/ui/icon-button';
 import { Tooltip } from '../../components/ui/tooltip';
 
-// Storage key for panel sizes
 const STORAGE_KEY = 'bidlens-workbench-panels';
 
-// Minimum panel widths (px)
 const MIN_LEFT = 200;
-const MIN_CENTER = 560;
+const MAX_LEFT = 360;
 const MIN_RIGHT = 280;
-
-// Default sizes
+const MAX_RIGHT = 420;
 const DEFAULT_LEFT = 280;
 const DEFAULT_RIGHT = 320;
+const NAV_COLLAPSED_WIDTH = 52;
 
 interface PanelSizes {
   left: number;
@@ -37,7 +35,7 @@ function loadPanelSizes(): PanelSizes {
       }
     }
   } catch {
-    // Ignore parse errors
+    // Ignore
   }
   return { left: DEFAULT_LEFT, right: DEFAULT_RIGHT };
 }
@@ -46,21 +44,25 @@ function savePanelSizes(sizes: PanelSizes): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sizes));
   } catch {
-    // Ignore storage errors
+    // Ignore
   }
 }
 
 interface WorkbenchLayoutProps {
-  leftPanel: React.ReactNode;
-  centerPanel: React.ReactNode;
-  rightPanel: React.ReactNode;
+  taskbar: React.ReactNode;
+  filterbar: React.ReactNode;
+  navPanel: React.ReactNode;
+  viewport: React.ReactNode;
+  detailPanel: React.ReactNode;
   className?: string;
 }
 
 export function WorkbenchLayout({
-  leftPanel,
-  centerPanel,
-  rightPanel,
+  taskbar,
+  filterbar,
+  navPanel,
+  viewport,
+  detailPanel,
   className,
 }: WorkbenchLayoutProps) {
   const [sizes, setSizes] = useState<PanelSizes>(loadPanelSizes);
@@ -68,25 +70,26 @@ export function WorkbenchLayout({
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [autoRightCollapsed, setAutoRightCollapsed] = useState(false);
   const [dragging, setDragging] = useState<'left' | 'right' | null>(null);
+  const [detailOverlay, setDetailOverlay] = useState(false);
 
-  // Persist sizes on change
   useEffect(() => {
     savePanelSizes(sizes);
   }, [sizes]);
 
   useEffect(() => {
-    const updateResponsiveState = () => setAutoRightCollapsed(window.innerWidth < 1120);
-    updateResponsiveState();
-    window.addEventListener('resize', updateResponsiveState);
-    return () => window.removeEventListener('resize', updateResponsiveState);
+    const update = () => {
+      const w = window.innerWidth;
+      setAutoRightCollapsed(w < 1120);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
   }, []);
 
-  // Handle drag resize
   const handleMouseDown = useCallback(
     (panel: 'left' | 'right') => (e: React.MouseEvent) => {
       e.preventDefault();
       setDragging(panel);
-
       const startX = e.clientX;
       const startSizes = { ...sizes };
 
@@ -94,11 +97,9 @@ export function WorkbenchLayout({
         const delta = moveEvent.clientX - startX;
         setSizes((prev) => {
           if (panel === 'left') {
-            const newLeft = Math.max(MIN_LEFT, startSizes.left + delta);
-            return { ...prev, left: newLeft };
+            return { ...prev, left: Math.max(MIN_LEFT, Math.min(MAX_LEFT, startSizes.left + delta)) };
           } else {
-            const newRight = Math.max(MIN_RIGHT, startSizes.right - delta);
-            return { ...prev, right: newRight };
+            return { ...prev, right: Math.max(MIN_RIGHT, Math.min(MAX_RIGHT, startSizes.right - delta)) };
           }
         });
       };
@@ -115,16 +116,15 @@ export function WorkbenchLayout({
     [sizes]
   );
 
-  // Keyboard resize (arrow keys when focused on resizer)
   const handleKeyDown = useCallback(
     (panel: 'left' | 'right') => (e: React.KeyboardEvent) => {
       const step = e.shiftKey ? 50 : 10;
       setSizes((prev) => {
         if (panel === 'left') {
           if (e.key === 'ArrowLeft') return { ...prev, left: Math.max(MIN_LEFT, prev.left - step) };
-          if (e.key === 'ArrowRight') return { ...prev, left: prev.left + step };
+          if (e.key === 'ArrowRight') return { ...prev, left: Math.min(MAX_LEFT, prev.left + step) };
         } else {
-          if (e.key === 'ArrowLeft') return { ...prev, right: prev.right + step };
+          if (e.key === 'ArrowLeft') return { ...prev, right: Math.min(MAX_RIGHT, prev.right + step) };
           if (e.key === 'ArrowRight') return { ...prev, right: Math.max(MIN_RIGHT, prev.right - step) };
         }
         return prev;
@@ -133,107 +133,151 @@ export function WorkbenchLayout({
     []
   );
 
+  const showRight = !rightCollapsed && !autoRightCollapsed;
+  const navWidth = leftCollapsed ? NAV_COLLAPSED_WIDTH : sizes.left;
+
   return (
-    <div className={cn('flex h-full overflow-hidden', className)}>
-      {/* Left panel */}
-      {!leftCollapsed && (
+    <div
+      className={cn('grid overflow-hidden', className)}
+      style={{ gridTemplateRows: '50px 46px minmax(0, 1fr)' }}
+    >
+      {/* Row 1: Taskbar */}
+      <div className="flex items-center gap-2.5 px-3.5 bg-[var(--color-bg)] border-b border-[var(--color-border)]" style={{ minHeight: 50 }}>
+        {taskbar}
+        <div className="flex-1" />
+        {/* Detail toggle (visible when detail panel is hidden) */}
+        {(autoRightCollapsed || rightCollapsed) && (
+          <Tooltip content="打开差异详情">
+            <IconButton
+              icon={<PanelRightOpen className="h-4 w-4" />}
+              tooltip="打开差异详情"
+              onClick={() => setDetailOverlay(true)}
+              aria-label="打开差异详情"
+            />
+          </Tooltip>
+        )}
+      </div>
+
+      {/* Row 2: Filter bar */}
+      <div className="flex items-center gap-[7px] px-3.5 bg-[var(--color-bg)] border-b border-[var(--color-border)] overflow-hidden" style={{ minHeight: 46 }}>
+        {filterbar}
+      </div>
+
+      {/* Row 3: Work grid */}
+      <div
+        className="grid min-h-0 overflow-hidden"
+        style={{
+          gridTemplateColumns: `${navWidth}px 5px minmax(560px, 1fr) 5px ${showRight ? sizes.right : 0}px`,
+        }}
+      >
+        {/* Nav panel */}
         <div
-          className="flex-shrink-0 border-r border-[var(--color-border)] overflow-hidden"
-          style={{ width: sizes.left }}
+          className="min-w-0 min-h-0 bg-[var(--color-bg)] border-r border-[var(--color-border)] overflow-hidden"
           role="region"
           aria-label="差异导航"
         >
-          {leftPanel}
+          {/* Panel head */}
+          <div className="flex items-center justify-between gap-2 px-3 border-b border-[var(--color-border)]" style={{ height: 42, fontSize: 12, fontWeight: 700 }}>
+            {!leftCollapsed && <span>差异导航</span>}
+            <Tooltip content={leftCollapsed ? '展开导航' : '折叠导航'}>
+              <IconButton
+                icon={leftCollapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
+                tooltip={leftCollapsed ? '展开导航' : '折叠导航'}
+                onClick={() => setLeftCollapsed(!leftCollapsed)}
+                aria-label={leftCollapsed ? '展开导航' : '折叠导航'}
+                className="h-6 w-6"
+              />
+            </Tooltip>
+          </div>
+          <div className="overflow-auto" style={{ height: 'calc(100% - 42px)' }}>
+            {navPanel}
+          </div>
         </div>
-      )}
 
-      {/* Left resizer */}
-      <div
-        className={cn(
-          'w-1 cursor-col-resize hover:bg-[var(--color-accent)]/20 transition-colors flex-shrink-0',
-          dragging === 'left' && 'bg-[var(--color-accent)]/30'
+        {/* Left resizer */}
+        {!leftCollapsed && (
+          <div
+            className={cn(
+              'cursor-col-resize relative',
+              'bg-[var(--color-bg-muted)] hover:bg-[var(--color-accent-soft)]',
+              dragging === 'left' && 'bg-[var(--color-accent-soft)]'
+            )}
+            onMouseDown={handleMouseDown('left')}
+            onKeyDown={handleKeyDown('left')}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="调整导航宽度"
+            tabIndex={0}
+          >
+            <div className="absolute w-px bg-[var(--color-border-strong)]" style={{ width: 1, height: 34, left: 2, top: 'calc(50% - 17px)' }} />
+          </div>
         )}
-        onMouseDown={handleMouseDown('left')}
-        onKeyDown={handleKeyDown('left')}
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="调整左侧面板宽度"
-        tabIndex={0}
-      />
+        {leftCollapsed && <div />}
 
-      {/* Center panel */}
-      <div
-        className="flex-1 overflow-hidden min-w-0"
-        role="region"
-        aria-label="比对视图"
-      >
-        {/* Collapse/expand controls */}
-        <div className="flex items-center gap-1 h-8 px-2 border-b border-[var(--color-border)]">
-          <Tooltip content={leftCollapsed ? '展开导航' : '折叠导航'}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLeftCollapsed(!leftCollapsed)}
-              aria-label={leftCollapsed ? '展开左侧面板' : '折叠左侧面板'}
-              className="h-6 w-6 p-0"
-            >
-              {leftCollapsed ? (
-                <PanelLeftOpen className="h-3.5 w-3.5" />
-              ) : (
-                <PanelLeftClose className="h-3.5 w-3.5" />
-              )}
-            </Button>
-          </Tooltip>
-
-          <div className="flex-1" />
-
-          <Tooltip content={rightCollapsed ? '展开详情' : '折叠详情'}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setRightCollapsed(!rightCollapsed)}
-              aria-label={(rightCollapsed || autoRightCollapsed) ? '展开右侧面板' : '折叠右侧面板'}
-              className="h-6 w-6 p-0"
-            >
-              {rightCollapsed || autoRightCollapsed ? (
-                <PanelRightOpen className="h-3.5 w-3.5" />
-              ) : (
-                <PanelRightClose className="h-3.5 w-3.5" />
-              )}
-            </Button>
-          </Tooltip>
+        {/* Center viewport */}
+        <div className="min-w-0 min-h-0 overflow-hidden bg-[var(--color-bg-muted)]">
+          {viewport}
         </div>
 
-        <div className="h-[calc(100%-2rem)] overflow-auto">
-          {centerPanel}
-        </div>
+        {/* Right resizer */}
+        {showRight && (
+          <div
+            className={cn(
+              'cursor-col-resize relative',
+              'bg-[var(--color-bg-muted)] hover:bg-[var(--color-accent-soft)]',
+              dragging === 'right' && 'bg-[var(--color-accent-soft)]'
+            )}
+            onMouseDown={handleMouseDown('right')}
+            onKeyDown={handleKeyDown('right')}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="调整详情宽度"
+            tabIndex={0}
+          >
+            <div className="absolute w-px bg-[var(--color-border-strong)]" style={{ width: 1, height: 34, left: 2, top: 'calc(50% - 17px)' }} />
+          </div>
+        )}
+        {!showRight && <div />}
+
+        {/* Detail panel */}
+        {showRight && (
+          <div
+            className="min-w-0 min-h-0 bg-[var(--color-bg)] border-l border-[var(--color-border)] overflow-hidden"
+            role="region"
+            aria-label="差异详情"
+          >
+            {detailPanel}
+          </div>
+        )}
       </div>
 
-      {/* Right resizer */}
-      {!rightCollapsed && !autoRightCollapsed && (
+      {/* Detail overlay mode (when auto-collapsed or manually collapsed) */}
+      {detailOverlay && !showRight && (
         <div
-          className={cn(
-            'w-1 cursor-col-resize hover:bg-[var(--color-accent)]/20 transition-colors flex-shrink-0',
-            dragging === 'right' && 'bg-[var(--color-accent)]/30'
-          )}
-          onMouseDown={handleMouseDown('right')}
-          onKeyDown={handleKeyDown('right')}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="调整右侧面板宽度"
-          tabIndex={0}
-        />
-      )}
-
-      {/* Right panel */}
-      {!rightCollapsed && !autoRightCollapsed && (
-        <div
-          className="flex-shrink-0 border-l border-[var(--color-border)] overflow-hidden"
-          style={{ width: sizes.right }}
-          role="region"
-          aria-label="详情面板"
+          className="fixed inset-0 z-50"
+          onClick={(e) => { if (e.target === e.currentTarget) setDetailOverlay(false); }}
         >
-          {rightPanel}
+          <div
+            className="absolute top-[98px] right-0 bottom-0 bg-[var(--color-bg)] border-l border-[var(--color-border)]"
+            style={{ width: 'min(390px, 42vw)', boxShadow: 'var(--shadow)' }}
+          >
+            {/* Close button */}
+            <div className="flex items-center justify-between px-3 border-b border-[var(--color-border)]" style={{ height: 42, fontSize: 12, fontWeight: 700 }}>
+              <span>差异详情</span>
+              <Tooltip content="收起差异详情">
+                <IconButton
+                  icon={<PanelRightClose className="h-3.5 w-3.5" />}
+                  tooltip="收起差异详情"
+                  onClick={() => setDetailOverlay(false)}
+                  aria-label="收起差异详情"
+                  className="h-6 w-6"
+                />
+              </Tooltip>
+            </div>
+            <div className="overflow-auto" style={{ height: 'calc(100% - 42px)' }}>
+              {detailPanel}
+            </div>
+          </div>
         </div>
       )}
     </div>

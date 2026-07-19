@@ -135,7 +135,7 @@ export function DetailTabs({ item, capabilities, className }: DetailTabsProps) {
       onValueChange={setActiveTab}
       className={cn('h-full flex flex-col', className)}
     >
-      <TabsList className="h-8 px-1 border-b border-[var(--color-border)] rounded-none bg-transparent">
+      <TabsList className="border-b border-[var(--color-border)] rounded-none bg-transparent px-2" style={{ height: 42 }}>
         {TABS.map((tab) => {
           const state = getCapabilityState(capabilities, tab.dimension);
           const Icon = tab.icon;
@@ -144,9 +144,10 @@ export function DetailTabs({ item, capabilities, className }: DetailTabsProps) {
               key={tab.id}
               value={tab.id}
               className={cn(
-                'h-7 px-2 text-xs gap-1 data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)] rounded-none',
+                'rounded-none border-0 border-b-2 border-transparent text-[11px] gap-1 data-[state=active]:border-[var(--color-accent)] data-[state=active]:font-bold data-[state=active]:text-[var(--color-text)]',
                 state === 'unsupported' && 'opacity-50'
               )}
+              style={{ height: 41, padding: '0 7px' }}
               disabled={state === 'unsupported'}
             >
               <Icon className="h-3 w-3" />

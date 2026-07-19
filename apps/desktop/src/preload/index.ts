@@ -53,6 +53,17 @@ const api: BidLensApi = {
 
   // Engine
   engineHandshake: () => ipcRenderer.invoke('engine:handshake'),
+
+  // Window controls
+  windowMinimize: () => ipcRenderer.invoke('window:minimize'),
+  windowMaximize: () => ipcRenderer.invoke('window:maximize'),
+  windowClose: () => ipcRenderer.invoke('window:close'),
+  windowIsMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  onMaximizeChanged: (handler: (maximized: boolean) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, maximized: boolean) => handler(maximized);
+    ipcRenderer.on('window:maximize-changed', listener);
+    return () => { ipcRenderer.removeListener('window:maximize-changed', listener); };
+  },
 };
 
 contextBridge.exposeInMainWorld('bidlens', api);

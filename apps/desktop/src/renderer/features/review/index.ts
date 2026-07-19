@@ -2,7 +2,7 @@
 export { ReviewWorkbench } from './review-workbench';
 export { WorkbenchLayout } from './workbench-layout';
 export { DiffNavList } from './diff-nav-list';
-export { FilterPanel, applyFilters, DEFAULT_FILTERS, type FilterState } from './filter-panel';
+export { FilterBar, applyFilters, DEFAULT_FILTERS, type FilterState } from './filter-panel';
 export { TaskToolbar } from './task-toolbar';
 export { DiffViewport } from './diff-viewport';
 export { DetailTabs } from './detail-tabs';

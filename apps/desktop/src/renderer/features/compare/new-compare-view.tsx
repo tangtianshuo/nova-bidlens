@@ -75,6 +75,22 @@ export function NewCompareView() {
 
   const canStart = baseline.path && review.path && !baseline.error && !review.error;
 
+  const handleDropFile = useCallback((slot: 'baseline' | 'review') => (file: File) => {
+    // Electron adds path property to File objects
+    const filePath = (file as File & { path?: string }).path;
+    if (!filePath) return;
+    const ext = file.name.split('.').pop()?.toUpperCase() ?? '';
+    const fileSlot: FileSlot = {
+      path: filePath,
+      name: file.name,
+      size: file.size,
+      format: ext,
+      error: null,
+    };
+    if (slot === 'baseline') setBaseline(fileSlot);
+    else setReview(fileSlot);
+  }, []);
+
   const handleStart = useCallback(async () => {
     if (!canStart || !baseline.path || !review.path || isStarting) return;
 
@@ -116,7 +132,7 @@ export function NewCompareView() {
 
   return (
     <div className="flex flex-1 overflow-auto">
-      <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col px-8 py-8">
+      <div className="mx-auto flex min-h-full w-full flex-col" style={{ maxWidth: 1120, padding: '34px 36px 28px' }}>
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-[var(--color-text)]">新建比对</h1>
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">文档内容仅在本机处理</p>
@@ -128,6 +144,7 @@ export function NewCompareView() {
             slot={baseline}
             onSelect={() => selectFile('baseline')}
             onClear={() => clearSlot('baseline')}
+            onDropFile={handleDropFile('baseline')}
           />
 
           {/* Swap button */}
@@ -146,15 +163,16 @@ export function NewCompareView() {
             slot={review}
             onSelect={() => selectFile('review')}
             onClear={() => clearSlot('review')}
+            onDropFile={handleDropFile('review')}
           />
         </div>
 
-        <div className="mt-4 border-y border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-4 py-3">
+        <div className="mt-4 border-y border-[var(--color-border)] px-4 py-3.5" style={{ background: 'color-mix(in srgb, var(--color-bg) 72%, transparent)' }}>
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="mr-1 font-semibold text-[var(--color-text-secondary)]">检测维度</span>
             {['正文', '表格', '格式', '批注', '修订'].map((dimension) => (
-              <span key={dimension} className="inline-flex items-center gap-1 rounded border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1 text-[var(--color-text-secondary)]">
-                <Check className="h-3 w-3 text-[var(--color-added)]" />{dimension}
+              <span key={dimension} className="inline-flex items-center gap-1 rounded-[5px] border border-[var(--color-added-border)] bg-[var(--color-added-bg)] px-2 py-0.5 text-[var(--color-added)]" style={{ minHeight: 26, fontSize: 12 }}>
+                <Check className="h-3 w-3" />{dimension}
               </span>
             ))}
           </div>
@@ -163,32 +181,40 @@ export function NewCompareView() {
         {/* Advanced settings */}
         <div className="mt-5 border-b border-[var(--color-border)] pb-3">
           <button
-            className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+            className="flex w-full items-center gap-1.5 py-2.5 text-xs font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] cursor-pointer"
             onClick={() => setShowAdvanced(!showAdvanced)}
           >
             <Settings2 className="h-3.5 w-3.5" />
             高级设置
           </button>
           {showAdvanced && (
-            <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 pb-4 pt-1">
               <div><strong className="block text-sm text-[var(--color-text)]">匹配灵敏度</strong><span className="text-xs text-[var(--color-text-muted)]">标准适用于结构相近但措辞可能调整的文档</span></div>
-              <select
-                value={sensitivity}
-                onChange={(e) => setSensitivity(e.target.value as typeof sensitivity)}
-                className="h-8 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 text-sm text-[var(--color-text)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]/20"
-              >
-                <option value="strict">严格</option>
-                <option value="standard">标准</option>
-                <option value="loose">宽松</option>
-              </select>
+              <div className="inline-flex items-center p-[3px] border border-[var(--color-border)] rounded-[5px] bg-[var(--color-bg-subtle)]">
+                {(['strict', 'standard', 'loose'] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setSensitivity(opt)}
+                    className={cn(
+                      'min-w-[68px] min-h-[30px] px-2.5 text-sm rounded transition-colors cursor-pointer',
+                      sensitivity === opt
+                        ? 'bg-[var(--color-bg)] text-[var(--color-text)] font-semibold shadow-sm'
+                        : 'text-[var(--color-text-secondary)]'
+                    )}
+                  >
+                    {opt === 'strict' ? '严格' : opt === 'standard' ? '标准' : '宽松'}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
         {/* Start button */}
-        <div className="mt-auto flex items-center gap-4 pt-6">
+        <div className="mt-auto flex items-center gap-2.5 pt-6">
           <span className="mr-auto text-xs text-[var(--color-text-muted)]">{canStart ? '两份文档已就绪' : '请选择两份文档'}</span>
           <Button
+            variant="primary"
             size="lg"
             className="min-w-40"
             disabled={!canStart || isStarting}
@@ -207,13 +233,44 @@ interface FileSlotCardProps {
   slot: FileSlot;
   onSelect: () => void;
   onClear: () => void;
+  onDropFile?: (file: File) => void;
 }
 
-function FileSlotCard({ label, slot, onSelect, onClear }: FileSlotCardProps) {
+function FileSlotCard({ label, slot, onSelect, onClear, onDropFile }: FileSlotCardProps) {
   const hasFile = slot.path !== null;
+  const [dragging, setDragging] = useState(false);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && onDropFile) {
+      onDropFile(file);
+    }
+  }, [onDropFile]);
 
   return (
-    <article className="overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg)]">
+    <article
+      className={cn(
+        'overflow-hidden rounded-[var(--radius-sm)] border bg-[var(--color-bg)]',
+        dragging
+          ? 'border-[var(--color-accent)]'
+          : 'border-[var(--color-border)]'
+      )}
+      style={dragging ? { boxShadow: 'inset 0 0 0 1px var(--color-accent)' } : undefined}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="flex min-h-12 items-center justify-between border-b border-[var(--color-border)] px-4">
         <span className="text-sm font-semibold text-[var(--color-text)]">{label}</span>
         {hasFile && <button onClick={onClear} className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-muted)]" aria-label={`移除${label}`}><Trash2 className="h-4 w-4" /></button>}
@@ -221,29 +278,34 @@ function FileSlotCard({ label, slot, onSelect, onClear }: FileSlotCardProps) {
       <button
         onClick={onSelect}
         className={cn(
-          'flex min-h-44 w-full items-center gap-4 p-5 text-left transition-colors',
+          'flex w-full items-center gap-3.5 p-5 text-left transition-colors cursor-pointer',
           hasFile
-            ? 'border-[var(--color-border-strong)] bg-[var(--color-bg-subtle)]'
-            : 'border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-accent-light)]/50',
+            ? 'bg-[var(--color-bg-subtle)]'
+            : 'hover:bg-[var(--color-bg-hover)]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]'
         )}
+        style={{ minHeight: 232 }}
         aria-label={hasFile ? `已选择: ${slot.name}` : `选择${label}`}
       >
         {hasFile ? (
           <>
-            <FileText className="h-8 w-8 text-[var(--color-text-muted)]" />
-            <div className="w-full truncate text-sm font-medium text-[var(--color-text)]">
-              {slot.name}
+            <div className="flex-shrink-0 grid place-items-center rounded-[5px] border border-[var(--color-border-strong)] bg-[var(--color-bg-subtle)]" style={{ width: 48, height: 58 }}>
+              <FileText className="h-6 w-6 text-[var(--color-text-muted)]" />
             </div>
-            <div className="flex items-center gap-2">
-              {slot.format && (
-                <Badge variant="default">{slot.format}</Badge>
-              )}
-              {slot.size && (
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  {formatFileSize(slot.size)}
-                </span>
-              )}
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[15px] font-semibold text-[var(--color-text)]">
+                {slot.name}
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                {slot.format && (
+                  <Badge variant="default">{slot.format}</Badge>
+                )}
+                {slot.size && (
+                  <span className="text-xs text-[var(--color-text-muted)]">
+                    {formatFileSize(slot.size)}
+                  </span>
+                )}
+              </div>
             </div>
           </>
         ) : (

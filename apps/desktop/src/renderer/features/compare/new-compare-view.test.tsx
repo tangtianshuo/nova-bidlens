@@ -25,12 +25,12 @@ describe('NewCompareView', () => {
 
   it('renders the heading', () => {
     render(<NewCompareView />);
-    expect(screen.getByText('新建文档比对')).toBeDefined();
+    expect(screen.getByText('新建比对')).toBeDefined();
   });
 
   it('renders the description', () => {
     render(<NewCompareView />);
-    expect(screen.getByText('选择两份招标文档进行语义比对分析')).toBeDefined();
+    expect(screen.getByText('文档内容仅在本机处理')).toBeDefined();
   });
 
   it('renders baseline slot label', () => {

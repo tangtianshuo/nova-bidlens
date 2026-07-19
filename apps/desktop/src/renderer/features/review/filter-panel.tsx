@@ -1,16 +1,12 @@
 /**
- * P4-02: Search and combined filters for diff items.
- * Filter by match type, review status, importance, and text search.
+ * Filter bar for the workbench - matches V0.2.2 prototype filterbar.
+ * Horizontal bar with type filters, dimension filters, review status, and search.
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { Search, X, RotateCcw } from 'lucide-react';
+import { Search, Star } from 'lucide-react';
 import type { MatchType, ReviewStatus } from '@bidlens/shared/types-only';
 import { cn } from '../../lib/utils';
-import { Input } from '../../components/ui/input';
-import { Button } from '../../components/ui/button';
-import { Badge } from '../../components/ui/badge';
-import { Separator } from '../../components/ui/separator';
 
 export interface FilterState {
   searchQuery: string;
@@ -20,15 +16,19 @@ export interface FilterState {
   hideIdentical: boolean;
 }
 
-const MATCH_TYPE_OPTIONS: { value: MatchType; label: string; color: string }[] = [
-  { value: 'modified', label: '修改', color: 'var(--color-modified)' },
-  { value: 'added', label: '新增', color: 'var(--color-added)' },
-  { value: 'deleted', label: '删除', color: 'var(--color-deleted)' },
-  { value: 'moved', label: '移动', color: 'var(--color-moved)' },
-  { value: 'split', label: '拆分', color: 'var(--color-uncertain)' },
-  { value: 'merged', label: '合并', color: 'var(--color-uncertain)' },
-  { value: 'uncertain', label: '不确定', color: 'var(--color-uncertain)' },
-  { value: 'identical', label: '相同', color: 'var(--color-text-muted)' },
+export const DEFAULT_FILTERS: FilterState = {
+  searchQuery: '',
+  matchTypes: new Set(),
+  reviewStatuses: new Set(),
+  showImportantOnly: false,
+  hideIdentical: true,
+};
+
+const MATCH_TYPE_CHIPS: { value: MatchType; label: string }[] = [
+  { value: 'modified', label: '修改' },
+  { value: 'added', label: '新增' },
+  { value: 'deleted', label: '删除' },
+  { value: 'table' as MatchType, label: '表格' },
 ];
 
 const REVIEW_STATUS_OPTIONS: { value: ReviewStatus; label: string }[] = [
@@ -38,15 +38,7 @@ const REVIEW_STATUS_OPTIONS: { value: ReviewStatus; label: string }[] = [
   { value: 'ignored', label: '已忽略' },
 ];
 
-export const DEFAULT_FILTERS: FilterState = {
-  searchQuery: '',
-  matchTypes: new Set(),
-  reviewStatuses: new Set(),
-  showImportantOnly: false,
-  hideIdentical: true,
-};
-
-interface FilterPanelProps {
+interface FilterBarProps {
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
   totalCount: number;
@@ -54,25 +46,13 @@ interface FilterPanelProps {
   className?: string;
 }
 
-export function FilterPanel({
+export function FilterBar({
   filters,
   onFiltersChange,
   totalCount,
   filteredCount,
   className,
-}: FilterPanelProps) {
-  const [expanded, setExpanded] = useState(false);
-
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filters.searchQuery) count++;
-    if (filters.matchTypes.size > 0) count++;
-    if (filters.reviewStatuses.size > 0) count++;
-    if (filters.showImportantOnly) count++;
-    if (filters.hideIdentical) count++;
-    return count;
-  }, [filters]);
-
+}: FilterBarProps) {
   const updateFilter = useCallback(
     (patch: Partial<FilterState>) => {
       onFiltersChange({ ...filters, ...patch });
@@ -90,177 +70,104 @@ export function FilterPanel({
     [filters.matchTypes, updateFilter]
   );
 
-  const toggleReviewStatus = useCallback(
-    (status: ReviewStatus) => {
-      const next = new Set(filters.reviewStatuses);
-      if (next.has(status)) next.delete(status);
-      else next.add(status);
-      updateFilter({ reviewStatuses: next });
-    },
-    [filters.reviewStatuses, updateFilter]
-  );
-
-  const resetFilters = useCallback(() => {
-    onFiltersChange(DEFAULT_FILTERS);
-  }, [onFiltersChange]);
-
   return (
-    <div className={cn('border-b border-[var(--color-border)]', className)}>
-      {/* Search bar */}
-      <div className="flex items-center gap-2 px-3 py-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-text-muted)]" />
-          <Input
-            value={filters.searchQuery}
-            onChange={(e) => updateFilter({ searchQuery: e.target.value })}
-            placeholder="搜索差异..."
-            className="h-7 pl-8 text-xs"
-            aria-label="搜索差异"
-          />
-          {filters.searchQuery && (
-            <button
-              onClick={() => updateFilter({ searchQuery: '' })}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              aria-label="清除搜索"
-            >
-              <X className="h-3 w-3" />
-            </button>
+    <>
+      {/* Type filter chips */}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => updateFilter({ matchTypes: new Set() })}
+          className={cn(
+            'min-h-7 px-2 text-xs rounded-[var(--radius-sm)] border border-transparent transition-colors whitespace-nowrap',
+            filters.matchTypes.size === 0
+              ? 'border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text)] font-semibold'
+              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
           )}
-        </div>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setExpanded(!expanded)}
-          className="h-7 px-2 text-xs"
-          aria-expanded={expanded}
-          aria-label="展开筛选选项"
         >
-          筛选
-          {activeFilterCount > 0 && (
-            <Badge variant="default" className="ml-1 h-4 w-4 p-0 text-xs">
-              {activeFilterCount}
-            </Badge>
-          )}
-        </Button>
-
-        {activeFilterCount > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={resetFilters}
-            className="h-7 px-2 text-xs"
-            aria-label="重置筛选"
-          >
-            <RotateCcw className="h-3 w-3" />
-          </Button>
-        )}
+          全部 <span className="text-[var(--color-text-muted)] ml-0.5">{totalCount}</span>
+        </button>
+        {MATCH_TYPE_CHIPS.map(({ value, label }) => {
+          const isActive = filters.matchTypes.has(value);
+          return (
+            <button
+              key={value}
+              onClick={() => toggleMatchType(value)}
+              className={cn(
+                'min-h-7 px-2 text-xs rounded-[var(--radius-sm)] border border-transparent transition-colors whitespace-nowrap',
+                isActive
+                  ? 'border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text)] font-semibold'
+                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
+
+      {/* Divider */}
+      <div className="w-px h-[22px] bg-[var(--color-border)] mx-0.5" />
+
+      {/* Dimension filters */}
+      <div className="flex items-center gap-1 dimensions">
+        {['正文', '表格', '格式', '批注', '修订'].map((dim) => (
+          <button
+            key={dim}
+            className="min-h-7 px-2 text-xs rounded-[var(--radius-sm)] border border-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors whitespace-nowrap"
+          >
+            {dim}
+          </button>
+        ))}
+      </div>
+
+      {/* Review status */}
+      <select
+        value={filters.reviewStatuses.size === 1 ? [...filters.reviewStatuses][0] : 'all'}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === 'all') updateFilter({ reviewStatuses: new Set() });
+          else updateFilter({ reviewStatuses: new Set([val as ReviewStatus]) });
+        }}
+        className="min-h-7 px-2 text-xs rounded-[var(--radius-sm)] border border-transparent text-[var(--color-text-secondary)] bg-transparent cursor-pointer"
+        aria-label="审核状态筛选"
+      >
+        <option value="all">审核状态</option>
+        {REVIEW_STATUS_OPTIONS.map(({ value, label }) => (
+          <option key={value} value={value}>{label}</option>
+        ))}
+      </select>
+
+      {/* Important filter */}
+      <button
+        onClick={() => updateFilter({ showImportantOnly: !filters.showImportantOnly })}
+        className={cn(
+          'min-h-7 px-2 text-xs rounded-[var(--radius-sm)] border border-transparent transition-colors',
+          filters.showImportantOnly
+            ? 'border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text)] font-semibold'
+            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
+        )}
+        title="仅看重要"
+        aria-label="仅看重要"
+      >
+        <Star className="h-3.5 w-3.5" />
+      </button>
 
       {/* Result count */}
-      <div className="px-3 pb-1.5 text-xs text-[var(--color-text-muted)]">
-        {filteredCount === totalCount
-          ? `共 ${totalCount} 项`
-          : `${filteredCount} / ${totalCount} 项`}
+      <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">
+        {filteredCount} / {totalCount}
+      </span>
+
+      {/* Search */}
+      <div className="flex items-center gap-1.5 h-7 min-w-[190px] ml-auto px-2.5 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-bg-input)] text-[var(--color-text-muted)]">
+        <Search className="h-3.5 w-3.5 flex-shrink-0" />
+        <input
+          value={filters.searchQuery}
+          onChange={(e) => updateFilter({ searchQuery: e.target.value })}
+          placeholder="搜索差异"
+          className="min-w-0 flex-1 border-0 outline-0 bg-transparent text-xs text-[var(--color-text)]"
+          aria-label="搜索差异"
+        />
       </div>
-
-      {/* Expanded filter options */}
-      {expanded && (
-        <div className="px-3 pb-3 space-y-3">
-          {/* Match type filters */}
-          <div>
-            <label className="text-xs text-[var(--color-text-muted)] mb-1.5 block">
-              差异类型
-            </label>
-            <div className="flex flex-wrap gap-1">
-              {MATCH_TYPE_OPTIONS.map(({ value, label, color }) => {
-                const isActive = filters.matchTypes.has(value);
-                return (
-                  <button
-                    key={value}
-                    onClick={() => toggleMatchType(value)}
-                    className={cn(
-                      'h-6 px-2 text-xs rounded-md border transition-colors',
-                      isActive
-                        ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10'
-                        : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/50'
-                    )}
-                    aria-pressed={isActive}
-                    aria-label={`筛选${label}`}
-                  >
-                    <span
-                      className="inline-block w-2 h-2 rounded-full mr-1"
-                      style={{ backgroundColor: color }}
-                    />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Review status filters */}
-          <div>
-            <label className="text-xs text-[var(--color-text-muted)] mb-1.5 block">
-              审核状态
-            </label>
-            <div className="flex flex-wrap gap-1">
-              {REVIEW_STATUS_OPTIONS.map(({ value, label }) => {
-                const isActive = filters.reviewStatuses.has(value);
-                return (
-                  <button
-                    key={value}
-                    onClick={() => toggleReviewStatus(value)}
-                    className={cn(
-                      'h-6 px-2 text-xs rounded-md border transition-colors',
-                      isActive
-                        ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10'
-                        : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/50'
-                    )}
-                    aria-pressed={isActive}
-                    aria-label={`筛选${label}`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Toggle filters */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => updateFilter({ showImportantOnly: !filters.showImportantOnly })}
-              className={cn(
-                'h-6 px-2 text-xs rounded-md border transition-colors',
-                filters.showImportantOnly
-                  ? 'border-[var(--color-warning)] bg-[var(--color-warning)]/10'
-                  : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/50'
-              )}
-              aria-pressed={filters.showImportantOnly}
-            >
-              仅重要
-            </button>
-            <button
-              onClick={() => updateFilter({ hideIdentical: !filters.hideIdentical })}
-              className={cn(
-                'h-6 px-2 text-xs rounded-md border transition-colors',
-                filters.hideIdentical
-                  ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10'
-                  : 'border-[var(--color-border)] hover:border-[var(--color-accent)]/50'
-              )}
-              aria-pressed={filters.hideIdentical}
-            >
-              隐藏相同
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
 
@@ -273,26 +180,21 @@ export function applyFilters(
   annotationMap: Map<string, import('@bidlens/shared/types-only').ReviewAnnotation>
 ): import('@bidlens/shared/types-only').DiffItem[] {
   return items.filter((item) => {
-    // Hide identical
     if (filters.hideIdentical && item.matchType === 'identical') return false;
 
-    // Match type filter
     if (filters.matchTypes.size > 0 && !filters.matchTypes.has(item.matchType)) return false;
 
-    // Review status filter
     if (filters.reviewStatuses.size > 0) {
       const ann = annotationMap.get(item.matchId);
       const status = ann?.status ?? 'unreviewed';
       if (!filters.reviewStatuses.has(status)) return false;
     }
 
-    // Important only
     if (filters.showImportantOnly) {
       const ann = annotationMap.get(item.matchId);
       if (!ann?.important) return false;
     }
 
-    // Text search
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
       const text = [item.sourceA, item.sourceB, item.summary]

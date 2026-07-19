@@ -11,7 +11,7 @@ export const TabsList = forwardRef<
   <RadixTabs.List
     ref={ref}
     className={cn(
-      'inline-flex h-9 items-center gap-1 border-b border-[var(--color-border)]',
+      'inline-flex items-center gap-0',
       className
     )}
     {...props}
@@ -26,7 +26,7 @@ export const TabsTrigger = forwardRef<
   <RadixTabs.Trigger
     ref={ref}
     className={cn(
-      'inline-flex items-center justify-center whitespace-nowrap px-3 py-1.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] data-[state=active]:text-[var(--color-accent)] data-[state=active]:shadow-[inset_0_-2px_0_0_var(--color-accent)]',
+      'inline-flex items-center justify-center whitespace-nowrap text-[11px] text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] data-[state=active]:text-[var(--color-text)] data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)]',
       className
     )}
     {...props}
@@ -41,7 +41,7 @@ export const TabsContent = forwardRef<
   <RadixTabs.Content
     ref={ref}
     className={cn(
-      'mt-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
       className
     )}
     {...props}

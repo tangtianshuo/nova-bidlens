@@ -149,4 +149,11 @@ export interface BidLensApi {
 
   // Engine
   engineHandshake(): Promise<EngineHandshake>;
+
+  // Window controls
+  windowMinimize(): Promise<void>;
+  windowMaximize(): Promise<void>;
+  windowClose(): Promise<void>;
+  windowIsMaximized(): Promise<boolean>;
+  onMaximizeChanged(handler: (maximized: boolean) => void): () => void;
 }

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain } from 'electron';
 import path from 'node:path';
 import {
   registerCompareHandlers,
@@ -28,12 +28,7 @@ function createWindow() {
     height: 800,
     minWidth: 1024,
     minHeight: 700,
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#ffffff',
-      symbolColor: '#17202a',
-      height: 38,
-    },
+    frame: false,
     autoHideMenuBar: true,
     webPreferences: {
       preload: preloadPath,
@@ -42,9 +37,17 @@ function createWindow() {
     },
   });
 
-  // The renderer owns the product title bar; never expose Electron's menu bar.
-  win.setMenuBarVisibility(false);
-  win.setAutoHideMenuBar(true);
+  // Window control IPC handlers
+  ipcMain.handle('window:minimize', () => win.minimize());
+  ipcMain.handle('window:maximize', () => {
+    win.isMaximized() ? win.unmaximize() : win.maximize();
+  });
+  ipcMain.handle('window:close', () => win.close());
+  ipcMain.handle('window:isMaximized', () => win.isMaximized());
+
+  // Push maximize state changes to renderer
+  win.on('maximize', () => win.webContents.send('window:maximize-changed', true));
+  win.on('unmaximize', () => win.webContents.send('window:maximize-changed', false));
 
   // Initialize persistence layer
   persistence = new PersistenceManager();

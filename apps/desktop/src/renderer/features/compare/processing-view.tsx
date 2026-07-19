@@ -137,31 +137,36 @@ export function ProcessingView() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8">
-      <div className="w-full max-w-3xl">
+      <div className="w-full" style={{ maxWidth: 820 }}>
         <h1 className="text-2xl font-semibold text-[var(--color-text)]">正在比对</h1>
         <p className="mt-1 text-xs text-[var(--color-text-muted)]">标准灵敏度</p>
 
-        <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-b border-[var(--color-border)] pb-5 text-sm">
+        <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center border-b border-[var(--color-border)] text-sm" style={{ gap: 14, padding: '14px 0 18px' }}>
           <div className="flex min-w-0 items-center gap-3"><FileText className="h-5 w-5 text-[var(--color-text-muted)]" /><div className="min-w-0"><strong className="block truncate">基准文档</strong><span className="text-xs text-[var(--color-text-muted)]">等待文件信息</span></div></div>
           <ArrowRight className="h-4 w-4 text-[var(--color-text-muted)]" />
           <div className="flex min-w-0 items-center gap-3"><FileText className="h-5 w-5 text-[var(--color-text-muted)]" /><div className="min-w-0"><strong className="block truncate">待审文档</strong><span className="text-xs text-[var(--color-text-muted)]">等待文件信息</span></div></div>
         </div>
 
-        <ol className="mt-5 space-y-0 border-t border-[var(--color-border)]">
+        <ol className="mt-5 border-t border-[var(--color-border)]" style={{ marginTop: 22 }}>
           {stages.map((stage) => (
             <li
               key={stage.id}
               className={cn(
-                'grid min-h-[66px] grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-3 border-b border-[var(--color-border)] px-1 transition-colors',
-                stage.status === 'current' && 'bg-[var(--color-accent-light)]/50'
+                'grid items-center border-b border-[var(--color-border)] px-1 transition-colors',
+                stage.status === 'current' && 'bg-[var(--color-accent-soft)]/50'
               )}
+              style={{ minHeight: 66, gridTemplateColumns: '28px minmax(0,1fr) auto', gap: 12 }}
             >
               {stage.status === 'completed' ? (
-                <Check className="h-4 w-4 text-[var(--color-added)]" />
+                <div className="grid h-6 w-6 place-items-center rounded-full border border-[var(--color-added-border)] bg-[var(--color-added-bg)]">
+                  <Check className="h-3.5 w-3.5 text-[var(--color-added)]" />
+                </div>
               ) : stage.status === 'current' ? (
-                <Loader2 className="h-4 w-4 animate-spin text-[var(--color-accent)]" />
+                <div className="grid h-6 w-6 place-items-center rounded-full border border-[var(--color-accent)]">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--color-accent)]" />
+                </div>
               ) : (
-                <div className="grid h-6 w-6 place-items-center rounded-full border border-[var(--color-border)] text-xs text-[var(--color-text-muted)]">{stages.indexOf(stage) + 1}</div>
+                <div className="grid h-6 w-6 place-items-center rounded-full border border-[var(--color-border-strong)] text-xs text-[var(--color-text-muted)]">{stages.indexOf(stage) + 1}</div>
               )}
               <span
                 className={cn(
@@ -184,12 +189,13 @@ export function ProcessingView() {
           </div>
         )}
 
-        <div className="mt-5 flex items-center justify-between">
-          <span className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]"><Clock className="h-4 w-4" />已用时间 <strong>{formatTime(elapsed)}</strong></span>
+        <div className="flex items-center justify-between" style={{ marginTop: 20 }}>
+          <span className="flex items-center text-xs text-[var(--color-text-secondary)]" style={{ gap: 7 }}><Clock className="h-4 w-4" />已用时间 <strong>{formatTime(elapsed)}</strong></span>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setCancelDialogOpen(true)}
+            className="text-[var(--color-danger)]"
           >
             <X className="h-3.5 w-3.5" />
             取消比对

@@ -84,29 +84,26 @@ export function ReviewControls({
   }, []);
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn('space-y-2', className)}>
       {/* Status buttons */}
       <div>
         <label className="text-xs text-[var(--color-text-muted)] mb-1.5 block">
           审核状态
         </label>
-        <div className="flex gap-1.5" role="radiogroup" aria-label="审核状态">
+        <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="审核状态">
           {STATUS_OPTIONS.map(({ value, label, icon: Icon }) => {
             const isActive = currentStatus === value;
             return (
               <Button
                 key={value}
-                variant={isActive ? 'secondary' : 'ghost'}
+                variant={isActive ? 'active' : 'secondary'}
                 size="sm"
                 onClick={() => handleStatusClick(value)}
                 disabled={disabled}
                 role="radio"
                 aria-checked={isActive}
                 aria-label={label}
-                className={cn(
-                  'h-7 px-2 text-xs gap-1',
-                  isActive && 'border-[var(--color-primary)]'
-                )}
+                className="min-w-0 px-1.5 text-[11px] gap-1"
               >
                 <Icon className="h-3 w-3" />
                 {label}
@@ -117,15 +114,15 @@ export function ReviewControls({
       </div>
 
       {/* Importance toggle */}
-      <div>
+      <div style={{ marginTop: 7 }}>
         <Button
-          variant={isImportant ? 'secondary' : 'ghost'}
+          variant={isImportant ? 'active' : 'secondary'}
           size="sm"
           onClick={handleImportantToggle}
           disabled={disabled}
           aria-label={isImportant ? '取消重要标记' : '标记为重要'}
           className={cn(
-            'h-7 px-2 text-xs gap-1 w-full justify-start',
+            'w-full px-1.5 text-[11px] gap-1 justify-start',
             isImportant && 'text-[var(--color-warning)]'
           )}
         >
@@ -139,7 +136,7 @@ export function ReviewControls({
       </div>
 
       {/* Note */}
-      <div>
+      <div style={{ marginTop: 9 }}>
         <label
           htmlFor={`note-${matchId}`}
           className="text-xs text-[var(--color-text-muted)] mb-1.5 flex items-center gap-1"
@@ -147,13 +144,14 @@ export function ReviewControls({
           <MessageSquare className="h-3 w-3" />
           备注
         </label>
-        <Textarea
+        <textarea
           id={`note-${matchId}`}
           value={noteText}
           onChange={handleNoteChange}
           disabled={disabled}
           placeholder="添加备注..."
-          className="min-h-[60px] text-xs resize-none"
+          className="w-full rounded-[5px] border border-[var(--color-border)] bg-[var(--color-bg-input)] p-2 text-xs text-[var(--color-text)] resize-vertical focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+          style={{ minHeight: 66 }}
           aria-label="审核备注"
         />
       </div>

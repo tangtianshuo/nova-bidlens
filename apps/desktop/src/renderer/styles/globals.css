@@ -1,22 +1,23 @@
 @import "tailwindcss";
 
 /* ============================================================
-   BidLens Swiss Minimalism Design Tokens
-   Philosophy: Clean, restrained, functional. Information hierarchy
-   via type size, weight, and neutral color depth.
+   BidLens V0.2.2 Design Tokens
+   Source: v022-ui-ux-prototype.html (frozen 2026-07-18)
+   Philosophy: Blue-gray palette, steel blue accent, restrained.
    ============================================================ */
 
 @theme {
-  /* Typography - Offline system fonts, zero letter spacing */
-  --font-sans: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
+  /* Typography - Arial-first per prototype */
+  --font-sans: Arial, "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", monospace;
 
-  /* Border radius - restrained */
+  /* Border radius - 4px per prototype */
   --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
 
   /* Shadows - only for true overlays */
-  --shadow-overlay: 0 4px 24px rgba(0, 0, 0, 0.12);
+  --shadow-overlay: 0 8px 24px rgba(25, 34, 45, 0.12);
   --shadow-dropdown: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -26,59 +27,106 @@
 :root {
   /* Backgrounds */
   --color-bg: #ffffff;
-  --color-bg-subtle: #f8f9fa;
-  --color-bg-muted: #f1f3f5;
+  --color-bg-subtle: #f0f2f5;
+  --color-bg-muted: #f6f7f9;
+  --color-bg-hover: #e9edf2;
+  --color-bg-input: #ffffff;
 
   /* Borders */
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
+  --color-border: #dfe3e8;
+  --color-border-strong: #c4cbd4;
 
   /* Text */
-  --color-text: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-muted: #9ca3af;
+  --color-text: #17202a;
+  --color-text-secondary: #4c5968;
+  --color-text-muted: #7c8794;
 
   /* Accent */
-  --color-accent: #2563eb;
-  --color-accent-hover: #1d4ed8;
-  --color-accent-light: #dbeafe;
+  --color-accent: #315f8f;
+  --color-accent-hover: #274c73;
+  --color-accent-soft: #e9eff5;
 
   /* Semantic diff colors */
-  --color-added: #16a34a;
-  --color-added-bg: #dcfce7;
-  --color-deleted: #dc2626;
-  --color-deleted-bg: #fee2e2;
-  --color-modified: #d97706;
-  --color-modified-bg: #fef3c7;
-  --color-uncertain: #6b7280;
+  --color-added: #17633b;
+  --color-added-bg: #e5f6ed;
+  --color-added-border: #a9dbc0;
+  --color-deleted: #9d302c;
+  --color-deleted-bg: #fce9e8;
+  --color-deleted-border: #efb7b4;
+  --color-modified: #805b08;
+  --color-modified-bg: #fff4d8;
+  --color-modified-border: #edd08b;
+  --color-uncertain: #7c8794;
+
+  /* Table diff */
+  --color-span-bg: #e9efff;
+  --color-span-border: #b9c8f4;
+  --color-span-text: #3153a1;
+
+  /* Status */
+  --color-danger: #b43a35;
+  --color-warning: #9a6800;
+  --color-success: #24734a;
 
   /* Focus ring */
-  --color-ring: #2563eb;
+  --color-ring: #315f8f;
+
+  /* Shadow */
+  --shadow: 0 8px 24px rgba(25, 34, 45, 0.12);
 }
 
 /* ============================================================
-   Dark Theme (charcoal, not blue-black)
+   Dark Theme
    ============================================================ */
 :root[data-theme="dark"] {
-  --color-bg: #1a1a1a;
-  --color-bg-subtle: #222222;
-  --color-bg-muted: #2a2a2a;
-  --color-border: #333333;
-  --color-border-strong: #444444;
-  --color-text: #f3f4f6;
-  --color-text-secondary: #9ca3af;
-  --color-text-muted: #6b7280;
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
-  --color-accent-light: #1e3a5f;
-  --color-added: #22c55e;
-  --color-added-bg: #14532d;
-  --color-deleted: #ef4444;
-  --color-deleted-bg: #7f1d1d;
-  --color-modified: #f59e0b;
-  --color-modified-bg: #78350f;
-  --color-uncertain: #9ca3af;
-  --color-ring: #3b82f6;
+  /* Backgrounds */
+  --color-bg: #1d2023;
+  --color-bg-subtle: #25292d;
+  --color-bg-muted: #151719;
+  --color-bg-hover: #2d3237;
+  --color-bg-input: #202428;
+
+  /* Borders */
+  --color-border: #343a40;
+  --color-border-strong: #505860;
+
+  /* Text */
+  --color-text: #eef1f4;
+  --color-text-secondary: #b8c0c8;
+  --color-text-muted: #89939d;
+
+  /* Accent */
+  --color-accent: #8baac8;
+  --color-accent-hover: #a5bdd5;
+  --color-accent-soft: #26333f;
+
+  /* Semantic diff colors */
+  --color-added: #7bd6a4;
+  --color-added-bg: #173a29;
+  --color-added-border: #2d6949;
+  --color-deleted: #f0a09a;
+  --color-deleted-bg: #442321;
+  --color-deleted-border: #7f3f3b;
+  --color-modified: #f1ce72;
+  --color-modified-bg: #453816;
+  --color-modified-border: #77632d;
+  --color-uncertain: #89939d;
+
+  /* Table diff */
+  --color-span-bg: #243255;
+  --color-span-border: #435a95;
+  --color-span-text: #a8bdf3;
+
+  /* Status */
+  --color-danger: #f08c86;
+  --color-warning: #e4bd60;
+  --color-success: #7bd6a4;
+
+  /* Focus ring */
+  --color-ring: #8baac8;
+
+  /* Shadow */
+  --shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
 /* ============================================================
@@ -100,7 +148,7 @@ html {
 }
 
 body {
-  background-color: var(--color-bg);
+  background-color: var(--color-bg-muted);
   color: var(--color-text);
   min-height: 100vh;
 }

@@ -355,7 +355,7 @@ export function HistoryView() {
   }
 
   return (
-    <div className="flex flex-1 flex-col p-6">
+    <div className="flex flex-1 flex-col p-6 mx-auto w-full" style={{ maxWidth: 1240 }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-[var(--color-text)]">
@@ -473,25 +473,25 @@ export function HistoryView() {
 
       {/* Table */}
       <div className="mt-2 overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)]">
-        <table className="w-full">
+        <table className="w-full" style={{ tableLayout: 'fixed' }}>
           <thead>
-            <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-subtle)]">
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[var(--color-text-muted)]">
+            <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-subtle)]" style={{ height: 38 }}>
+              <th className="px-4 text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '38%' }}>
                 文档对
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[var(--color-text-muted)]">
+              <th className="px-4 text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '13%' }}>
                 状态
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[var(--color-text-muted)]">
+              <th className="px-4 text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '16%' }}>
                 差异摘要
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[var(--color-text-muted)]">
+              <th className="px-4 text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '18%' }}>
                 审阅进度
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[var(--color-text-muted)]">
+              <th className="px-4 text-left text-[11px] font-bold text-[var(--color-text-muted)]" style={{ width: '12%' }}>
                 最后访问
               </th>
-              <th className="w-32 px-4 py-2.5" />
+              <th className="px-4" style={{ width: 46 }} />
             </tr>
           </thead>
           <tbody>
@@ -597,7 +597,7 @@ function HistoryRow({ item, onOpen, onRetain, onDelete, onRecompare }: HistoryRo
     ? 'added'
     : item.status === 'failed'
     ? 'deleted'
-    : 'modified';
+    : 'accent';
 
   const statusLabel = item.status === 'completed'
     ? '完成'
@@ -610,6 +610,7 @@ function HistoryRow({ item, onOpen, onRetain, onDelete, onRecompare }: HistoryRo
   return (
     <tr
       className="border-b border-[var(--color-border)] transition-colors hover:bg-[var(--color-bg-subtle)]"
+      style={{ height: 64 }}
     >
       {/* Document pair */}
       <td
@@ -644,7 +645,7 @@ function HistoryRow({ item, onOpen, onRetain, onDelete, onRecompare }: HistoryRo
 
       {/* Status */}
       <td className="px-4 py-3">
-        <Badge variant={statusBadgeVariant}>{statusLabel}</Badge>
+        <Badge variant={statusBadgeVariant} className="text-[11px] font-bold">{statusLabel}</Badge>
       </td>
 
       {/* Diff summary */}
@@ -655,7 +656,7 @@ function HistoryRow({ item, onOpen, onRetain, onDelete, onRecompare }: HistoryRo
       {/* Review progress */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--color-bg-muted)]">
+          <div className="overflow-hidden rounded-full bg-[var(--color-bg-muted)]" style={{ width: 72, height: 5 }}>
             <div
               className={cn(
                 'h-full rounded-full transition-all',

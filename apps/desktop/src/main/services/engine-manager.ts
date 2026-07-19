@@ -97,11 +97,15 @@ export class EngineManager {
 
     if (isDev) {
       // In dev, look for cargo build output
+      // Use app.getAppPath() to get the app directory (apps/desktop) and go up to project root
+      const appPath = app.getAppPath();
+      const projectRoot = path.resolve(appPath, '..', '..');
+      
       const candidates = [
-        path.join(process.cwd(), 'bidlens-engine', 'target', 'release', 'bidlens-engine'),
-        path.join(process.cwd(), 'bidlens-engine', 'target', 'debug', 'bidlens-engine'),
-        path.join(process.cwd(), 'bidlens-engine', 'target', 'release', 'bidlens-engine.exe'),
-        path.join(process.cwd(), 'bidlens-engine', 'target', 'debug', 'bidlens-engine.exe'),
+        path.join(projectRoot, 'bidlens-engine', 'target', 'release', 'bidlens-engine'),
+        path.join(projectRoot, 'bidlens-engine', 'target', 'debug', 'bidlens-engine'),
+        path.join(projectRoot, 'bidlens-engine', 'target', 'release', 'bidlens-engine.exe'),
+        path.join(projectRoot, 'bidlens-engine', 'target', 'debug', 'bidlens-engine.exe'),
       ];
       for (const candidate of candidates) {
         if (existsSync(candidate)) return candidate;
@@ -120,10 +124,6 @@ export class EngineManager {
     }
     throw new Error('Engine binary not found in resources');
   }
-
-  /**
-   * Start the engine process.
-   */
   async start(resetRestartAttempts = true): Promise<void> {
     if (this.process && this.started) return;
 

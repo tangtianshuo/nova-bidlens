@@ -10,14 +10,14 @@ export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
   ({ icon, tooltip, size = 'md', className, ...props }, ref) => {
-    const sizeClasses = size === 'sm' ? 'h-7 w-7' : 'h-8 w-8';
+    const sizeClasses = size === 'sm' ? 'w-7 h-7' : 'w-[34px] h-[34px]';
 
     return (
       <Tooltip content={tooltip}>
         <button
           ref={ref}
           className={cn(
-            'inline-flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
+            'inline-grid place-items-center rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
             sizeClasses,
             className
           )}
