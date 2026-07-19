@@ -55,3 +55,9 @@ test-results/
 # TypeScript sidecar output from app-level config type checks
 apps/*/vite.config.js
 apps/*/vitest.config.js
+
+# V0.3 local model feasibility artifacts and private evaluation data
+.artifacts/v03/
+tests/v03/private-gold/
+scripts/v03/model-feasibility/.venv/
+scripts/v03/model-feasibility/__pycache__/

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "modelId": "BAAI/bge-m3",
+  "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+  "redistributionApproved": false,
+  "reviewer": "unassigned",
+  "reviewedAt": null,
+  "evidenceDocument": "docs/v03/bge-m3-license-review.md"
+}
