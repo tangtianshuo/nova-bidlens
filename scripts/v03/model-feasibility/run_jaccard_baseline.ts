@@ -11,8 +11,38 @@ export interface ExitResult { exitCode: number | null; signal: NodeJS.Signals | 
 
 export function awaitChildExit(child: ChildProcess): Promise<ExitResult> {
   return new Promise((resolve, reject) => {
-    child.on('close', (code, signal) => resolve({ exitCode: code, signal }));
-    child.on('error', (err) => reject(err));
+    // Fast path: child already terminated before listeners attached.
+    if (child.exitCode !== null || child.signalCode !== null) {
+      resolve({ exitCode: child.exitCode, signal: child.signalCode });
+      return;
+    }
+
+    function onClose(code: number | null, signal: NodeJS.Signals | null) {
+      cleanup();
+      resolve({ exitCode: code, signal });
+    }
+
+    function onError(err: Error) {
+      cleanup();
+      reject(err);
+    }
+
+    function cleanup() {
+      child.removeListener('close', onClose);
+      child.removeListener('error', onError);
+    }
+
+    child.on('close', onClose);
+    child.on('error', onError);
+
+    // Second check: child terminated between first check and listener attachment.
+    // If close already fired, the listener above captured it; if exitCode is set
+    // but close hasn't fired yet, resolve now (listener will be a harmless no-op
+    // and cleaned up on next tick at latest).
+    if (child.exitCode !== null || child.signalCode !== null) {
+      cleanup();
+      resolve({ exitCode: child.exitCode, signal: child.signalCode });
+    }
   });
 }
 
