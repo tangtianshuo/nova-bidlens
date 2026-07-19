@@ -30,4 +30,22 @@ describe('V0.3 Phase 0 gate', () => {
     evidence.dataset.relationCount = 2999;
     expect(evaluatePhase0Gate(evidence).failures).toContain('gold dataset requires at least 3000 relations');
   });
+
+  it('blocks reviewer unassigned even when redistribution approved and reviewedAt set', () => {
+    const evidence = structuredClone(passing);
+    evidence.legal.reviewer = 'unassigned';
+    expect(evaluatePhase0Gate(evidence).failures).toContain('model redistribution is not approved');
+  });
+
+  it.each([
+    ['dataset.pairCount', (e: Phase0Evidence) => { e.dataset.pairCount = NaN; }, 'gold dataset requires at least 30 pairs'],
+    ['dataset.relationCount', (e: Phase0Evidence) => { e.dataset.relationCount = NaN; }, 'gold dataset requires at least 3000 relations'],
+    ['model.dimension', (e: Phase0Evidence) => { e.model.dimension = NaN; }, 'model output dimension must be 1024'],
+    ['model.minimumReferenceCosine', (e: Phase0Evidence) => { e.model.minimumReferenceCosine = NaN; }, 'INT8 reference cosine must be at least 0.98'],
+    ['model.peakWorkingSetBytes', (e: Phase0Evidence) => { e.model.peakWorkingSetBytes = NaN; }, 'model peak working set must be below 2GB'],
+  ])('blocks non-finite %s', (_label, mutator, expectedFailure) => {
+    const evidence = structuredClone(passing);
+    mutator(evidence);
+    expect(evaluatePhase0Gate(evidence).failures).toContain(expectedFailure);
+  });
 });

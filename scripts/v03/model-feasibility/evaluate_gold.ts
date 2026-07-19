@@ -86,14 +86,21 @@ export function evaluateRelations(input: unknown, predictions: PredictedRelation
   const dataset = input as GoldDataset;
   const gold = new Set(dataset.pairs.flatMap((pair) => pair.relations.map((r) => relationKey(pair.pairId, r))));
   const forbidden = new Set(dataset.pairs.flatMap((pair) => pair.forbiddenRelations.map((r) => edgeKey(pair.pairId, r))));
-  const predicted = new Set(predictions.map((r) => relationKey(r.pairId, r)));
+  const seen = new Set<string>();
+  const uniquePredictions = predictions.filter((r) => {
+    const key = relationKey(r.pairId, r);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const predicted = new Set(uniquePredictions.map((r) => relationKey(r.pairId, r)));
   const truePositive = [...predicted].filter((key) => gold.has(key)).length;
   const falsePositive = predicted.size - truePositive;
   const falseNegative = gold.size - truePositive;
   const precision = predicted.size === 0 ? 0 : truePositive / predicted.size;
   const recall = gold.size === 0 ? 0 : truePositive / gold.size;
   const f1 = precision + recall === 0 ? 0 : (2 * precision * recall) / (precision + recall);
-  const obviousErrorCount = predictions.filter((r) => forbidden.has(edgeKey(r.pairId, r))).length;
+  const obviousErrorCount = uniquePredictions.filter((r) => forbidden.has(edgeKey(r.pairId, r))).length;
   return {
     truePositive,
     falsePositive,

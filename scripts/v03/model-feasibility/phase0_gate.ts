@@ -7,14 +7,14 @@ export interface Phase0Evidence {
 
 export function evaluatePhase0Gate(evidence: Phase0Evidence): { status: 'pass' | 'fail'; failures: string[] } {
   const failures: string[] = [];
-  if (!evidence.legal.redistributionApproved || !evidence.legal.reviewer || !evidence.legal.reviewedAt) {
+  if (!evidence.legal.redistributionApproved || !evidence.legal.reviewer || evidence.legal.reviewer === 'unassigned' || !evidence.legal.reviewedAt) {
     failures.push('model redistribution is not approved');
   }
-  if (evidence.dataset.pairCount < 30) failures.push('gold dataset requires at least 30 pairs');
-  if (evidence.dataset.relationCount < 3000) failures.push('gold dataset requires at least 3000 relations');
-  if (evidence.model.dimension !== 1024) failures.push('model output dimension must be 1024');
-  if (evidence.model.minimumReferenceCosine < 0.98) failures.push('INT8 reference cosine must be at least 0.98');
-  if (evidence.model.peakWorkingSetBytes >= 2_147_483_648) failures.push('model peak working set must be below 2GB');
+  if (!Number.isFinite(evidence.dataset.pairCount) || evidence.dataset.pairCount < 30) failures.push('gold dataset requires at least 30 pairs');
+  if (!Number.isFinite(evidence.dataset.relationCount) || evidence.dataset.relationCount < 3000) failures.push('gold dataset requires at least 3000 relations');
+  if (!Number.isFinite(evidence.model.dimension) || evidence.model.dimension !== 1024) failures.push('model output dimension must be 1024');
+  if (!Number.isFinite(evidence.model.minimumReferenceCosine) || evidence.model.minimumReferenceCosine < 0.98) failures.push('INT8 reference cosine must be at least 0.98');
+  if (!Number.isFinite(evidence.model.peakWorkingSetBytes) || evidence.model.peakWorkingSetBytes >= 2_147_483_648) failures.push('model peak working set must be below 2GB');
   if (!Number.isFinite(evidence.baseline.f1) || !Number.isFinite(evidence.baseline.obviousErrorRate)) {
     failures.push('Jaccard baseline metrics must be finite');
   }

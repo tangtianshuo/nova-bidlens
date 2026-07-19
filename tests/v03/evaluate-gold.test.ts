@@ -33,6 +33,18 @@ describe('V0.3 gold evaluation', () => {
     expect(evaluateRelations(sample, predictions).obviousErrorRate).toBe(1);
   });
 
+  it('normalizes duplicate predictions so obviousErrorRate never exceeds 1', () => {
+    const predictions: PredictedRelation[] = [
+      { pairId: 'sample-001', nodeIdsA: ['a-3'], nodeIdsB: ['b-5'], matchType: 'modified' },
+      { pairId: 'sample-001', nodeIdsA: ['a-3'], nodeIdsB: ['b-5'], matchType: 'modified' },
+    ];
+    const result = evaluateRelations(sample, predictions);
+    expect(result.obviousErrorRate).toBeLessThanOrEqual(1);
+    expect(result.obviousErrorRate).toBe(1);
+    expect(result.truePositive).toBe(0);
+    expect(result.falsePositive).toBe(1);
+  });
+
   it('rejects duplicate relation identities', () => {
     const duplicate = structuredClone(sample);
     duplicate.pairs[0].relations.push(duplicate.pairs[0].relations[0]);
