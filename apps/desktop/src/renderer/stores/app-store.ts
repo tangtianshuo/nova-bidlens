@@ -9,25 +9,52 @@ export type AppMode = 'risk-review' | 'version-diff';
 
 /**
  * Application view states.
+ *
+ * Shared views (both modes):
  * - 'new': File selection for new comparison
  * - 'processing': Comparison in progress
  * - 'result': Viewing comparison results
  * - 'history': Viewing history of comparisons
+ *
+ * Risk-review project views:
+ * - 'project-list': Project list / dashboard
+ * - 'new-project': Creating a new analysis project
+ * - 'project-processing': Analysis in progress
+ * - 'project-result': Viewing analysis results
  */
-export type AppView = 'new' | 'processing' | 'result' | 'history';
+export type AppView =
+  | 'new'
+  | 'processing'
+  | 'result'
+  | 'history'
+  | 'project-list'
+  | 'new-project'
+  | 'project-processing'
+  | 'project-result';
+
+/** Default view when switching modes via setMode. */
+const MODE_DEFAULT_VIEW: Record<AppMode, AppView> = {
+  'risk-review': 'project-list',
+  'version-diff': 'new',
+};
 
 /**
  * Legal state transitions.
- * new -> processing, history
- * processing -> result, new (cancel)
- * result -> new, history
- * history -> new, result, processing (recompare)
+ *
+ * Shared views follow the same transitions in both modes.
+ * Project views are only reachable in risk-review mode.
  */
 const VALID_TRANSITIONS: Record<AppView, AppView[]> = {
+  // Shared views — valid in both modes
   new: ['processing', 'history'],
   processing: ['result', 'new'],
   result: ['new', 'history'],
   history: ['new', 'result', 'processing'],
+  // Risk-review project views
+  'project-list': ['new-project', 'project-processing', 'project-result'],
+  'new-project': ['project-processing', 'project-list'],
+  'project-processing': ['project-result', 'project-list'],
+  'project-result': ['project-list', 'new-project'],
 };
 
 interface AppState {
@@ -48,7 +75,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   taskId: null,
 
   setMode: (mode: AppMode) => {
-    set({ mode, view: 'new', taskId: null });
+    set({ mode, view: MODE_DEFAULT_VIEW[mode], taskId: null });
   },
 
   setView: (view: AppView) => {
@@ -62,15 +89,19 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   startTask: (taskId: string) => {
     const current = get().view;
-    if (current === 'new' || current === 'history') {
-      set({ view: 'processing', taskId });
+    if (current === 'new' || current === 'history' || current === 'project-list' || current === 'new-project') {
+      const nextView: AppView = current === 'new' || current === 'history' ? 'processing' : 'project-processing';
+      set({ view: nextView, taskId });
     }
   },
 
   completeTask: (taskId: string) => {
-    const current = get().view;
-    if (current === 'processing' && get().taskId === taskId) {
+    const { view: current, taskId: activeTaskId } = get();
+    if (activeTaskId !== taskId) return;
+    if (current === 'processing') {
       set({ view: 'result' });
+    } else if (current === 'project-processing') {
+      set({ view: 'project-result' });
     }
   },
 
@@ -78,10 +109,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     const current = get().view;
     if (current === 'processing') {
       set({ view: 'new', taskId: null });
+    } else if (current === 'project-processing') {
+      set({ view: 'project-list', taskId: null });
     }
   },
 
   resetToNew: () => {
-    set({ view: 'new', taskId: null });
+    const { mode } = get();
+    if (mode === 'version-diff') {
+      set({ view: 'new', taskId: null });
+    } else {
+      set({ view: 'project-list', taskId: null });
+    }
   },
 }));
