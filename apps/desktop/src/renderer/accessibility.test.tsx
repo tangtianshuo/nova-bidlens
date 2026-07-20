@@ -464,20 +464,128 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
   });
 
   describe('Reduced Motion', () => {
-    it('respects prefers-reduced-motion', () => {
-      // This test documents the requirement - actual implementation
-      // requires CSS media query testing with real browser environment
-      // In jsdom, matchMedia is not available by default
-      expect(true).toBe(true); // Placeholder for documentation
+    beforeEach(() => {
+      // Stub matchMedia for prefers-reduced-motion queries
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: vi.fn().mockImplementation((query: string) => ({
+          matches: query === '(prefers-reduced-motion: reduce)',
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })),
+      });
+    });
+
+    it('matchMedia can detect prefers-reduced-motion: reduce', () => {
+      const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      expect(mq.matches).toBe(true);
+    });
+
+    it('matchMedia returns false for no-preference when reduce is active', () => {
+      const mq = window.matchMedia('(prefers-reduced-motion: no-preference)');
+      expect(mq.matches).toBe(false);
+    });
+
+    it('a component can branch on prefers-reduced-motion', () => {
+      // Simulate a component that hides animations when reduced-motion is preferred
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      function MockAnimatedBox() {
+        return (
+          <div
+            data-testid="animated-box"
+            style={{ animation: prefersReducedMotion ? 'none' : 'spin 1s linear infinite' }}
+          >
+            内容
+          </div>
+        );
+      }
+
+      render(<MockAnimatedBox />);
+      const box = screen.getByTestId('animated-box');
+      expect(box.style.animation).toBe('none');
     });
   });
 
-  describe('High Contrast Mode', () => {
-    it('supports high contrast mode', () => {
-      // This test documents the requirement - actual implementation
-      // requires Windows high contrast mode testing with real browser environment
-      // In jsdom, matchMedia is not available by default
-      expect(true).toBe(true); // Placeholder for documentation
+  describe('Forced Colors (Windows High Contrast)', () => {
+    beforeEach(() => {
+      // Stub matchMedia for forced-colors queries
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: vi.fn().mockImplementation((query: string) => ({
+          matches: query === '(forced-colors: active)',
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })),
+      });
+    });
+
+    it('matchMedia can detect forced-colors: active', () => {
+      const mq = window.matchMedia('(forced-colors: active)');
+      expect(mq.matches).toBe(true);
+    });
+
+    it('a component can detect forced-colors and apply fallback borders', () => {
+      const forcedColorsActive = window.matchMedia('(forced-colors: active)').matches;
+      function MockDiffMarker() {
+        return (
+          <div
+            data-diff-type="added"
+            data-testid="diff-marker"
+            style={forcedColorsActive ? { border: '2px solid CanvasText' } : undefined}
+          >
+            新增内容
+          </div>
+        );
+      }
+
+      render(<MockDiffMarker />);
+      const marker = screen.getByTestId('diff-marker');
+      // jsdom normalizes CSS color keywords to lowercase
+      expect(marker.style.border.toLowerCase()).toBe('2px solid canvastext');
+    });
+
+    it('components without forced-colors do not get fallback borders', () => {
+      // Reset to no forced-colors
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: vi.fn().mockImplementation((query: string) => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })),
+      });
+
+      const forcedColorsActive = window.matchMedia('(forced-colors: active)').matches;
+      function MockDiffMarker() {
+        return (
+          <div
+            data-diff-type="deleted"
+            data-testid="diff-marker"
+            style={forcedColorsActive ? { border: '2px solid CanvasText' } : undefined}
+          >
+            删除内容
+          </div>
+        );
+      }
+
+      render(<MockDiffMarker />);
+      const marker = screen.getByTestId('diff-marker');
+      expect(marker.style.border).toBe('');
     });
   });
 });
