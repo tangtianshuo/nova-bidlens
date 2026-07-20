@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import path from 'path';
 
 export default defineConfig({
   root: 'src/renderer',
@@ -28,7 +29,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // 确保Node.js模块在浏览器中被正确处理
+      '@': path.resolve(__dirname, 'src/renderer'),
     }
   }
 });

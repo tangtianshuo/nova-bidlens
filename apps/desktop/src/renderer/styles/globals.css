@@ -25,6 +25,43 @@
    Light Theme (default)
    ============================================================ */
 :root {
+  /* --- shadcn/ui aliases (map to BidLens tokens) --- */
+  --background: 0 0% 100%;
+  --foreground: 210 18% 13%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 18% 13%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 18% 13%;
+  --primary: 210 40% 38%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 20% 95%;
+  --secondary-foreground: 210 18% 13%;
+  --muted: 210 14% 97%;
+  --muted-foreground: 213 12% 53%;
+  --accent: 210 40% 38%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 3 61% 46%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 210 16% 89%;
+  --input: 210 16% 89%;
+  --ring: 210 40% 38%;
+  --radius: 4px;
+  --chart-1: 210 40% 38%;
+  --chart-2: 175 60% 36%;
+  --chart-3: 210 20% 95%;
+  --chart-4: 40 70% 50%;
+  --chart-5: 213 12% 53%;
+  --sidebar-background: 210 14% 97%;
+  --sidebar-foreground: 210 18% 13%;
+  --sidebar-primary: 210 40% 38%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 210 30% 93%;
+  --sidebar-accent-foreground: 210 18% 13%;
+  --sidebar-border: 210 16% 89%;
+  --sidebar-ring: 210 40% 38%;
+
+  /* --- BidLens design tokens (primary source) --- */
+
   /* Spacing scale and responsive layout contract */
   --space-1: 4px;
   --space-2: 8px;
@@ -98,6 +135,43 @@
    Dark Theme
    ============================================================ */
 :root[data-theme="dark"] {
+  /* --- shadcn/ui aliases (map to BidLens tokens) --- */
+  --background: 210 8% 13%;
+  --foreground: 210 14% 94%;
+  --card: 210 8% 13%;
+  --card-foreground: 210 14% 94%;
+  --popover: 210 8% 13%;
+  --popover-foreground: 210 14% 94%;
+  --primary: 210 30% 67%;
+  --primary-foreground: 210 18% 13%;
+  --secondary: 210 10% 16%;
+  --secondary-foreground: 210 14% 94%;
+  --muted: 210 6% 9%;
+  --muted-foreground: 213 12% 53%;
+  --accent: 210 30% 67%;
+  --accent-foreground: 210 18% 13%;
+  --destructive: 0 78% 68%;
+  --destructive-foreground: 210 18% 13%;
+  --border: 210 8% 23%;
+  --input: 210 8% 23%;
+  --ring: 210 30% 67%;
+  --radius: 4px;
+  --chart-1: 210 30% 67%;
+  --chart-2: 175 55% 66%;
+  --chart-3: 210 10% 16%;
+  --chart-4: 40 60% 63%;
+  --chart-5: 213 12% 53%;
+  --sidebar-background: 210 6% 9%;
+  --sidebar-foreground: 210 14% 94%;
+  --sidebar-primary: 210 30% 67%;
+  --sidebar-primary-foreground: 210 18% 13%;
+  --sidebar-accent: 210 12% 20%;
+  --sidebar-accent-foreground: 210 14% 94%;
+  --sidebar-border: 210 8% 23%;
+  --sidebar-ring: 210 30% 67%;
+
+  /* --- BidLens design tokens (primary source) --- */
+
   /* Backgrounds */
   --color-bg: #1d2023;
   --color-bg-subtle: #25292d;
