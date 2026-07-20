@@ -6,16 +6,20 @@ import { render, screen, cleanup } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { WorkbenchLayout } from './workbench-layout';
 
-vi.mock('../../components/ui/icon-button', () => ({
-  IconButton: ({ icon, tooltip, ...props }: any) => (
-    <button title={tooltip} {...props}>{icon}</button>
+vi.mock('../../components/ui/button', () => ({
+  Button: ({ children, ...props }: any) => (
+    <button {...props}>{children}</button>
   ),
 }));
 
 vi.mock('../../components/ui/tooltip', () => ({
-  Tooltip: ({ children, content }: any) => (
+  SimpleTooltip: ({ children, content }: any) => (
     <div title={typeof content === 'string' ? content : ''}>{children}</div>
   ),
+  Tooltip: ({ children }: any) => children,
+  TooltipTrigger: ({ children }: any) => children,
+  TooltipContent: ({ children }: any) => children,
+  TooltipProvider: ({ children }: any) => children,
 }));
 
 vi.mock('../../lib/utils', () => ({

@@ -4,7 +4,7 @@ import { useAppStore } from '../../stores/app-store';
 import { getThemePreference, setThemePreference, watchSystemTheme, type Theme } from '../../lib/theme';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
-import { IconButton } from '../ui/icon-button';
+import { SimpleTooltip } from '../ui/tooltip';
 import { Separator } from '../ui/separator';
 import { SettingsDialog } from '../../features/settings/settings-dialog';
 
@@ -82,18 +82,26 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          <IconButton
-            icon={themeIcon}
-            tooltip={themeLabel}
-            onClick={cycleTheme}
-            aria-label={`切换主题: ${themeLabel}`}
-          />
-          <IconButton
-            icon={<Settings className="h-4 w-4" />}
-            tooltip="设置"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="打开设置"
-          />
+          <SimpleTooltip content={themeLabel}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={cycleTheme}
+              aria-label={`切换主题: ${themeLabel}`}
+            >
+              {themeIcon}
+            </Button>
+          </SimpleTooltip>
+          <SimpleTooltip content="设置">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="打开设置"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </SimpleTooltip>
           <Separator orientation="vertical" className="h-4 mx-1" />
           {/* Window controls */}
           <button

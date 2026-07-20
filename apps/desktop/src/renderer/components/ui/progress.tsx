@@ -1,30 +1,30 @@
-import { forwardRef, type ComponentPropsWithoutRef } from 'react';
-import * as RadixProgress from '@radix-ui/react-progress';
-import { cn } from '../../lib/utils';
+import * as React from "react"
+import * as ProgressPrimitive from "@radix-ui/react-progress"
+import { cn } from "@/lib/utils"
 
-export interface ProgressProps extends ComponentPropsWithoutRef<typeof RadixProgress.Root> {
-  indicatorClassName?: string;
-}
-
-export const Progress = forwardRef<HTMLDivElement, ProgressProps>(
-  ({ className, value, indicatorClassName, ...props }, ref) => (
-    <RadixProgress.Root
-      ref={ref}
+const Progress = React.forwardRef<
+  React.ComponentRef<typeof ProgressPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & {
+    indicatorClassName?: string
+  }
+>(({ className, value, indicatorClassName, ...props }, ref) => (
+  <ProgressPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-bg-muted)]",
+      className
+    )}
+    {...props}
+  >
+    <ProgressPrimitive.Indicator
       className={cn(
-        'relative h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-bg-muted)]',
-        className
+        "h-full rounded-full bg-[var(--color-accent)] transition-all duration-300 ease-in-out",
+        indicatorClassName
       )}
-      {...props}
-    >
-      <RadixProgress.Indicator
-        className={cn(
-          'h-full rounded-full bg-[var(--color-accent)] transition-all duration-300 ease-in-out',
-          indicatorClassName
-        )}
-        style={{ width: `${value ?? 0}%` }}
-      />
-    </RadixProgress.Root>
-  )
-);
+      style={{ width: `${value ?? 0}%` }}
+    />
+  </ProgressPrimitive.Root>
+))
+Progress.displayName = ProgressPrimitive.Root.displayName
 
-Progress.displayName = 'Progress';
+export { Progress }

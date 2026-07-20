@@ -34,8 +34,8 @@ import type { DiffItem, CellDiff, StructuralChange } from '@bidlens/shared/types
 import { getCellChangeColor, getCellDiffTooltip } from '@bidlens/shared/types-only';
 import type { ViewportViewProps } from './viewport-provider';
 import { Badge } from '../../components/ui/badge';
-import { IconButton } from '../../components/ui/icon-button';
-import { Tooltip } from '../../components/ui/tooltip';
+import { Button } from '../../components/ui/button';
+import { SimpleTooltip } from '../../components/ui/tooltip';
 import { cn } from '../../lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -183,20 +183,30 @@ function ChangeNav({
       <span className="text-xs text-[var(--color-text-muted)]">
         变更 {total > 0 ? current + 1 : 0} / {total}
       </span>
-      <IconButton
-        icon={<ChevronUp className="h-3.5 w-3.5" />}
-        tooltip="上一个变更"
-        size="sm"
-        onClick={onPrev}
-        disabled={total === 0}
-      />
-      <IconButton
-        icon={<ChevronDown className="h-3.5 w-3.5" />}
-        tooltip="下一个变更"
-        size="sm"
-        onClick={onNext}
-        disabled={total === 0}
-      />
+      <SimpleTooltip content="上一个变更">
+        <Button
+          variant="secondary"
+          size="icon"
+          className="h-7 w-7"
+          onClick={onPrev}
+          disabled={total === 0}
+          aria-label="上一个变更"
+        >
+          <ChevronUp className="h-3.5 w-3.5" />
+        </Button>
+      </SimpleTooltip>
+      <SimpleTooltip content="下一个变更">
+        <Button
+          variant="secondary"
+          size="icon"
+          className="h-7 w-7"
+          onClick={onNext}
+          disabled={total === 0}
+          aria-label="下一个变更"
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+        </Button>
+      </SimpleTooltip>
       {detailText && (
         <span className="ml-2 text-xs text-[var(--color-text-secondary)] truncate max-w-[300px]">
           {detailText}

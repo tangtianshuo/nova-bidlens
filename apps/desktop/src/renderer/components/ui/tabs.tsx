@@ -1,50 +1,52 @@
-import { forwardRef, type ComponentPropsWithoutRef } from 'react';
-import * as RadixTabs from '@radix-ui/react-tabs';
-import { cn } from '../../lib/utils';
+import * as React from "react"
+import * as TabsPrimitive from "@radix-ui/react-tabs"
+import { cn } from "@/lib/utils"
 
-export const Tabs = RadixTabs.Root;
+const Tabs = TabsPrimitive.Root
 
-export const TabsList = forwardRef<
-  HTMLDivElement,
-  ComponentPropsWithoutRef<typeof RadixTabs.List>
+const TabsList = React.forwardRef<
+  React.ComponentRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
-  <RadixTabs.List
+  <TabsPrimitive.List
     ref={ref}
     className={cn(
-      'inline-flex items-center gap-0 border-b border-[var(--color-border)]',
+      "inline-flex items-center gap-0 border-b border-[var(--color-border)]",
       className
     )}
     {...props}
   />
-));
-TabsList.displayName = 'TabsList';
+))
+TabsList.displayName = TabsPrimitive.List.displayName
 
-export const TabsTrigger = forwardRef<
-  HTMLButtonElement,
-  ComponentPropsWithoutRef<typeof RadixTabs.Trigger>
+const TabsTrigger = React.forwardRef<
+  React.ComponentRef<typeof TabsPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
 >(({ className, ...props }, ref) => (
-  <RadixTabs.Trigger
+  <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      'inline-flex items-center justify-center whitespace-nowrap px-3 py-2 text-[11px] text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:text-[var(--color-disabled-text)] disabled:opacity-100 data-[state=active]:text-[var(--color-text)] data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)]',
+      "inline-flex items-center justify-center whitespace-nowrap px-3 py-2 text-[11px] text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:text-[var(--color-disabled-text)] disabled:opacity-100 data-[state=active]:text-[var(--color-text)] data-[state=active]:font-bold data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent)]",
       className
     )}
     {...props}
   />
-));
-TabsTrigger.displayName = 'TabsTrigger';
+))
+TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
 
-export const TabsContent = forwardRef<
-  HTMLDivElement,
-  ComponentPropsWithoutRef<typeof RadixTabs.Content>
+const TabsContent = React.forwardRef<
+  React.ComponentRef<typeof TabsPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
 >(({ className, ...props }, ref) => (
-  <RadixTabs.Content
+  <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      'pt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]',
+      "pt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
       className
     )}
     {...props}
   />
-));
-TabsContent.displayName = 'TabsContent';
+))
+TabsContent.displayName = TabsPrimitive.Content.displayName
+
+export { Tabs, TabsList, TabsTrigger, TabsContent }

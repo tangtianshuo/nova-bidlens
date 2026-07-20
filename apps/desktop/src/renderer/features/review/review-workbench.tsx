@@ -16,8 +16,7 @@ import { ReviewControls } from './review-controls';
 import { ExportDialog } from './export-dialog';
 import { formatDiffSummary } from './diff-presentation';
 import { Button } from '../../components/ui/button';
-import { IconButton } from '../../components/ui/icon-button';
-import { Tooltip } from '../../components/ui/tooltip';
+import { SimpleTooltip } from '../../components/ui/tooltip';
 
 interface ReviewWorkbenchProps {
   result: CompareResult;
@@ -189,24 +188,28 @@ export function ReviewWorkbench({
     <div className="grid min-h-0 overflow-hidden" style={{ gridTemplateRows: '42px minmax(0, 1fr)' }}>
       {/* Viewport toolbar */}
       <div className="flex items-center gap-2 px-2.5 bg-[var(--color-bg)] border-b border-[var(--color-border)]">
-        <Tooltip content="上一项">
-          <IconButton
-            icon={<ChevronLeft className="h-4 w-4" />}
-            tooltip="上一项"
+        <SimpleTooltip content="上一项">
+          <Button
+            variant="secondary"
+            size="icon"
             onClick={handleSelectPrevious}
             disabled={filteredItems.length === 0}
             aria-label="上一项"
-          />
-        </Tooltip>
-        <Tooltip content="下一项">
-          <IconButton
-            icon={<ChevronRight className="h-4 w-4" />}
-            tooltip="下一项"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        </SimpleTooltip>
+        <SimpleTooltip content="下一项">
+          <Button
+            variant="secondary"
+            size="icon"
             onClick={handleSelectNext}
             disabled={filteredItems.length === 0}
             aria-label="下一项"
-          />
-        </Tooltip>
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </SimpleTooltip>
         <div className="flex-1 min-w-0 truncate text-xs font-bold">
           {selectedItem ? formatDiffSummary(selectedItem) : ''}
         </div>

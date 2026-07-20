@@ -7,8 +7,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { IconButton } from '../../components/ui/icon-button';
-import { Tooltip } from '../../components/ui/tooltip';
+import { Button } from '../../components/ui/button';
+import { SimpleTooltip } from '../../components/ui/tooltip';
 
 const STORAGE_KEY = 'bidlens-workbench-panels';
 
@@ -147,14 +147,16 @@ export function WorkbenchLayout({
         <div className="flex-1" />
         {/* Detail toggle (visible when detail panel is hidden) */}
         {(autoRightCollapsed || rightCollapsed) && (
-          <Tooltip content="打开差异详情">
-            <IconButton
-              icon={<PanelRightOpen className="h-4 w-4" />}
-              tooltip="打开差异详情"
+          <SimpleTooltip content="打开差异详情">
+            <Button
+              variant="secondary"
+              size="icon"
               onClick={() => setDetailOverlay(true)}
               aria-label="打开差异详情"
-            />
-          </Tooltip>
+            >
+              <PanelRightOpen className="h-4 w-4" />
+            </Button>
+          </SimpleTooltip>
         )}
       </div>
 
@@ -179,15 +181,17 @@ export function WorkbenchLayout({
           {/* Panel head */}
           <div className="flex items-center justify-between gap-2 px-3 border-b border-[var(--color-border)]" style={{ height: 42, fontSize: 12, fontWeight: 700 }}>
             {!leftCollapsed && <span>差异导航</span>}
-            <Tooltip content={leftCollapsed ? '展开导航' : '折叠导航'}>
-              <IconButton
-                icon={leftCollapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
-                tooltip={leftCollapsed ? '展开导航' : '折叠导航'}
+            <SimpleTooltip content={leftCollapsed ? '展开导航' : '折叠导航'}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
                 onClick={() => setLeftCollapsed(!leftCollapsed)}
                 aria-label={leftCollapsed ? '展开导航' : '折叠导航'}
-                className="h-6 w-6"
-              />
-            </Tooltip>
+              >
+                {leftCollapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
+              </Button>
+            </SimpleTooltip>
           </div>
           <div className="overflow-auto" style={{ height: 'calc(100% - 42px)' }}>
             {navPanel}
@@ -264,15 +268,17 @@ export function WorkbenchLayout({
             {/* Close button */}
             <div className="flex items-center justify-between px-3 border-b border-[var(--color-border)]" style={{ height: 42, fontSize: 12, fontWeight: 700 }}>
               <span>差异详情</span>
-              <Tooltip content="收起差异详情">
-                <IconButton
-                  icon={<PanelRightClose className="h-3.5 w-3.5" />}
-                  tooltip="收起差异详情"
+              <SimpleTooltip content="收起差异详情">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
                   onClick={() => setDetailOverlay(false)}
                   aria-label="收起差异详情"
-                  className="h-6 w-6"
-                />
-              </Tooltip>
+                >
+                  <PanelRightClose className="h-3.5 w-3.5" />
+                </Button>
+              </SimpleTooltip>
             </div>
             <div className="overflow-auto" style={{ height: 'calc(100% - 42px)' }}>
               {detailPanel}

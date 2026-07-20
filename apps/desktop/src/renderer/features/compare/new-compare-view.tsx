@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 import { useAppStore } from '../../stores/app-store';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { IconButton } from '../../components/ui/icon-button';
+import { SimpleTooltip } from '../../components/ui/tooltip';
 import { FieldError } from '../../components/feedback';
 
 interface FileSlot {
@@ -149,12 +149,16 @@ export function NewCompareView() {
 
           {/* Swap button */}
           <div className="file-swap flex items-center pt-8">
-            <IconButton
-              icon={<ArrowLeftRight className="h-4 w-4" />}
-              tooltip="交换文档"
-              onClick={handleSwap}
-              aria-label="交换基准和审查文档"
-            />
+            <SimpleTooltip content="交换文档">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={handleSwap}
+                aria-label="交换基准和审查文档"
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+              </Button>
+            </SimpleTooltip>
           </div>
 
           {/* Review slot */}

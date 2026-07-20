@@ -1,5 +1,5 @@
-import { forwardRef, type InputHTMLAttributes } from 'react';
-import { cn } from '../../lib/utils';
+import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { cn } from '@/lib/utils';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -44,7 +44,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
 Input.displayName = 'Input';
 
-export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   error?: string;
 }

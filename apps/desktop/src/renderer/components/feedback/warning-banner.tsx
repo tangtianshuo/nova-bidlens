@@ -1,7 +1,8 @@
 import { AlertTriangle, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
-import { IconButton } from '../ui/icon-button';
+import { Button } from '../ui/button';
+import { SimpleTooltip } from '../ui/tooltip';
 
 export interface WarningBannerProps {
   title: string;
@@ -61,12 +62,17 @@ export function WarningBanner({
         )}
       </div>
       {dismissable && (
-        <IconButton
-          icon={<X className="h-3.5 w-3.5" />}
-          tooltip="关闭"
-          size="sm"
-          onClick={handleDismiss}
-        />
+        <SimpleTooltip content="关闭">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-7 w-7"
+            onClick={handleDismiss}
+            aria-label="关闭"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </SimpleTooltip>
       )}
     </div>
   );
