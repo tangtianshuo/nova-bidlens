@@ -225,6 +225,145 @@
 }
 
 /* ============================================================
+   Risk Review Tokens
+   ============================================================ */
+
+:root {
+  /* Risk levels — reuses danger/warning/success families */
+  --risk-high: var(--color-danger);
+  --risk-high-bg: var(--color-deleted-bg);
+  --risk-high-border: var(--color-deleted-border);
+
+  --risk-medium: var(--color-warning);
+  --risk-medium-bg: var(--color-modified-bg);
+  --risk-medium-border: var(--color-modified-border);
+
+  --risk-low: var(--color-success);
+  --risk-low-bg: var(--color-added-bg);
+  --risk-low-border: var(--color-added-border);
+
+  /* Detector categories */
+  --detector-text: #3153a1;
+  --detector-text-bg: #e9efff;
+
+  --detector-table: #7e3ba1;
+  --detector-table-bg: #f3e8fa;
+
+  --detector-entity: #0e7a6e;
+  --detector-entity-bg: #e0f5f2;
+
+  /* Analysis pipeline status (TaskStatus) */
+  --status-draft: var(--color-text-muted);
+  --status-draft-bg: var(--color-bg-subtle);
+
+  --status-validating: var(--color-accent);
+  --status-validating-bg: var(--color-accent-soft);
+
+  --status-parsing: var(--color-accent);
+  --status-parsing-bg: var(--color-accent-soft);
+
+  --status-comparing: var(--color-modified);
+  --status-comparing-bg: var(--color-modified-bg);
+
+  --status-finalizing: var(--color-accent);
+  --status-finalizing-bg: var(--color-accent-soft);
+
+  --status-ready: var(--color-success);
+  --status-ready-bg: var(--color-added-bg);
+
+  --status-cancelled: var(--color-text-muted);
+  --status-cancelled-bg: var(--color-bg-subtle);
+
+  --status-failed: var(--color-danger);
+  --status-failed-bg: var(--color-deleted-bg);
+
+  --status-interrupted: var(--color-warning);
+  --status-interrupted-bg: var(--color-modified-bg);
+}
+
+:root[data-theme="dark"] {
+  /* Risk levels */
+  --risk-high: var(--color-danger);
+  --risk-high-bg: var(--color-deleted-bg);
+  --risk-high-border: var(--color-deleted-border);
+
+  --risk-medium: var(--color-warning);
+  --risk-medium-bg: var(--color-modified-bg);
+  --risk-medium-border: var(--color-modified-border);
+
+  --risk-low: var(--color-success);
+  --risk-low-bg: var(--color-added-bg);
+  --risk-low-border: var(--color-added-border);
+
+  /* Detector categories — dark adjusted */
+  --detector-text: #a8bdf3;
+  --detector-text-bg: #243255;
+
+  --detector-table: #c99de0;
+  --detector-table-bg: #3a1f4a;
+
+  --detector-entity: #5ec4b6;
+  --detector-entity-bg: #1a3a35;
+
+  /* Analysis pipeline status */
+  --status-draft: var(--color-text-muted);
+  --status-draft-bg: var(--color-bg-subtle);
+
+  --status-validating: var(--color-accent);
+  --status-validating-bg: var(--color-accent-soft);
+
+  --status-parsing: var(--color-accent);
+  --status-parsing-bg: var(--color-accent-soft);
+
+  --status-comparing: var(--color-modified);
+  --status-comparing-bg: var(--color-modified-bg);
+
+  --status-finalizing: var(--color-accent);
+  --status-finalizing-bg: var(--color-accent-soft);
+
+  --status-ready: var(--color-success);
+  --status-ready-bg: var(--color-added-bg);
+
+  --status-cancelled: var(--color-text-muted);
+  --status-cancelled-bg: var(--color-bg-subtle);
+
+  --status-failed: var(--color-danger);
+  --status-failed-bg: var(--color-deleted-bg);
+
+  --status-interrupted: var(--color-warning);
+  --status-interrupted-bg: var(--color-modified-bg);
+}
+
+/* ============================================================
+   Forced Colors (Windows High Contrast) fallback
+   Diff markers get visible borders in forced-colors mode
+   ============================================================ */
+@media (forced-colors: active) {
+  .diff-marker,
+  [data-diff-type="added"],
+  [data-diff-type="deleted"],
+  [data-diff-type="modified"],
+  [data-diff-type="uncertain"] {
+    border: 2px solid CanvasText !important;
+  }
+
+  .diff-badge,
+  [data-diff-badge] {
+    border: 1px solid CanvasText !important;
+  }
+
+  .risk-badge,
+  [data-risk-level] {
+    border: 1px solid CanvasText !important;
+  }
+
+  .status-badge,
+  [data-status] {
+    border: 1px solid CanvasText !important;
+  }
+}
+
+/* ============================================================
    Base styles
    ============================================================ */
 *,
