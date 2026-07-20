@@ -23,7 +23,7 @@ describe('project-queries', () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       const projects = result.current.data!;
-      expect(projects.length).toBe(5);
+      expect(projects.length).toBe(6);
       expect(projects[0].id).toBe('proj-fixture-001');
       expect(projects[0].name).toContain('XX道路改造工程');
     });

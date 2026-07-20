@@ -82,7 +82,7 @@ describe('ProjectListPage', () => {
       await renderPage();
       const input = screen.getByPlaceholderText('搜索项目名称...');
       fireEvent.change(input, { target: { value: '无基线' } });
-      expect(screen.getByText(/显示 1 \/ 5 个项目/)).toBeTruthy();
+      expect(screen.getByText(/显示 1 \/ 6 个项目/)).toBeTruthy();
     });
 
     it('clears search on X button click', async () => {
@@ -136,7 +136,8 @@ describe('ProjectListPage', () => {
     it('sorts by default (createdAt desc)', async () => {
       await renderPage();
       const rows = screen.getAllByRole('row');
-      expect(rows[1].textContent).toContain('XX道路改造工程招标项目');
+      // proj-fixture-006 has the latest createdAt
+      expect(rows[1].textContent).toContain('处理中');
     });
 
     it('changes sort field updates store', async () => {
@@ -222,6 +223,6 @@ describe('ProjectListPage', () => {
 
   it('shows total project count without filters', async () => {
     await renderPage();
-    expect(screen.getByText('共 5 个项目')).toBeTruthy();
+    expect(screen.getByText('共 6 个项目')).toBeTruthy();
   });
 });

@@ -301,6 +301,34 @@ export function buildInterruptedScenario(): AnalysisProjectDetail {
   };
 }
 
+/** Processing: project currently running through the analysis pipeline */
+export function buildProcessingScenario(): AnalysisProjectDetail {
+  resetFixtureIds();
+  const subs = [
+    makeSubmission({ id: 'sub-fixture-001', fileName: 'A公司投标文件.docx', sha256: 'a'.repeat(64), status: 'detecting' }),
+    makeSubmission({ id: 'sub-fixture-002', fileName: 'B公司投标文件.docx', sha256: 'b'.repeat(64), status: 'detecting' }),
+    makeSubmission({ id: 'sub-fixture-003', fileName: 'C公司投标文件.docx', sha256: 'c'.repeat(64), status: 'embedding' }),
+  ];
+  return {
+    id: 'proj-fixture-006',
+    name: 'XX道路改造工程（处理中）',
+    createdAt: '2026-07-20T14:00:00Z',
+    status: 'detecting',
+    submissions: subs,
+    baseline: makeSubmission({ id: 'sub-fixture-baseline', fileName: '招标文件.docx', sha256: '0'.repeat(64), status: 'ready' }),
+    findings: [],
+    assessment: null,
+    preset: 'standard',
+    modelVersion: 'bge-m3-1.0',
+    ruleVersion: '1.0.0',
+    parserVersion: '0.2.2',
+    matcherVersion: '0.2.2',
+    elapsedMs: 23_000,
+    warnings: [],
+    degradationReason: null,
+  };
+}
+
 /** Empty: no projects exist yet */
 export function buildEmptyProjectList(): AnalysisProjectSummary[] {
   return [];
@@ -363,6 +391,17 @@ export function buildProjectSummaries(): AnalysisProjectSummary[] {
       preset: 'loose',
       hasBaseline: false,
       elapsedMs: 12_000,
+    },
+    {
+      id: 'proj-fixture-006',
+      name: 'XX道路改造工程（处理中）',
+      createdAt: '2026-07-20T14:00:00Z',
+      status: 'detecting',
+      submissionCount: 3,
+      riskLevel: null,
+      preset: 'standard',
+      hasBaseline: true,
+      elapsedMs: 23_000,
     },
   ];
 }
