@@ -2,12 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TopBar } from './top-bar';
 
+const mockSetMode = vi.fn();
+const mockSetView = vi.fn();
+
 // Mock the stores
 vi.mock('../../stores/app-store', () => ({
   useAppStore: vi.fn(() => ({
+    mode: 'risk-review',
     view: 'new',
-    setView: vi.fn(),
+    setMode: mockSetMode,
+    setView: mockSetView,
   })),
+}));
+
+// Mock SimpleTooltip to avoid TooltipProvider dependency
+vi.mock('../ui/tooltip', () => ({
+  SimpleTooltip: ({ children, content: _content }: { children: React.ReactNode; content: string }) => <>{children}</>,
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 // Mock the theme module
@@ -40,9 +51,15 @@ describe('TopBar', () => {
     expect(screen.getByText('BidLens')).toBeDefined();
   });
 
-  it('renders new comparison button', () => {
+  it('renders risk review mode button', () => {
     render(<TopBar />);
-    const buttons = screen.getAllByLabelText('新建比对');
+    const buttons = screen.getAllByLabelText('雷同性审查');
+    expect(buttons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders version diff mode button', () => {
+    render(<TopBar />);
+    const buttons = screen.getAllByLabelText('版本差异比对');
     expect(buttons.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -64,10 +81,38 @@ describe('TopBar', () => {
     expect(buttons.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('renders window control buttons', () => {
+    render(<TopBar />);
+    expect(screen.getAllByLabelText('最小化').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByLabelText(/最大化|还原/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByLabelText('关闭').length).toBeGreaterThanOrEqual(1);
+  });
+
   it('opens settings dialog when settings button is clicked', () => {
     render(<TopBar />);
     const settingsButton = screen.getAllByLabelText('打开设置')[0];
     fireEvent.click(settingsButton);
     expect(screen.getByTestId('settings-dialog-mock')).toBeDefined();
+  });
+
+  it('calls setMode when risk review button is clicked', () => {
+    render(<TopBar />);
+    const button = screen.getAllByLabelText('雷同性审查')[0];
+    fireEvent.click(button);
+    expect(mockSetMode).toHaveBeenCalledWith('risk-review');
+  });
+
+  it('calls setMode when version diff button is clicked', () => {
+    render(<TopBar />);
+    const button = screen.getAllByLabelText('版本差异比对')[0];
+    fireEvent.click(button);
+    expect(mockSetMode).toHaveBeenCalledWith('version-diff');
+  });
+
+  it('highlights the active mode button', () => {
+    render(<TopBar />);
+    const riskButton = screen.getAllByLabelText('雷同性审查')[0];
+    // The active variant class should be present
+    expect(riskButton.className).toContain('accent-soft');
   });
 });

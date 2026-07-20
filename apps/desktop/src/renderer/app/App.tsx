@@ -3,7 +3,7 @@ import type { ReviewAnnotation } from '@bidlens/shared/types-only';
 import { Toaster } from 'sonner';
 import { useAppStore } from '../stores/app-store';
 import { applyTheme, watchSystemTheme } from '../lib/theme';
-import { TopBar } from '../components/layout/top-bar';
+import { AppShell } from '../components/layout/app-shell';
 import { NewCompareView } from '../features/compare/new-compare-view';
 import { ProcessingView } from '../features/compare/processing-view';
 import { HistoryView } from '../features/history/history-view';
@@ -26,15 +26,12 @@ export function App() {
   return (
     <ErrorBoundary>
       <TooltipProvider delayDuration={300}>
-        <div className="flex h-screen flex-col overflow-hidden">
-          <TopBar />
-          <main className="flex-1 overflow-auto">
-            {view === 'new' && <NewCompareView />}
-            {view === 'processing' && <ProcessingView />}
-            {view === 'result' && <ResultView />}
-            {view === 'history' && <HistoryView />}
-          </main>
-        </div>
+        <AppShell>
+          {view === 'new' && <NewCompareView />}
+          {view === 'processing' && <ProcessingView />}
+          {view === 'result' && <ResultView />}
+          {view === 'history' && <HistoryView />}
+        </AppShell>
         <Toaster position="top-right" offset={52} />
       </TooltipProvider>
     </ErrorBoundary>

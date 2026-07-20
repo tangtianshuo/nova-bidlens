@@ -1,6 +1,6 @@
 import { FileText, History, Minus, Monitor, Moon, Settings, ShieldCheck, Square, Sun, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { useAppStore } from '../../stores/app-store';
+import { useAppStore, type AppMode } from '../../stores/app-store';
 import { getThemePreference, setThemePreference, watchSystemTheme, type Theme } from '../../lib/theme';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -8,8 +8,13 @@ import { SimpleTooltip } from '../ui/tooltip';
 import { Separator } from '../ui/separator';
 import { SettingsDialog } from '../../features/settings/settings-dialog';
 
+const MODE_LABELS: Record<AppMode, string> = {
+  'risk-review': '雷同性审查',
+  'version-diff': '版本差异比对',
+};
+
 export function TopBar() {
-  const { view, setView } = useAppStore();
+  const { mode, setMode, view, setView } = useAppStore();
   const [theme, setTheme] = useState<Theme>(getThemePreference);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -58,14 +63,24 @@ export function TopBar() {
           <span className="font-bold text-[var(--color-text)]" style={{ fontSize: 17 }}>BidLens</span>
           <Separator orientation="vertical" className="h-4" />
           <Button
-            variant={view === 'new' ? 'active' : 'ghost'}
+            variant={mode === 'risk-review' ? 'active' : 'ghost'}
             size="sm"
-            onClick={() => setView('new')}
-            aria-label="新建比对"
+            onClick={() => setMode('risk-review')}
+            aria-label={MODE_LABELS['risk-review']}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            {MODE_LABELS['risk-review']}
+          </Button>
+          <Button
+            variant={mode === 'version-diff' ? 'active' : 'ghost'}
+            size="sm"
+            onClick={() => setMode('version-diff')}
+            aria-label={MODE_LABELS['version-diff']}
           >
             <FileText className="h-3.5 w-3.5" />
-            新建比对
+            {MODE_LABELS['version-diff']}
           </Button>
+          <Separator orientation="vertical" className="h-4" />
           <Button
             variant={view === 'history' ? 'active' : 'ghost'}
             size="sm"
