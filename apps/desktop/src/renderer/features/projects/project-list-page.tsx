@@ -43,6 +43,7 @@ const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: 'createdAt', label: '创建时间' },
   { value: 'name', label: '项目名称' },
   { value: 'riskLevel', label: '风险等级' },
+  { value: 'elapsedTime', label: '耗时' },
 ];
 
 const PAGE_SIZE_OPTIONS = ['5', '10', '20'];
@@ -97,6 +98,8 @@ export function ProjectListPage() {
           const bv = order[(b.riskLevel ?? 'incomplete') as keyof typeof order] ?? 0;
           return dir * (av - bv);
         }
+        case 'elapsedTime':
+          return dir * (a.elapsedMs - b.elapsedMs);
         case 'createdAt':
         default:
           return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -238,7 +241,7 @@ export function ProjectListPage() {
         {/* Sort */}
         <Select
           value={sortBy}
-          onValueChange={(v) => setSort(v as 'createdAt' | 'name' | 'riskLevel')}
+          onValueChange={(v) => setSort(v as 'createdAt' | 'name' | 'riskLevel' | 'elapsedTime')}
         >
           <SelectTrigger className="h-9 w-[130px]">
             <SelectValue />

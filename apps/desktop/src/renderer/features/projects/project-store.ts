@@ -7,7 +7,7 @@ import type {
 
 // ─── Sort types ──────────────────────────────────────────────────────────
 
-export type ProjectSortField = 'createdAt' | 'name' | 'status' | 'riskLevel';
+export type ProjectSortField = 'createdAt' | 'name' | 'status' | 'riskLevel' | 'elapsedTime';
 export type SortOrder = 'asc' | 'desc';
 
 // ─── Store shape ─────────────────────────────────────────────────────────

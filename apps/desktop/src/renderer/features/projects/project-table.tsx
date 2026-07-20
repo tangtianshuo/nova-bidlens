@@ -35,7 +35,7 @@ const COLUMNS: Column[] = [
   { key: 'status', label: '状态', width: '10%', sortable: 'status' },
   { key: 'risk', label: '风险等级', width: '12%', sortable: 'riskLevel' },
   { key: 'submissions', label: '投标文件', width: '10%' },
-  { key: 'elapsed', label: '耗时', width: '12%', sortable: 'createdAt' },
+  { key: 'elapsed', label: '耗时', width: '12%', sortable: 'elapsedTime' },
   { key: 'created', label: '创建时间', width: '16%', sortable: 'createdAt' },
   { key: 'actions', label: '', width: '46px' },
 ];
