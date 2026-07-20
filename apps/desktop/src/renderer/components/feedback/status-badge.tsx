@@ -13,8 +13,6 @@ import {
 import { Badge } from '../ui/badge';
 import {
   getRiskLabel,
-  getStatusLabel,
-  getReviewStatusLabel,
 } from '../../lib/semantic-state';
 import type { RiskLevel } from '../../lib/semantic-state';
 
@@ -132,28 +130,28 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
 
 // ── Review status badge ──────────────────────────────────────────
 
-type ReviewStatus = 'pending' | 'confirmed' | 'ignored' | 'important';
+type FindingReviewStatus = 'pending' | 'confirmed' | 'ignored' | 'important';
 
 export interface ReviewBadgeProps {
-  status: ReviewStatus;
+  status: FindingReviewStatus;
   className?: string;
 }
 
-const REVIEW_ICONS: Record<ReviewStatus, React.ElementType> = {
+const REVIEW_ICONS: Record<FindingReviewStatus, React.ElementType> = {
   pending: Clock,
   confirmed: CheckCircle2,
   ignored: EyeOff,
   important: Flag,
 };
 
-const REVIEW_VARIANT: Record<ReviewStatus, string> = {
+const REVIEW_VARIANT: Record<FindingReviewStatus, string> = {
   pending: 'uncertain',
   confirmed: 'added',
   ignored: 'default',
   important: 'modified',
 };
 
-const REVIEW_LABELS: Record<ReviewStatus, string> = {
+const REVIEW_LABELS: Record<FindingReviewStatus, string> = {
   pending: '待审查',
   confirmed: '已确认',
   ignored: '已忽略',
