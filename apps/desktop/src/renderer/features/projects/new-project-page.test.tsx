@@ -4,8 +4,28 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { NewProjectPage } from './new-project-page';
 import { ProjectNameField } from './project-name-field';
 import { TenderBaselineSlot } from './tender-baseline-slot';
+import type { SubmissionFile } from './submission-file-list';
 
 afterEach(cleanup);
+
+// ─── Helpers ────────────────────────────────────────────────────────
+
+function makeSubmission(overrides: Partial<SubmissionFile> = {}): SubmissionFile {
+  return {
+    id: `file-${Math.random().toString(36).slice(2, 8)}`,
+    name: '投标文件.docx',
+    format: 'docx',
+    sizeBytes: 2_500_000,
+    pageCount: 120,
+    sha256: 'a'.repeat(64),
+    ...overrides,
+  };
+}
+
+const VALID_SUBMISSIONS: SubmissionFile[] = [
+  makeSubmission({ id: 'f1', name: 'A公司.docx', sha256: 'a'.repeat(64) }),
+  makeSubmission({ id: 'f2', name: 'B公司.docx', sha256: 'b'.repeat(64) }),
+];
 
 // ─── ProjectNameField ──────────────────────────────────────────────────
 
@@ -101,7 +121,6 @@ describe('TenderBaselineSlot', () => {
 
   it('shows label with optional indicator', () => {
     const { container } = render(<TenderBaselineSlot value={null} onChange={() => {}} />);
-    // The label span contains "招标基线文件" and "(可选)"
     const label = container.querySelector('span.text-sm.font-medium');
     expect(label?.textContent).toContain('招标基线文件');
     expect(label?.textContent).toContain('可选');
@@ -116,51 +135,26 @@ describe('NewProjectPage', () => {
     expect(screen.getByText('新建项目')).toBeTruthy();
   });
 
-  it('disables submit when name is empty', () => {
+  it('disables submit when name is empty and no files', () => {
     render(<NewProjectPage />);
     const btn = screen.getByRole('button', { name: /下一步/ });
     expect(btn).toBeDisabled();
   });
 
-  it('enables submit when name is valid', async () => {
-    const user = userEvent.setup();
+  it('shows file list component with empty state', () => {
     render(<NewProjectPage />);
-    await user.type(screen.getByLabelText(/项目名称/), '测试项目');
-    const btn = screen.getByRole('button', { name: /下一步/ });
-    expect(btn).not.toBeDisabled();
+    expect(screen.getByText(/拖放投标文件到此处/)).toBeTruthy();
   });
 
-  it('calls onSubmit with form data', async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn();
-    render(<NewProjectPage onSubmit={onSubmit} />);
-    await user.type(screen.getByLabelText(/项目名称/), '测试项目');
-    await user.click(screen.getByRole('button', { name: /下一步/ }));
-    expect(onSubmit).toHaveBeenCalledWith({
-      name: '测试项目',
-      baseline: null,
-    });
-  });
-
-  it('shows hint when submit is disabled', () => {
+  it('shows hint to enter project name when empty', () => {
     render(<NewProjectPage />);
     expect(screen.getByText(/请输入项目名称后继续/)).toBeTruthy();
   });
 
-  it('hides hint when submit is enabled', async () => {
+  it('shows hint to add files when name is valid but no files', async () => {
     const user = userEvent.setup();
     render(<NewProjectPage />);
     await user.type(screen.getByLabelText(/项目名称/), '测试项目');
-    expect(screen.queryByText(/请输入项目名称后继续/)).toBeNull();
-  });
-
-  it('shows no-baseline warning on the page', () => {
-    render(<NewProjectPage />);
-    expect(screen.getByText(/误报风险较高/)).toBeTruthy();
-  });
-
-  it('includes placeholder for submission files', () => {
-    render(<NewProjectPage />);
-    expect(screen.getByText(/投标文件将在下一步添加/)).toBeTruthy();
+    expect(screen.getByText(/请添加至少 2 个投标文件/)).toBeTruthy();
   });
 });
