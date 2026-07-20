@@ -324,7 +324,7 @@ export function HistoryView() {
   // -- Loading state --
   if (loading) {
     return (
-      <div className="app-page flex flex-1 flex-col" data-width="standard">
+      <div className="app-page flex flex-1 flex-col overflow-auto" data-width="standard">
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div
@@ -340,7 +340,7 @@ export function HistoryView() {
   // -- Empty state --
   if (items.length === 0 && !error) {
     return (
-      <div className="app-page flex flex-1 flex-col items-center justify-center" data-width="standard">
+      <div className="app-page flex flex-1 flex-col items-center justify-center overflow-auto" data-width="standard">
         <Clock className="h-12 w-12 text-[var(--color-text-muted)]" />
         <h2 className="mt-4 text-lg font-medium text-[var(--color-text)]">
           暂无比对记录
@@ -357,7 +357,7 @@ export function HistoryView() {
   }
 
   return (
-    <div className="app-page flex flex-1 flex-col" data-width="standard">
+    <div className="app-page flex flex-1 flex-col overflow-auto" data-width="standard">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-[var(--color-text)]">

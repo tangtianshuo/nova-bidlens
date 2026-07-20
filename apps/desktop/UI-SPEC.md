@@ -128,6 +128,13 @@ min-height: 680px
 - Nav buttons: `min-height: 32px`
 - Protection badge: `font-size: 12px, color: var(--text-3)`
 
+### Scroll Contract
+- App Shell outer grid: `overflow: hidden` — page never scrolls as a whole
+- Content area (`<main>`): `min-height: 0; overflow: hidden` — fills grid cell without allowing page-level scroll
+- **Workbench (three-column layout)**: each column scrolls independently; taskbar (50px), filter bar (46px), and panel headers (42px) are fixed within their column; only the column body has `overflow: auto`
+- **Non-workbench views** (New Compare, History, Processing): carry `overflow: auto` on their own outer container to scroll independently within the content area
+- The App Bar (56px) is always fixed at the top and never participates in scrolling
+
 ---
 
 ## Buttons

@@ -110,7 +110,7 @@ export function ProcessingView() {
 
   if (error) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-8">
+      <div className="flex flex-1 flex-col items-center justify-center overflow-auto p-8">
         <div className="w-full max-w-md">
           <div className="rounded-[var(--radius-md)] border border-[var(--color-deleted)]/30 bg-[var(--color-deleted-bg)] p-6 text-center">
             <XCircle className="mx-auto h-10 w-10 text-[var(--color-deleted)]" />

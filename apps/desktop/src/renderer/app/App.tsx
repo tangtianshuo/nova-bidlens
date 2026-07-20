@@ -73,7 +73,7 @@ function ResultView() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-8">
+    <div className="flex flex-1 flex-col items-center justify-center overflow-auto p-8">
       <p className="text-sm text-[var(--color-text-secondary)]">
         未找到比对结果
       </p>
