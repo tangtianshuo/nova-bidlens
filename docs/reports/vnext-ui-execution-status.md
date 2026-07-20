@@ -1,6 +1,6 @@
 # VNext UI Execution Status
 
-> Phase: 0 → 1 | Branch: `feature/vnext-ui-phase-0` | Started: 2026-07-20
+> Phase: 0 → 1 → 2 (DONE) → 3 (IN_PROGRESS) | Branch: `feature/vnext-ui-phase-0` | Started: 2026-07-20
 
 ## Phase 0 — 契约、基线和迁移设计
 
@@ -63,3 +63,42 @@
 | `layout/app-shell.test.tsx` | 4 | ✅ |
 | `layout/top-bar.test.tsx` | 11 | ✅ |
 | **Total** | **172** | **✅** |
+
+## Phase 2 — 项目主链
+
+| Task | Status | Commit | Verification | Notes |
+|------|--------|--------|-------------|-------|
+| UI-200 | done | `5103c12` | project-store + project-queries tests pass | Query/Store separation |
+| UI-201 | done | `3c139a5` | project-table tests pass | Filtering, sorting, pagination |
+| UI-202 | done | `09ff66d` | project-list-page tests pass | Loading/Empty/Error/Partial/Interrupted |
+| UI-203 | done | `d90d45f` | new-project-page tests pass | Name validation, baseline slot |
+| UI-204 | done | `ad68b71` | 20 tests pass, lint clean, build pass | File list, validation, capacity |
+| UI-205 | done | `575fc09` | 19 tests pass, lint clean, build pass | Presets, launch confirmation |
+| UI-206 | done | `a7c3010` | project-processing-page tests pass | Stage list, file progress |
+| UI-207 | done | `a4b4085` | 24 tests pass, lint clean, build pass | Recovery actions |
+| Integration | done | `9765b63` | All 167 project tests pass | Two-step flow, recovery wiring |
+
+### Phase 2 Exit Gate
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| 默认首页可创建并启动一个 2-8 文件项目 | PASS | NewProjectPage has SubmissionFileList + DetectionPreset |
+| 无基线、重复文件、超限和模型缺失均有明确交互 | PASS | Validation errors, no-baseline warning, degradation banners |
+| 处理页只显示真实进度 | PASS | AnalysisStageList + SubmissionProgressTable from project data |
+| 取消、失败和恢复不会丢失项目输入 | PASS | Recovery actions: retry/resume/accept-partial |
+| 项目历史中可区分 Ready、Partial、Interrupted 和 Failed | PASS | StatusBadge + PersistentBanner differentiate states |
+
+### Phase 2 Test Summary
+
+| Test File | Tests | Status |
+|-----------|-------|--------|
+| `project-store.test.ts` | 13 | ✅ |
+| `project-queries.test.tsx` | 11 | ✅ |
+| `project-list-page.test.tsx` | 29 | ✅ |
+| `project-table.test.tsx` | 14 | ✅ |
+| `new-project-page.test.tsx` | 16 | ✅ |
+| `submission-file-list.test.tsx` | 20 | ✅ |
+| `detection-preset.test.tsx` | 19 | ✅ |
+| `project-processing-page.test.tsx` | 21 | ✅ |
+| `analysis-recovery-actions.test.tsx` | 24 | ✅ |
+| **Total** | **167** | **✅** |
