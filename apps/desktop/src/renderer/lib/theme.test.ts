@@ -152,8 +152,8 @@ describe('Theme utilities', () => {
     localStorageMock.setItem('bidlens-theme', 'light');
     applyTheme();
     const theme = document.documentElement.getAttribute('data-theme');
-    // Light tokens live under :root (no data-theme) or :root[data-theme="light"]
-    expect(theme === 'light' || theme === null).toBe(true);
+    // Light tokens live under :root[data-theme="light"]
+    expect(theme).toBe('light');
   });
 
   it('dark theme applies data-theme="dark" for dark token set', () => {

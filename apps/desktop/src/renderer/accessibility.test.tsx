@@ -6,7 +6,7 @@
  */
 
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createElement } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -464,6 +464,8 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
   });
 
   describe('Reduced Motion', () => {
+    const originalMatchMedia = window.matchMedia;
+
     beforeEach(() => {
       // Stub matchMedia for prefers-reduced-motion queries
       Object.defineProperty(window, 'matchMedia', {
@@ -479,6 +481,10 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
           dispatchEvent: vi.fn(),
         })),
       });
+    });
+
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
     });
 
     it('matchMedia can detect prefers-reduced-motion: reduce', () => {
@@ -512,6 +518,8 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
   });
 
   describe('Forced Colors (Windows High Contrast)', () => {
+    const originalMatchMedia = window.matchMedia;
+
     beforeEach(() => {
       // Stub matchMedia for forced-colors queries
       Object.defineProperty(window, 'matchMedia', {
@@ -527,6 +535,10 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
           dispatchEvent: vi.fn(),
         })),
       });
+    });
+
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
     });
 
     it('matchMedia can detect forced-colors: active', () => {
