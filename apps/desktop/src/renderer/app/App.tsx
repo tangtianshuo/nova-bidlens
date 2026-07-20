@@ -9,6 +9,7 @@ import { ProcessingView } from '../features/compare/processing-view';
 import { HistoryView } from '../features/history/history-view';
 import { ErrorBoundary } from '../components/feedback';
 import { ReviewWorkbench, DEFAULT_FILTERS, type FilterState } from '../features/review';
+import { TooltipProvider } from '../components/ui/tooltip';
 
 import { useResultStore } from '../stores/result-store';
 
@@ -24,16 +25,18 @@ export function App() {
 
   return (
     <ErrorBoundary>
-      <div className="flex h-screen flex-col overflow-hidden">
-        <TopBar />
-        <main className="flex-1 overflow-auto">
-          {view === 'new' && <NewCompareView />}
-          {view === 'processing' && <ProcessingView />}
-          {view === 'result' && <ResultView />}
-          {view === 'history' && <HistoryView />}
-        </main>
-      </div>
-      <Toaster position="top-right" offset={52} />
+      <TooltipProvider delayDuration={300}>
+        <div className="flex h-screen flex-col overflow-hidden">
+          <TopBar />
+          <main className="flex-1 overflow-auto">
+            {view === 'new' && <NewCompareView />}
+            {view === 'processing' && <ProcessingView />}
+            {view === 'result' && <ResultView />}
+            {view === 'history' && <HistoryView />}
+          </main>
+        </div>
+        <Toaster position="top-right" offset={52} />
+      </TooltipProvider>
     </ErrorBoundary>
   );
 }

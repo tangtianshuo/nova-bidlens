@@ -32,22 +32,18 @@ export interface SimpleTooltipProps {
   content: React.ReactNode
   children: React.ReactNode
   side?: "top" | "right" | "bottom" | "left"
-  delayDuration?: number
 }
 
 function SimpleTooltip({
   content,
   children,
   side = "top",
-  delayDuration = 300,
 }: SimpleTooltipProps) {
   return (
-    <TooltipProvider delayDuration={delayDuration}>
-      <Tooltip>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent side={side}>{content}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side={side}>{content}</TooltipContent>
+    </Tooltip>
   )
 }
 
