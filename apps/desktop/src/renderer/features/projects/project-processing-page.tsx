@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { ArrowLeft, XCircle } from 'lucide-react';
+import { ArrowLeft, XCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PersistentBanner } from '@/components/feedback/persistent-banner';
 import { StatusBadge } from '@/components/feedback/status-badge';
@@ -147,6 +147,25 @@ export function ProjectProcessingPage() {
         </h2>
         <AnalysisStageList stages={stages} />
       </div>
+
+      {/* Failed state recovery placeholder (UI-207) */}
+      {project.status === 'failed' && (
+        <div
+          role="status"
+          className="mb-6 rounded-[var(--radius)] border border-[var(--color-danger)] bg-[var(--color-danger)]/5 p-4"
+        >
+          <p className="text-sm font-medium text-[var(--color-danger)] mb-3">
+            分析失败，可尝试重新分析
+          </p>
+          <Button variant="secondary" size="sm" disabled>
+            <RotateCcw className="h-3.5 w-3.5" />
+            重试分析
+          </Button>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+            恢复功能将在 UI-207 中实现
+          </p>
+        </div>
+      )}
 
       {/* File progress table */}
       <div className="mb-6">

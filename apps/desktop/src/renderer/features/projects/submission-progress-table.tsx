@@ -1,23 +1,8 @@
 import { StatusBadge } from '@/components/feedback/status-badge';
-import type { AnalysisProjectStatus, SubmissionSummary } from '../../__fixtures__/risk-project';
+import type { SubmissionSummary } from '../../__fixtures__/risk-project';
+import { STAGE_LABELS } from './stage-labels';
 
-// ── Stage labels (for per-file stage display) ─────────────────────────
-
-const STAGE_LABELS: Record<string, string> = {
-  validating: '文件校验',
-  parsing: '文档解析',
-  filtering: '招标内容过滤',
-  embedding: '向量化',
-  retrieving: '候选召回',
-  detecting: '混合精排',
-  aggregating: '风险聚合',
-  ready: '完成',
-  partial: '部分结果',
-  interrupted: '已中断',
-  failed: '失败',
-};
-
-function getStageLabel(status: AnalysisProjectStatus): string {
+function getStageLabel(status: string): string {
   return STAGE_LABELS[status] ?? status;
 }
 

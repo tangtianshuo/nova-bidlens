@@ -213,4 +213,28 @@ describe('ProjectProcessingPage', () => {
       expect(screen.getByText(/加载项目详情失败/)).toBeTruthy();
     });
   });
+
+  it('shows recovery section with disabled retry button for failed project', async () => {
+    selectProject('proj-fixture-007');
+    const wrapper = createWrapper();
+    render(<ProjectProcessingPage />, { wrapper });
+    await waitFor(() => {
+      const recovery = screen.getByRole('status');
+      expect(recovery).toBeTruthy();
+      expect(screen.getByText(/可尝试重新分析/)).toBeTruthy();
+      const retryBtn = screen.getByText('重试分析');
+      expect(retryBtn).toBeTruthy();
+      expect(retryBtn.closest('button')).toBeDisabled();
+      expect(screen.getByText(/UI-207/)).toBeTruthy();
+    });
+  });
+
+  it('does not show recovery section for non-failed project', async () => {
+    selectProject('proj-fixture-006');
+    const wrapper = createWrapper();
+    render(<ProjectProcessingPage />, { wrapper });
+    await waitFor(() => {
+      expect(screen.queryByText('重试分析')).toBeNull();
+    });
+  });
 });

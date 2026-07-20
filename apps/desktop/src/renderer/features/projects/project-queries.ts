@@ -8,6 +8,7 @@ import {
   buildPartialScenario,
   buildInterruptedScenario,
   buildProcessingScenario,
+  buildFailedScenario,
 } from '../../__fixtures__/risk-project';
 import type {
   AnalysisProjectSummary,
@@ -38,6 +39,7 @@ function getFixtureDetail(id: string): AnalysisProjectDetail | undefined {
     'proj-fixture-004': buildPartialScenario,
     'proj-fixture-005': buildInterruptedScenario,
     'proj-fixture-006': buildProcessingScenario,
+    'proj-fixture-007': buildFailedScenario,
   };
   const builder = details[id];
   return builder?.();

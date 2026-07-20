@@ -301,6 +301,32 @@ export function buildInterruptedScenario(): AnalysisProjectDetail {
   };
 }
 
+/** Failed: analysis pipeline failed */
+export function buildFailedScenario(): AnalysisProjectDetail {
+  const subs = [
+    makeSubmission({ id: 'sub-fixture-001', fileName: 'A公司投标文件.docx', status: 'embedding' }),
+    makeSubmission({ id: 'sub-fixture-002', fileName: 'B公司投标文件.docx', status: 'parsing' }),
+  ];
+  return {
+    id: 'proj-fixture-007',
+    name: 'XX道路改造工程（分析失败）',
+    createdAt: '2026-07-20T08:00:00Z',
+    status: 'failed',
+    submissions: subs,
+    baseline: null,
+    findings: [],
+    assessment: null,
+    preset: 'standard',
+    modelVersion: 'bge-m3-1.0',
+    ruleVersion: '1.0.0',
+    parserVersion: '0.2.2',
+    matcherVersion: '0.2.2',
+    elapsedMs: 8_000,
+    warnings: ['分析过程中出现错误'],
+    degradationReason: null,
+  };
+}
+
 /** Processing: project currently running through the analysis pipeline */
 export function buildProcessingScenario(): AnalysisProjectDetail {
   resetFixtureIds();

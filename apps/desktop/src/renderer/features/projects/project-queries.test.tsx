@@ -92,6 +92,15 @@ describe('project-queries', () => {
       expect(result.current.data!.findings).toHaveLength(0);
     });
 
+    it('returns failed scenario', async () => {
+      const { result } = renderHook(() => useProjectDetail('proj-fixture-007'), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data!.status).toBe('failed');
+    });
+
     it('errors for unknown project', async () => {
       const { result } = renderHook(() => useProjectDetail('proj-unknown'), {
         wrapper: createWrapper(),

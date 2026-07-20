@@ -1,5 +1,6 @@
 import { Circle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import type { AnalysisProjectStatus } from '../../__fixtures__/risk-project';
+import { STAGE_LABELS } from './stage-labels';
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -25,18 +26,6 @@ const PIPELINE_ORDER: (AnalysisProjectStatus | 'ready' | 'failed')[] = [
   'ready',
   'failed',
 ];
-
-const STAGE_LABELS: Record<string, string> = {
-  validating: '文件校验',
-  parsing: '文档解析',
-  filtering: '招标内容过滤',
-  embedding: '向量化',
-  retrieving: '候选召回',
-  detecting: '混合精排',
-  aggregating: '风险聚合',
-  ready: '分析完成',
-  failed: '分析失败',
-};
 
 // ── Derive stages from project status ─────────────────────────────────
 
