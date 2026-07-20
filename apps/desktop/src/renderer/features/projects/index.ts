@@ -3,3 +3,5 @@ export { useProjectStore } from './project-store';
 export type { ProjectSortField, SortOrder } from './project-store';
 export { NewProjectPage } from './new-project-page';
 export type { NewProjectFormData } from './new-project-page';
+export { ProjectListPage } from './project-list-page';
+export { ProjectTable } from './project-table';

@@ -19,6 +19,8 @@ interface ProjectState {
   riskFilter: RiskLevel | null;
   sortBy: ProjectSortField;
   sortOrder: SortOrder;
+  page: number;
+  pageSize: number;
 
   selectProject: (id: string) => void;
   clearSelection: () => void;
@@ -26,6 +28,8 @@ interface ProjectState {
   setStatusFilter: (status: AnalysisProjectStatus | null) => void;
   setRiskFilter: (risk: RiskLevel | null) => void;
   setSort: (field: ProjectSortField) => void;
+  setPage: (page: number) => void;
+  setPageSize: (size: number) => void;
   clearFilters: () => void;
 }
 
@@ -36,13 +40,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   riskFilter: null,
   sortBy: 'createdAt',
   sortOrder: 'desc',
+  page: 1,
+  pageSize: 10,
 
   selectProject: (id: string) => set({ selectedProjectId: id }),
   clearSelection: () => set({ selectedProjectId: null }),
-  setSearchText: (text: string) => set({ searchText: text }),
+  setSearchText: (text: string) => set({ searchText: text, page: 1 }),
   setStatusFilter: (status: AnalysisProjectStatus | null) =>
-    set({ statusFilter: status }),
-  setRiskFilter: (risk: RiskLevel | null) => set({ riskFilter: risk }),
+    set({ statusFilter: status, page: 1 }),
+  setRiskFilter: (risk: RiskLevel | null) => set({ riskFilter: risk, page: 1 }),
   setSort: (field: ProjectSortField) => {
     const { sortBy, sortOrder } = get();
     if (sortBy === field) {
@@ -50,7 +56,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     } else {
       set({ sortBy: field, sortOrder: 'asc' });
     }
+    set({ page: 1 });
   },
+  setPage: (page: number) => set({ page }),
+  setPageSize: (size: number) => set({ pageSize: size, page: 1 }),
   clearFilters: () =>
-    set({ searchText: '', statusFilter: null, riskFilter: null }),
+    set({ searchText: '', statusFilter: null, riskFilter: null, page: 1 }),
 }));

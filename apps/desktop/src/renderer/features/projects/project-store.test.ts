@@ -10,6 +10,8 @@ describe('Project Store', () => {
       riskFilter: null,
       sortBy: 'createdAt',
       sortOrder: 'desc',
+      page: 1,
+      pageSize: 10,
     });
   });
 
@@ -21,6 +23,8 @@ describe('Project Store', () => {
     expect(state.riskFilter).toBeNull();
     expect(state.sortBy).toBe('createdAt');
     expect(state.sortOrder).toBe('desc');
+    expect(state.page).toBe(1);
+    expect(state.pageSize).toBe(10);
   });
 
   it('selects and clears project', () => {
@@ -76,5 +80,36 @@ describe('Project Store', () => {
     expect(useProjectStore.getState().searchText).toBe('');
     expect(useProjectStore.getState().statusFilter).toBeNull();
     expect(useProjectStore.getState().riskFilter).toBeNull();
+    expect(useProjectStore.getState().page).toBe(1);
+  });
+
+  it('sets page', () => {
+    useProjectStore.getState().setPage(3);
+    expect(useProjectStore.getState().page).toBe(3);
+  });
+
+  it('sets page size and resets page to 1', () => {
+    useProjectStore.getState().setPage(5);
+    useProjectStore.getState().setPageSize(20);
+    expect(useProjectStore.getState().pageSize).toBe(20);
+    expect(useProjectStore.getState().page).toBe(1);
+  });
+
+  it('resets page to 1 when search changes', () => {
+    useProjectStore.getState().setPage(3);
+    useProjectStore.getState().setSearchText('test');
+    expect(useProjectStore.getState().page).toBe(1);
+  });
+
+  it('resets page to 1 when status filter changes', () => {
+    useProjectStore.getState().setPage(3);
+    useProjectStore.getState().setStatusFilter('ready');
+    expect(useProjectStore.getState().page).toBe(1);
+  });
+
+  it('resets page to 1 when risk filter changes', () => {
+    useProjectStore.getState().setPage(3);
+    useProjectStore.getState().setRiskFilter('high');
+    expect(useProjectStore.getState().page).toBe(1);
   });
 });
