@@ -35,7 +35,7 @@ export function RelationshipMatrix({ submissions, findings, onCellClick }: Relat
   }
 
   return (
-    <div className="overflow-x-auto" role="grid" aria-label="文件关系矩阵">
+    <div className="relationship-matrix-scroll overflow-x-auto overscroll-behavior-inline-contain" role="grid" aria-label="文件关系矩阵">
       <table className="w-full border-collapse text-xs">
         <thead>
           <tr>

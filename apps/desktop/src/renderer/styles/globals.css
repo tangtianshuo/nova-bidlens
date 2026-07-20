@@ -449,6 +449,28 @@ body {
   gap: var(--space-2);
 }
 
+@media (min-width: 1920px) {
+  :root {
+    --layout-page-x: var(--space-8);
+    --layout-page-y: var(--space-8);
+    --layout-panel: var(--space-5);
+    --layout-section-gap: var(--space-6);
+    --layout-dialog-x: var(--space-8);
+    --layout-dialog-y: var(--space-6);
+  }
+}
+
+@media (max-width: 1440px) {
+  :root {
+    --layout-page-x: var(--space-6);
+    --layout-page-y: var(--space-6);
+    --layout-panel: var(--space-4);
+    --layout-section-gap: var(--space-5);
+    --layout-dialog-x: var(--space-6);
+    --layout-dialog-y: var(--space-5);
+  }
+}
+
 @media (max-width: 1280px) {
   :root {
     --layout-page-x: var(--space-5);
@@ -486,6 +508,22 @@ body {
 
   .workbench-taskbar .optional-label {
     display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .project-table-scroll {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .project-table-scroll > table {
+    min-width: 720px;
+  }
+
+  .relationship-matrix-scroll {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
   }
 }
 

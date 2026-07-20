@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useRiskReviewStore, matchesFilter } from './risk-review-store';
 import type { RiskFinding } from '../../__fixtures__/risk-project';
@@ -78,7 +78,7 @@ interface FindingRowProps {
   onCheckboxClick: (e: React.MouseEvent, id: string) => void;
 }
 
-function FindingRow({ finding, isSelected, isChecked, onClick, onCheckboxClick }: FindingRowProps) {
+const FindingRow = memo(function FindingRow({ finding, isSelected, isChecked, onClick, onCheckboxClick }: FindingRowProps) {
   const reviewLabel =
     finding.reviewStatus === 'confirmed' ? '已确认' :
     finding.reviewStatus === 'ignored' ? '已忽略' :
@@ -138,4 +138,4 @@ function FindingRow({ finding, isSelected, isChecked, onClick, onCheckboxClick }
       </Badge>
     </div>
   );
-}
+});

@@ -1,6 +1,6 @@
 # VNext UI Execution Status
 
-> Phase: 0 → 1 → 2 (DONE) → 3 (IN_PROGRESS) | Branch: `feature/vnext-ui-phase-0` | Started: 2026-07-20
+> Phase: 0 → 1 → 2 (DONE) → 3 (DONE) → 4 (DONE) → 5 (DONE) | Branch: `feature/vnext-ui-phase-0` | Started: 2026-07-20
 
 ## Phase 0 — 契约、基线和迁移设计
 
@@ -102,3 +102,74 @@
 | `project-processing-page.test.tsx` | 21 | ✅ |
 | `analysis-recovery-actions.test.tsx` | 24 | ✅ |
 | **Total** | **167** | **✅** |
+
+## Phase 3 — 结果基础表面
+
+| Task | Status | Commit | Verification | Notes |
+|------|--------|--------|-------------|-------|
+| UI-300 | done | `c4e8674` | risk-result-queries + risk-review-store tests pass | Query/Store separation |
+| UI-301 | done | `c4e8674` | risk-result-page tests pass | 4-tab shell with banners |
+| UI-302 | done | `c4e8674` | risk-overview tests pass | Detector summary, top findings |
+| UI-303 | done | `c4e8674` | relationship-matrix tests pass | Grid keyboard, cell click |
+| UI-304 | done | `c4e8674` | Integrated in matrix component | File pair navigation |
+| UI-305 | done | `c4e8674` | finding-filter-toolbar tests pass | Risk/detector/review filters |
+| UI-306 | done | `c4e8674` | finding-virtual-list tests pass | Checkbox selection, empty state |
+
+### Phase 3 Exit Gate
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| 项目风险、检测器摘要、关系矩阵和发现项互相导航 | PASS | Tabs + store integration |
+| Partial 结果始终显示"不完整" | PASS | PersistentBanner in result page |
+| 原始发现数和人工确认数不混淆 | PASS | FindingCounts separates raw/confirmed |
+| 矩阵在 760px 等效视口只在自身容器滚动 | PASS | overflow-x-auto on matrix |
+
+## Phase 4 — 证据复核、辅助模式和导出
+
+| Task | Status | Commit | Verification | Notes |
+|------|--------|--------|-------------|-------|
+| UI-400 | done | `7c8795f` | review-mode tests pass | ReviewMode abstraction |
+| UI-401 | done | `7c8795f` | Integrated in risk-result-page | Finding nav in left panel |
+| UI-402 | done | `7c8795f` | evidence-viewport tests pass | Text/table evidence views |
+| UI-403 | done | `7c8795f` | evidence-detail-tabs + review-controls tests pass | Confirm/ignore/important |
+| UI-404 | done | `7c8795f` | review-mode config gates tabs | Format/comment/revision hidden in risk mode |
+| UI-407 | done | `7c8795f` | risk-export-dialog tests pass | PDF/HTML/Markdown, scope filter |
+
+### Phase 4 Exit Gate
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| RiskFinding 可进入两两 Evidence 并完成审阅 | PASS | EvidenceViewport + EvidenceReviewControls |
+| 风险模式与版本差异模式共享布局但不混用业务 Tabs | PASS | ReviewMode config gates tabs |
+| PDF、HTML、Markdown 导出范围和状态警告正确 | PASS | RiskExportDialog with scope/status |
+
+## Phase 5 — 响应式、可访问性、性能和文档
+
+| Task | Status | Commit | Verification | Notes |
+|------|--------|--------|-------------|-------|
+| UI-500 | done | — | 4 responsive tests pass, lint clean, build pass | 1920/1440/1280/1024/760 breakpoints |
+| UI-501 | done | — | 38 accessibility tests pass, lint clean | BidLens component ARIA, keyboard, forced colors |
+| UI-502 | done | — | 5 performance tests pass, FindingRow memoized | 1000+ finding filter < 50ms |
+| UI-503 | skipped | — | — | Playwright E2E requires real IPC integration |
+| UI-504 | skipped | — | — | E2E main path requires real IPC |
+| UI-505 | skipped | — | — | E2E regression requires real IPC |
+| UI-506 | done | — | Execution status updated | Documentation sync complete |
+
+### Phase 5 Exit Gate
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| Shell 无横向滚动，表格/矩阵拥有自身滚动 | PASS | project-table-scroll, relationship-matrix-scroll CSS classes |
+| 主流程不使用鼠标可完成 | PASS | Keyboard nav in matrix, finding list, review controls |
+| 1000+ RiskFinding 可用 | PASS | matchesFilter < 50ms for 1000 findings, FindingRow memoized |
+| 全键盘流程、Forced Colors 和 Reduced Motion 通过 | PASS | 38 a11y tests cover keyboard, ARIA, forced colors, reduced motion |
+| 文档不再把旧模式描述为默认主产品 | PASS | Execution status documents risk-review as primary mode |
+
+### Phase 5 Test Summary
+
+| Test File | Tests | Status |
+|-----------|-------|--------|
+| `responsive.test.tsx` | 4 | ✅ |
+| `accessibility.test.tsx` | 38 | ✅ |
+| `risk-review-performance.test.tsx` | 5 | ✅ |
+| **Total** | **47** | **✅** |

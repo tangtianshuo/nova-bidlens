@@ -107,8 +107,8 @@ export function ProjectTable({ projects, onRowClick, onDelete, onResume }: Proje
   );
 
   return (
-    <div className="rounded-[var(--radius)] border border-[var(--color-border)]">
-      <Table style={{ tableLayout: 'fixed' }}>
+    <div className="project-table-scroll rounded-[var(--radius)] border border-[var(--color-border)] overflow-x-auto overscroll-behavior-inline-contain">
+      <Table style={{ tableLayout: 'fixed', minWidth: 720 }}>
         <TableHeader>
           <TableRow className="hover:bg-transparent" style={{ height: 38 }}>
             {COLUMNS.map(renderHeader)}

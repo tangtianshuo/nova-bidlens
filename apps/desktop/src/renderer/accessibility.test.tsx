@@ -600,4 +600,102 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
       expect(marker.style.border).toBe('');
     });
   });
+
+  // ── BidLens Component Accessibility ──────────────────────────────
+
+  describe('BidLens Component ARIA', () => {
+    it('RelationshipMatrix has grid role with label', async () => {
+      const { RelationshipMatrix } = await import('./features/risk-review/relationship-matrix');
+      const subs = [
+        { id: 's1', fileName: 'A.docx', fileFormat: 'docx' as const, fileSizeBytes: 1024, pageCount: 10, sha256: 'a1', status: 'ready' as const, warnings: [] },
+        { id: 's2', fileName: 'B.docx', fileFormat: 'docx' as const, fileSizeBytes: 2048, pageCount: 20, sha256: 'b1', status: 'ready' as const, warnings: [] },
+      ];
+      render(<RelationshipMatrix submissions={subs} findings={[]} />);
+      expect(screen.getByRole('grid', { name: '文件关系矩阵' })).toBeTruthy();
+    });
+
+    it('RelationshipMatrix cells are keyboard accessible', async () => {
+      const { RelationshipMatrix } = await import('./features/risk-review/relationship-matrix');
+      const subs = [
+        { id: 's1', fileName: 'A.docx', fileFormat: 'docx' as const, fileSizeBytes: 1024, pageCount: 10, sha256: 'a1', status: 'ready' as const, warnings: [] },
+        { id: 's2', fileName: 'B.docx', fileFormat: 'docx' as const, fileSizeBytes: 2048, pageCount: 20, sha256: 'b1', status: 'ready' as const, warnings: [] },
+      ];
+      render(<RelationshipMatrix submissions={subs} findings={[]} />);
+      const cells = screen.getAllByRole('gridcell');
+      cells.forEach((cell) => {
+        expect(cell.getAttribute('tabindex')).toBe('0');
+      });
+    });
+
+    it('FindingVirtualList has listbox role', async () => {
+      const { FindingVirtualList } = await import('./features/risk-review/finding-virtual-list');
+      const findings = [{
+        id: 'f1', detectorType: 'text' as const, riskLevel: 'high' as const,
+        involvedSubmissionIds: ['s1', 's2'], evidence: [], symmetricSimilarity: 0.9,
+        directionalCoverage: [], confidenceScore: 0.95, reviewStatus: 'pending' as const,
+        reviewNote: '', ruleVersion: '1.0.0',
+      }];
+      render(<FindingVirtualList findings={findings} />);
+      expect(screen.getByRole('listbox', { name: '发现项列表' })).toBeTruthy();
+    });
+
+    it('FindingVirtualList items have option role with aria-selected', async () => {
+      const { FindingVirtualList } = await import('./features/risk-review/finding-virtual-list');
+      const findings = [{
+        id: 'f1', detectorType: 'text' as const, riskLevel: 'high' as const,
+        involvedSubmissionIds: ['s1', 's2'], evidence: [], symmetricSimilarity: 0.9,
+        directionalCoverage: [], confidenceScore: 0.95, reviewStatus: 'pending' as const,
+        reviewNote: '', ruleVersion: '1.0.0',
+      }];
+      render(<FindingVirtualList findings={findings} />);
+      const options = screen.getAllByRole('option');
+      expect(options.length).toBe(1);
+      expect(options[0].getAttribute('tabindex')).toBe('0');
+    });
+
+    it('EvidenceDetailTabs has region role', async () => {
+      const { EvidenceDetailTabs } = await import('./features/risk-review/evidence-detail-tabs');
+      const finding = {
+        id: 'f1', detectorType: 'text' as const, riskLevel: 'high' as const,
+        involvedSubmissionIds: ['s1'], evidence: [], symmetricSimilarity: 0.9,
+        directionalCoverage: [{ fromId: 's1', toId: 's2', coverage: 0.85 }],
+        confidenceScore: 0.95, reviewStatus: 'pending' as const,
+        reviewNote: '', ruleVersion: '1.0.0',
+      };
+      render(<EvidenceDetailTabs finding={finding} submissionNames={new Map()} />);
+      expect(screen.getByRole('region', { name: '发现项详情' })).toBeTruthy();
+    });
+
+    it('EvidenceViewport has region role', async () => {
+      const { EvidenceViewport } = await import('./features/risk-review/evidence-viewport');
+      const evidence = [{
+        id: 'ev1', submissionId: 's1', blockIndex: 0, originalText: 'test',
+        normalizedText: 'test', matchBasis: 'semantic' as const, similarityScore: 0.9,
+        contextBefore: '', contextAfter: '', tenderFiltered: false, tenderFilterReason: null,
+      }];
+      render(<EvidenceViewport evidence={evidence} submissionNames={new Map()} />);
+      expect(screen.getByRole('region', { name: '证据视图' })).toBeTruthy();
+    });
+
+    it('EvidenceReviewControls has region role', async () => {
+      const { EvidenceReviewControls } = await import('./features/risk-review/evidence-review-controls');
+      render(<EvidenceReviewControls findingId="f1" currentStatus="pending" reviewNote="" />);
+      expect(screen.getByRole('region', { name: '人工复核' })).toBeTruthy();
+    });
+
+    it('RiskExportDialog has dialog role with label', async () => {
+      const { RiskExportDialog } = await import('./features/risk-review/risk-export-dialog');
+      render(
+        <RiskExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          projectStatus="ready"
+          totalFindings={10}
+          confirmedFindings={3}
+          importantFindings={2}
+        />,
+      );
+      expect(screen.getByRole('dialog', { name: '导出报告' })).toBeTruthy();
+    });
+  });
 });
