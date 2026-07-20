@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { Search, Filter, ArrowUpDown, X, Plus } from 'lucide-react';
+import { Search, X, Plus, RefreshCw, FileQuestion } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -17,6 +17,8 @@ import {
   PaginationNext,
   PaginationEllipsis,
 } from '@/components/ui/pagination';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PersistentBanner } from '@/components/feedback/persistent-banner';
 import { useProjectList } from './project-queries';
 import { useProjectStore } from './project-store';
 import { ProjectTable } from './project-table';
@@ -51,7 +53,7 @@ const PAGE_SIZE_OPTIONS = ['5', '10', '20'];
 // ─── Component ──────────────────────────────────────────────────────
 
 export function ProjectListPage() {
-  const { data: projects, isLoading, error } = useProjectList();
+  const { data: projects, isLoading, error, refetch } = useProjectList();
 
   const {
     searchText, setSearchText,
@@ -63,6 +65,9 @@ export function ProjectListPage() {
   } = useProjectStore();
 
   // ── Filter + sort pipeline ──────────────────────────────────────
+
+  const hasPartial = projects?.some((p) => p.status === 'partial') ?? false;
+  const hasInterrupted = projects?.some((p) => p.status === 'interrupted') ?? false;
 
   const filtered = useMemo(() => {
     if (!projects) return [];
@@ -82,6 +87,11 @@ export function ProjectListPage() {
     // Risk filter
     if (riskFilter) {
       result = result.filter((p) => p.riskLevel === riskFilter);
+    }
+
+    // Hide low-risk when partial results exist
+    if (hasPartial && !riskFilter) {
+      result = result.filter((p) => p.riskLevel !== 'low');
     }
 
     // Sort
@@ -142,12 +152,11 @@ export function ProjectListPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-full flex-col" style={{ maxWidth: 1240, padding: '34px 36px 28px' }}>
+        <Skeleton className="mb-4 h-7 w-32" />
+        <Skeleton className="mb-3 h-9 w-full max-w-xs" />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-16 animate-pulse rounded-[var(--radius)] bg-[var(--color-bg-subtle)]"
-            />
+            <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
       </div>
@@ -162,6 +171,26 @@ export function ProjectListPage() {
         <p className="text-sm text-[var(--color-danger)]">
           加载项目列表失败: {error instanceof Error ? error.message : '未知错误'}
         </p>
+        <Button variant="primary" size="sm" className="mt-3" onClick={() => refetch()}>
+          <RefreshCw className="h-3.5 w-3.5" />
+          重试
+        </Button>
+      </div>
+    );
+  }
+
+  // ── Empty ─────────────────────────────────────────────────────
+
+  if (!projects || projects.length === 0) {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center" style={{ maxWidth: 1240, padding: '34px 36px 28px' }}>
+        <FileQuestion className="h-10 w-10 text-[var(--color-text-muted)]" aria-hidden="true" />
+        <p className="mt-3 text-sm font-medium text-[var(--color-text)]">暂无项目</p>
+        <p className="mt-1 text-xs text-[var(--color-text-muted)]">创建一个新项目开始分析</p>
+        <Button size="sm" variant="primary" className="mt-3" onClick={() => console.log('[ProjectList] new project')}>
+          <Plus className="h-3.5 w-3.5" />
+          新建项目
+        </Button>
       </div>
     );
   }
@@ -270,6 +299,25 @@ export function ProjectListPage() {
           ? `显示 ${filtered.length} / ${projects?.length ?? 0} 个项目`
           : `共 ${filtered.length} 个项目`}
       </div>
+
+      {/* Banners */}
+      {hasPartial && (
+        <PersistentBanner
+          variant="warning"
+          title="分析结果不完整，低风险项已隐藏"
+          className="mt-2"
+          dismissable
+        />
+      )}
+      {hasInterrupted && (
+        <PersistentBanner
+          variant="warning"
+          title="分析已中断"
+          className="mt-2"
+        >
+          部分项目的分析过程中断，可在项目菜单中恢复分析
+        </PersistentBanner>
+      )}
 
       {/* Table */}
       <div className="mt-2">

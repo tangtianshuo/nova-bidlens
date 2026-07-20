@@ -4,6 +4,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ProjectListPage } from './project-list-page';
 import { useProjectStore } from './project-store';
+import { buildProjectSummaries } from '../../__fixtures__/risk-project';
+import type { AnalysisProjectSummary } from '../../__fixtures__/risk-project';
+
+vi.mock('./project-queries', () => ({
+  useProjectList: vi.fn(),
+  projectKeys: { all: ['projects'], list: () => [['projects', 'list']] },
+}));
+
+const { useProjectList } = await import('./project-queries');
+const mockUseProjectList = vi.mocked(useProjectList);
 
 afterEach(cleanup);
 
@@ -14,6 +24,18 @@ function createWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
+}
+
+const DEFAULT_PROJECTS: AnalysisProjectSummary[] = buildProjectSummaries();
+
+function setMockReturn(overrides: Partial<ReturnType<typeof useProjectList>> = {}) {
+  mockUseProjectList.mockReturnValue({
+    data: DEFAULT_PROJECTS,
+    isLoading: false,
+    error: null,
+    refetch: vi.fn().mockResolvedValue({ data: DEFAULT_PROJECTS }),
+    ...overrides,
+  } as ReturnType<typeof useProjectList>);
 }
 
 beforeEach(() => {
@@ -27,6 +49,7 @@ beforeEach(() => {
     page: 1,
     pageSize: 10,
   });
+  setMockReturn();
 });
 
 async function renderPage() {
@@ -45,6 +68,7 @@ describe('ProjectListPage', () => {
   });
 
   it('shows loading skeleton initially', () => {
+    setMockReturn({ data: undefined, isLoading: true });
     const wrapper = createWrapper();
     const { container } = render(<ProjectListPage />, { wrapper });
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
@@ -75,7 +99,10 @@ describe('ProjectListPage', () => {
       fireEvent.change(input, { target: { value: '无基线' } });
 
       expect(screen.getByText(/无基线/)).toBeTruthy();
-      expect(screen.queryByText(/已中断/)).toBeNull();
+      // Only the matching project row should be in the table
+      const table = screen.getByRole('table');
+      const dataRows = table.querySelectorAll('tbody tr');
+      expect(dataRows.length).toBe(1);
     });
 
     it('shows filtered count', async () => {
@@ -223,6 +250,56 @@ describe('ProjectListPage', () => {
 
   it('shows total project count without filters', async () => {
     await renderPage();
-    expect(screen.getByText('共 6 个项目')).toBeTruthy();
+    // Low-risk project hidden due to partial state → 6 - 1 = 5
+    expect(screen.getByText('共 5 个项目')).toBeTruthy();
+  });
+
+  describe('empty state', () => {
+    it('shows empty state when no projects', () => {
+      setMockReturn({ data: [] });
+      const wrapper = createWrapper();
+      render(<ProjectListPage />, { wrapper });
+      expect(screen.getByText('暂无项目')).toBeTruthy();
+      expect(screen.getByText('新建项目')).toBeTruthy();
+    });
+  });
+
+  describe('error state', () => {
+    it('shows error message and retry button', () => {
+      setMockReturn({ data: undefined, error: new Error('网络错误') });
+      const wrapper = createWrapper();
+      render(<ProjectListPage />, { wrapper });
+      expect(screen.getByText(/加载项目列表失败/)).toBeTruthy();
+      expect(screen.getByText('重试')).toBeTruthy();
+    });
+
+    it('calls refetch when retry clicked', async () => {
+      const refetch = vi.fn().mockResolvedValue({ data: DEFAULT_PROJECTS });
+      setMockReturn({ data: undefined, error: new Error('fail'), refetch });
+      const wrapper = createWrapper();
+      render(<ProjectListPage />, { wrapper });
+      fireEvent.click(screen.getByText('重试'));
+      expect(refetch).toHaveBeenCalled();
+    });
+  });
+
+  describe('partial state', () => {
+    it('shows partial banner when partial projects exist', async () => {
+      await renderPage();
+      expect(screen.getByText('分析结果不完整，低风险项已隐藏')).toBeTruthy();
+    });
+
+    it('hides low-risk projects when partial results exist', async () => {
+      await renderPage();
+      // proj-fixture-003 has riskLevel 'low' — should be hidden
+      expect(screen.queryByText(/XX道路改造工程（降级）/)).toBeNull();
+    });
+  });
+
+  describe('interrupted state', () => {
+    it('shows interrupted banner when interrupted projects exist', async () => {
+      await renderPage();
+      expect(screen.getByText('分析已中断')).toBeTruthy();
+    });
   });
 });
