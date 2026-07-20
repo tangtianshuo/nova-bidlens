@@ -48,12 +48,15 @@ function savePanelSizes(sizes: PanelSizes): void {
   }
 }
 
+import type { ReviewMode } from './review-mode';
+
 interface WorkbenchLayoutProps {
   taskbar: React.ReactNode;
   filterbar: React.ReactNode;
   navPanel: React.ReactNode;
   viewport: React.ReactNode;
   detailPanel: React.ReactNode;
+  mode?: ReviewMode;
   className?: string;
 }
 
@@ -63,8 +66,11 @@ export function WorkbenchLayout({
   navPanel,
   viewport,
   detailPanel,
+  mode = 'version-diff',
   className,
 }: WorkbenchLayoutProps) {
+  const navLabel = mode === 'risk-review' ? '发现项导航' : '差异导航';
+  const detailLabel = mode === 'risk-review' ? '证据详情' : '差异详情';
   const [sizes, setSizes] = useState<PanelSizes>(loadPanelSizes);
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
@@ -176,11 +182,11 @@ export function WorkbenchLayout({
         <div
           className="min-w-0 min-h-0 bg-[var(--color-bg)] border-r border-[var(--color-border)] overflow-hidden"
           role="region"
-          aria-label="差异导航"
+          aria-label={navLabel}
         >
           {/* Panel head */}
           <div className="flex items-center justify-between gap-2 px-3 border-b border-[var(--color-border)]" style={{ height: 42, fontSize: 12, fontWeight: 700 }}>
-            {!leftCollapsed && <span>差异导航</span>}
+            {!leftCollapsed && <span>{navLabel}</span>}
             <SimpleTooltip content={leftCollapsed ? '展开导航' : '折叠导航'}>
               <Button
                 variant="ghost"
@@ -248,7 +254,7 @@ export function WorkbenchLayout({
           <div
             className="min-w-0 min-h-0 bg-[var(--color-bg)] border-l border-[var(--color-border)] overflow-hidden"
             role="region"
-            aria-label="差异详情"
+            aria-label={detailLabel}
           >
             {detailPanel}
           </div>
@@ -267,7 +273,7 @@ export function WorkbenchLayout({
           >
             {/* Close button */}
             <div className="flex items-center justify-between px-3 border-b border-[var(--color-border)]" style={{ height: 42, fontSize: 12, fontWeight: 700 }}>
-              <span>差异详情</span>
+              <span>{detailLabel}</span>
               <SimpleTooltip content="收起差异详情">
                 <Button
                   variant="ghost"
