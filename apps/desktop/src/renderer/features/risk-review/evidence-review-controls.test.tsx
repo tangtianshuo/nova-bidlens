@@ -71,19 +71,19 @@ describe('EvidenceReviewControls', () => {
     expect(onStatusChange).toHaveBeenCalledWith('f1', 'ignored');
   });
 
-  it('calls onStatusChange with important when important clicked', async () => {
+  it('calls onImportantChange when important clicked', async () => {
     const user = userEvent.setup();
-    const onStatusChange = vi.fn();
+    const onImportantChange = vi.fn();
     render(
       <EvidenceReviewControls
         findingId="f1"
         currentStatus="pending"
         reviewNote=""
-        onStatusChange={onStatusChange}
+        onImportantChange={onImportantChange}
       />,
     );
     await user.click(screen.getByText('标记重要'));
-    expect(onStatusChange).toHaveBeenCalledWith('f1', 'important');
+    expect(onImportantChange).toHaveBeenCalledWith('f1', true);
   });
 
   it('shows reset button when status is not pending', () => {

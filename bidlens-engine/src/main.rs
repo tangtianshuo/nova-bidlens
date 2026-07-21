@@ -1,8 +1,11 @@
+mod risk_engine;
 mod task_service;
 
 use anyhow::Result;
+use risk_engine::{RiskEngine, RiskProjectRequest};
 use serde::Deserialize;
 use serde_json::{Value, json};
+use std::sync::Arc;
 use task_service::{CancellationToken, TaskProgress, TaskResult, engine_info, run_compare};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::sync::{mpsc, watch};
@@ -23,6 +26,13 @@ enum TaskEvent {
         request_id: String,
         result: Result<TaskResult, String>,
     },
+    RiskProgress {
+        progress: risk_engine::RiskProgress,
+    },
+    RiskCompleted {
+        request_id: String,
+        result: Result<risk_engine::RiskProjectResult, String>,
+    },
 }
 
 struct ActiveTask {
@@ -36,6 +46,7 @@ async fn main() -> Result<()> {
     let mut stdout = io::stdout();
     let (event_tx, mut event_rx) = mpsc::unbounded_channel::<TaskEvent>();
     let mut active_task: Option<ActiveTask> = None;
+    let risk_engine = Arc::new(RiskEngine::new());
 
     loop {
         tokio::select! {
@@ -120,6 +131,74 @@ async fn main() -> Result<()> {
                         };
                         write_result(&mut stdout, &request.id, json!({ "cancelled": cancelled })).await?;
                     }
+                    "risk.createProject" => {
+                        let params: RiskProjectRequest = match request.params.map(serde_json::from_value).transpose() {
+                            Ok(Some(params)) => params,
+                            Ok(None) => {
+                                write_error(&mut stdout, &request.id, -32602, "缺少参数").await?;
+                                continue;
+                            }
+                            Err(error) => {
+                                write_error(&mut stdout, &request.id, -32602, &format!("参数错误: {error}")).await?;
+                                continue;
+                            }
+                        };
+                        let engine = risk_engine.clone();
+                        let request_id = request.id.clone();
+                        let worker_tx = event_tx.clone();
+                        let project_id = match engine.create_project(params).await {
+                            Ok(resp) => resp.project_id.clone(),
+                            Err(err) => {
+                                write_error(&mut stdout, &request.id, -32010, &err.message).await?;
+                                continue;
+                            }
+                        };
+                        // Run analysis in background
+                        let engine_clone = engine.clone();
+                        let pid = project_id.clone();
+                        let completion_tx = event_tx.clone();
+                        tokio::spawn(async move {
+                            let progress_tx = worker_tx.clone();
+                            let result = engine_clone.run_analysis(&pid, move |progress| {
+                                let _ = progress_tx.send(TaskEvent::RiskProgress {
+                                    progress,
+                                });
+                            }).await;
+                            let _ = completion_tx.send(TaskEvent::RiskCompleted {
+                                request_id: request_id.clone(),
+                                result: result.map_err(|e| e.message),
+                            });
+                        });
+                        write_result(&mut stdout, &request.id, json!({ "projectId": project_id })).await?;
+                    }
+                    "risk.cancelProject" => {
+                        let project_id: String = match request.params.and_then(|p| p.get("projectId").cloned()).map(serde_json::from_value).transpose() {
+                            Ok(Some(id)) => id,
+                            _ => {
+                                write_error(&mut stdout, &request.id, -32602, "缺少 projectId").await?;
+                                continue;
+                            }
+                        };
+                        let engine = risk_engine.clone();
+                        match engine.cancel_project(&project_id).await {
+                            Ok(resp) => write_result(&mut stdout, &request.id, serde_json::to_value(&resp).unwrap()).await?,
+                            Err(err) => write_error(&mut stdout, &request.id, -32010, &err.message).await?,
+                        }
+                    }
+                    "risk.getProject" => {
+                        let project_id: String = match request.params.and_then(|p| p.get("projectId").cloned()).map(serde_json::from_value).transpose() {
+                            Ok(Some(id)) => id,
+                            _ => {
+                                write_error(&mut stdout, &request.id, -32602, "缺少 projectId").await?;
+                                continue;
+                            }
+                        };
+                        let engine = risk_engine.clone();
+                        match engine.get_project(&project_id).await {
+                            Ok(resp) => write_result(&mut stdout, &request.id, serde_json::to_value(&resp).unwrap()).await?,
+                            Err(err) => write_error(&mut stdout, &request.id, -32010, &err.message).await?,
+                        }
+                    }
                     "shutdown" => {
                         if let Some(task) = &active_task {
                             let _ = task.cancel.send(true);
@@ -157,6 +236,25 @@ async fn main() -> Result<()> {
                                     "diff": task_result.diff,
                                     "duration_ms": task_result.duration_ms
                                 })).await?;
+                            }
+                            Err(message) if message.contains("取消") => {
+                                write_error(&mut stdout, &request_id, -32002, &message).await?;
+                            }
+                            Err(message) => {
+                                write_error(&mut stdout, &request_id, -32000, &message).await?;
+                            }
+                        }
+                    }
+                    TaskEvent::RiskProgress { progress } => {
+                        write_line(&mut stdout, &json!({
+                            "method": "risk.progress",
+                            "params": progress
+                        })).await?;
+                    }
+                    TaskEvent::RiskCompleted { request_id, result } => {
+                        match result {
+                            Ok(project_result) => {
+                                write_result(&mut stdout, &request_id, serde_json::to_value(&project_result).unwrap()).await?;
                             }
                             Err(message) if message.contains("取消") => {
                                 write_error(&mut stdout, &request_id, -32002, &message).await?;

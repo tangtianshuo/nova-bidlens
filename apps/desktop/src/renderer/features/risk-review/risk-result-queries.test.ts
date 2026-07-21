@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { computeFindingCounts } from './risk-result-queries';
 import type { RiskFinding } from '../../__fixtures__/risk-project';
 
+const DEFAULT_SCORE = { exactMatchScore: 0.9, lexicalScore: 0, structuralScore: 0, entityScore: 0, factScore: 0, tenderDiscount: 0, templateDiscount: 0, factConflictPenalty: 0, finalScore: 0.9, ruleVersion: '1.0.0' };
+
 function makeFinding(overrides: Partial<RiskFinding> = {}): RiskFinding {
   return {
     id: 'find-test-001',
@@ -12,9 +14,12 @@ function makeFinding(overrides: Partial<RiskFinding> = {}): RiskFinding {
     symmetricSimilarity: 0.85,
     directionalCoverage: [],
     confidenceScore: 0.9,
-    reviewStatus: 'pending',
-    reviewNote: '',
+    scoreBreakdown: DEFAULT_SCORE,
     ruleVersion: '1.0.0',
+    reviewStatus: 'pending',
+    important: false,
+    reviewNote: '',
+    reviewedAt: null,
     ...overrides,
   };
 }
@@ -63,13 +68,13 @@ describe('computeFindingCounts', () => {
       makeFinding({ id: 'f2', reviewStatus: 'pending' }),
       makeFinding({ id: 'f3', reviewStatus: 'confirmed' }),
       makeFinding({ id: 'f4', reviewStatus: 'ignored' }),
-      makeFinding({ id: 'f5', reviewStatus: 'important' }),
+      makeFinding({ id: 'f5', important: true, reviewStatus: 'confirmed' }),
     ];
     const counts = computeFindingCounts(findings);
     expect(counts.pending).toBe(2);
-    expect(counts.confirmed).toBe(1);
+    expect(counts.confirmed).toBe(2);
     expect(counts.byReviewStatus.ignored).toBe(1);
-    expect(counts.byReviewStatus.important).toBe(1);
+    expect(counts.important).toBe(1);
   });
 
   it('maintains separate raw, confirmed, and filtered counts', () => {
@@ -79,9 +84,10 @@ describe('computeFindingCounts', () => {
       makeFinding({ id: 'f3', riskLevel: 'medium', reviewStatus: 'confirmed' }),
     ];
     const counts = computeFindingCounts(findings);
-    expect(counts.total).toBe(3); // raw
-    expect(counts.confirmed).toBe(2); // human confirmed
+    expect(counts.total).toBe(3);
+    expect(counts.byRisk.high).toBe(2);
+    expect(counts.byRisk.medium).toBe(1);
+    expect(counts.confirmed).toBe(2);
     expect(counts.pending).toBe(1);
-    expect(counts.byRisk.high).toBe(2); // filtered by risk
   });
 });

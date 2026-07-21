@@ -3,7 +3,7 @@
  * All SQL statements for table creation and indexes.
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const CREATE_TABLES_SQL = [
   // Tasks table — stores comparison task metadata

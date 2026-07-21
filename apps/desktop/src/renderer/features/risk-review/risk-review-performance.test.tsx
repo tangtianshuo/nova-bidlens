@@ -6,6 +6,8 @@ import type { RiskFinding } from '../../__fixtures__/risk-project';
 
 afterEach(cleanup);
 
+const DEFAULT_SCORE = { exactMatchScore: 0.9, lexicalScore: 0, structuralScore: 0, entityScore: 0, factScore: 0, tenderDiscount: 0, templateDiscount: 0, factConflictPenalty: 0, finalScore: 0.9, ruleVersion: '1.0.0' };
+
 function makeFinding(id: string, overrides: Partial<RiskFinding> = {}): RiskFinding {
   return {
     id,
@@ -18,9 +20,12 @@ function makeFinding(id: string, overrides: Partial<RiskFinding> = {}): RiskFind
       { fromId: 'sub-1', toId: 'sub-2', coverage: 0.85 },
     ],
     confidenceScore: 0.9,
-    reviewStatus: 'pending',
-    reviewNote: '',
+    scoreBreakdown: DEFAULT_SCORE,
     ruleVersion: '1.0.0',
+    reviewStatus: 'pending',
+    important: false,
+    reviewNote: '',
+    reviewedAt: null,
     ...overrides,
   };
 }

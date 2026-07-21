@@ -1,43 +1,34 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/query-keys';
 
-// ─── Query keys ──────────────────────────────────────────────────────────
-
+// Backward-compat alias matching the old projectKeys shape.
 export const projectKeys = {
-  all: ['projects'] as const,
-  list: () => [...projectKeys.all, 'list'] as const,
-  detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
+  all: queryKeys.projects.all,
+  list: queryKeys.projects.list,
+  detail: queryKeys.projects.detail,
 };
 
 // ─── Hooks ───────────────────────────────────────────────────────────────
 
 /**
  * Fetch the list of analysis project summaries.
- * Reads project summaries from the Electron main process.
+ * For progress-driven auto-refresh, use useProgressSubscription from lib/progress-subscription.ts.
  */
 export function useProjectList() {
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    if (!window.bidlens?.onRiskProgress) return;
-    return window.bidlens.onRiskProgress(() => {
-    void queryClient.invalidateQueries({ queryKey: projectKeys.all });
-    });
-  }, [queryClient]);
   return useQuery({
-    queryKey: projectKeys.list(),
+    queryKey: queryKeys.projects.list(),
     queryFn: () => window.bidlens.listProjects(),
   });
 }
 
 /**
  * Fetch full detail for a single analysis project.
- * Reads one project snapshot from the Electron main process.
+ * For progress-driven auto-refresh, use useProgressSubscription from lib/progress-subscription.ts.
  */
 export function useProjectDetail(projectId: string | null) {
   return useQuery({
-    queryKey: projectKeys.detail(projectId ?? ''),
+    queryKey: queryKeys.projects.detail(projectId ?? ''),
     queryFn: () => {
       if (!projectId) throw new Error('projectId is required');
       return window.bidlens.getProject(projectId);

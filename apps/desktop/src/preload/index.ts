@@ -20,12 +20,23 @@ const api: BidLensApi = {
   getProject: (projectId: string) => ipcRenderer.invoke('risk:getProject', projectId),
   createRiskProject: (request: CreateRiskProjectRequest) => ipcRenderer.invoke('risk:createProject', request),
   cancelRiskProject: (projectId: string) => ipcRenderer.invoke('risk:cancelProject', projectId),
+  resumeRiskProject: (projectId: string) => ipcRenderer.invoke('risk:resumeProject', projectId),
+  retryRiskSubmission: (projectId: string, submissionId: string, newFile?: unknown) => ipcRenderer.invoke('risk:retrySubmission', projectId, submissionId, newFile),
+  acceptPartial: (projectId: string) => ipcRenderer.invoke('risk:acceptPartial', projectId),
+  deleteProject: (projectId: string) => ipcRenderer.invoke('risk:deleteProject', projectId),
   onRiskProgress: (handler: (progress: RiskProgress) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: unknown) => handler(progress as RiskProgress);
     ipcRenderer.on('risk:progress', listener);
     return () => { ipcRenderer.removeListener('risk:progress', listener); };
   },
+  onDetectorProgress: (handler: (progress: import('@bidlens/shared').DetectorProgress) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: unknown) => handler(progress as import('@bidlens/shared').DetectorProgress);
+    ipcRenderer.on('risk:detectorProgress', listener);
+    return () => { ipcRenderer.removeListener('risk:detectorProgress', listener); };
+  },
   saveRiskFindingReview: (request) => ipcRenderer.invoke('risk:saveFindingReview', request),
+  getAuditEvents: (projectId: string) => ipcRenderer.invoke('risk:getAuditEvents', projectId),
+  exportRiskReport: (request: unknown) => ipcRenderer.invoke('risk:exportReport', request),
   // File
   selectFile: () => ipcRenderer.invoke('file:select'),
   validateFiles: (request: ValidateFilesRequest) => ipcRenderer.invoke('file:validate', request),

@@ -19,10 +19,10 @@ describe('AnalysisRecoveryActions', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('renders nothing for validating status', () => {
+  it('renders nothing for running status', () => {
     const { container } = render(
       <AnalysisRecoveryActions
-        status="validating"
+        status="running"
         degradationReason={null}
         warnings={[]}
       />,
@@ -30,10 +30,10 @@ describe('AnalysisRecoveryActions', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('renders nothing for detecting status', () => {
+  it('renders nothing for draft status', () => {
     const { container } = render(
       <AnalysisRecoveryActions
-        status="detecting"
+        status="draft"
         degradationReason={null}
         warnings={[]}
       />,

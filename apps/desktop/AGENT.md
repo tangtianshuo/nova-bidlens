@@ -1,394 +1,167 @@
-# AGENT.md - Desktop 应用层
+# AGENT.md - Desktop application layer
 
-> 层级：Electron桌面应用
-> 路径：apps/desktop/
-> 最后更新：2026-07-17
+> Path: `apps/desktop/`
+> Updated: 2026-07-21
+> Product authority: `docs/product/PRD-v0.3-similarity-risk-review.md`
 
----
+## Responsibilities
 
-## 一、模块概述
+The Desktop layer owns:
 
-### 1.1 职责
+- Electron windows and operating-system integration.
+- Typed preload IPC between Renderer and Main.
+- File dialogs, validation and Node parser orchestration.
+- Project orchestration, progress, cancellation and recovery.
+- SQLite Worker ownership, encryption, retention and reports.
+- React project, processing, risk, evidence and settings surfaces.
 
-Desktop模块是BidLens的Electron桌面应用层，负责：
-- 窗口管理和系统交互
-- IPC通信桥接（主进程↔渲染进程）
-- 文件系统操作
-- 自动更新
-- UI渲染和用户交互
+Rust owns transport-neutral detection and risk computation. Renderer must not access Node APIs or databases directly.
 
-### 1.2 架构
+## Current And Target State
 
-`
-apps/desktop/
-├── electron/              # 主进程 (CommonJS)
-│   └── src/main/
-│       └── index.ts       # 入口，IPC处理器注册
-├── src/
-│   ├── main/              # 主进程代码
-│   ├── renderer/          # 渲染进程 (React)
-│   │   ├── components/    # 通用组件
-│   │   ├── features/      # 功能模块
-│   │   │   └── compare/   # 比对功能
-│   │   ├── hooks/         # 自定义Hook
-│   │   └── stores/        # Zustand状态
-│   └── preload/           # 预加载脚本
-│       └── index.ts       # contextBridge
-└── package.json
-`
+Current:
 
----
+- The V0.2.2 `compare:*` pipeline is implemented and remains registered.
+- VNext risk-review UI surfaces and initial `risk:*` IPC are implemented.
+- The risk-review Main service is an incomplete in-memory lexical fallback.
+- Risk project persistence, ReviewNode extraction, detectors, recovery, review-save integration, project reports and real-file Electron E2E are not complete.
 
-## 二、技术栈
+Target V0.3.0:
 
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| Electron | 35.x | 桌面框架 |
-| React | 19.x | UI框架 |
-| Vite | 6.x | 构建工具 |
-| TypeScript | 5.x | 类型系统 |
-| Zustand | 5.x | 状态管理 |
-| TanStack Query | 5.x | 异步状态 |
-| diff | 8.x | Renderer 字符级文本差异回退 |
-| TailwindCSS | 4.x | 样式 |
-| shadcn/ui | - | UI组件库 |
-| Vitest | 3.x | 测试 |
+- A single project-based risk-review product flow.
+- No standalone version-diff product entry.
+- Existing Diff capabilities reused from RiskFinding and file-pair evidence views.
+- Real encrypted project checkpoints and reports.
 
----
+Target V0.3.1:
 
-## 三、核心模块
+- Local model lifecycle, semantic progress, encrypted vector cache and explicit lexical fallback.
 
-### 3.1 主进程 (Main Process)
+Do not describe target modules as currently implemented.
 
-`	ypescript
-// src/main/index.ts
-import { app, BrowserWindow, ipcMain } from 'electron';
-import { registerCompareHandlers } from './compare-handlers';
+## Runtime Boundaries
 
-let mainWindow: BrowserWindow;
+```text
+React Renderer
+  -> window.bidlens typed API
+Preload
+  -> ipcRenderer.invoke / event subscriptions
+Electron Main
+  -> file validation, parsers, orchestration, SQLite, encryption
+  -> stdio JSON-RPC
+Rust Engine
+```
 
-function createWindow() {
-    mainWindow = new BrowserWindow({
-        width: 1400,
-        height: 900,
-        webPreferences: {
-            preload: path.join(__dirname, '../preload/index.js'),
-            contextIsolation: true,
-            nodeIntegration: false,
-        },
-    });
-}
+Main entry and important boundaries:
 
-app.whenReady().then(() => {
-    createWindow();
-    registerCompareHandlers(ipcMain, mainWindow);
-});
-`
+- `src/main/index.ts`
+- `src/main/ipc/compare-handlers.ts`
+- `src/main/ipc/risk-review-handlers.ts`
+- `src/main/services/task-orchestrator.ts`
+- `src/main/services/risk-review-service.ts`
+- `src/preload/index.ts`
+- `src/renderer/app/App.tsx`
 
-### 3.2 IPC处理器
+## IPC Rules
 
-`	ypescript
-// src/main/compare-handlers.ts
-export function registerCompareHandlers(ipcMain: IpcMain, mainWindow: BrowserWindow) {
-    ipcMain.handle('compare:start', async (event, request) => {
-        // 启动比对任务
-        const taskId = generateTaskId();
-        
-        // 异步执行比对
-        executeCompare(taskId, request, (progress) => {
-            mainWindow.webContents.send('compare:progress', progress);
-        });
-        
-        return { taskId };
-    });
-    
-    ipcMain.handle('compare:cancel', async (event, taskId) => {
-        // 取消比对任务
-    });
-}
-`
+1. Define request, response and event types in `packages/shared/src/ipc.ts`.
+2. Export renderer-safe types through `@bidlens/shared/types-only`.
+3. Implement the Main handler under `src/main/ipc/`.
+4. Expose the exact `BidLensApi` method in `src/preload/index.ts`.
+5. Consume only `window.bidlens` from Renderer.
+6. Add contract and handler tests.
 
-### 3.3 预加载脚本
+Current risk creation uses:
 
-`	ypescript
-// src/preload/index.ts
-import { contextBridge, ipcRenderer } from 'electron';
-import { BidLensApi } from '@bidlens/shared';
+```text
+window.bidlens.createRiskProject(request)
+-> risk:createProject
+-> { projectId }
+```
 
-const api: BidLensApi = {
-    startCompare: (request) => ipcRenderer.invoke('compare:start', request),
-    cancelCompare: (taskId) => ipcRenderer.invoke('compare:cancel', taskId),
-    onCompareProgress: (callback) => {
-        ipcRenderer.on('compare:progress', (event, progress) => callback(progress));
-    },
-};
+Do not rename this to `createProject` in documentation or code without changing the Shared contract.
 
-contextBridge.exposeInMainWorld('bidlens', api);
-`
+`compare:*` remains a compatibility and evidence capability until the PRD migration is complete. New primary product work belongs under `risk:*`.
 
-### 3.4 渲染进程组件
+## Renderer Import Rule
 
-`	ypescript
-// src/renderer/features/compare/ReviewWorkbench.tsx
-export function ReviewWorkbench({ diffAst }: { diffAst: DiffAst }) {
-    return (
-        <div className="grid grid-cols-3 h-full">
-            <DocumentPanel title="文档A" items={diffAst.items} side="left" />
-            <DiffPanel items={diffAst.items} />
-            <DocumentPanel title="文档B" items={diffAst.items} side="right" />
-        </div>
-    );
-}
-`
+Renderer files under `src/renderer/` must import Shared values and types from:
 
----
+```ts
+import type { RiskFinding } from '@bidlens/shared/types-only';
+```
 
-## 四、关键组件
+Renderer must not import from `@bidlens/shared` because the full entry can include Node-only parser dependencies.
 
-| 组件 | 路径 | 功能 |
-|------|------|------|
-| ReviewWorkbench | features/compare/ | 三栏比对工作台 |
-| TableDiffView | components/ | 表格差异视图 |
-| TableCellView | components/ | 单元格差异视图 |
-| DiffItemCard | components/ | 差异项卡片 |
-| DocumentPanel | components/ | 文档面板 |
+When adding a browser-safe Shared type or pure helper, export it from `packages/shared/src/types-only.ts` without importing the full index.
 
----
+## Vite And Electron Guardrails
 
-## 五、状态管理
+`vite.config.ts` must retain:
 
-`	ypescript
-// src/renderer/stores/compare-store.ts
-import { create } from 'zustand';
+```ts
+server: {
+  port: 5173,
+  strictPort: true,
+},
+base: './',
+```
 
-interface CompareState {
-    taskId: string | null;
-    status: 'idle' | 'comparing' | 'completed' | 'error';
-    progress: number;
-    diffAst: DiffAst | null;
-    error: string | null;
-    
-    startCompare: (request: CompareRequest) => Promise<void>;
-    cancelCompare: () => void;
-    reset: () => void;
-}
+- Electron development loads `http://127.0.0.1:5173`.
+- Packaged `file://` rendering requires relative assets.
+- The native menu stays disabled.
+- Renderer owns the frameless title bar.
+- DevTools must not open automatically.
+- Default window is 1280x800 with a 1024x700 minimum.
 
-export const useCompareStore = create<CompareState>((set) => ({
-    taskId: null,
-    status: 'idle',
-    progress: 0,
-    diffAst: null,
-    error: null,
-    
-    startCompare: async (request) => {
-        set({ status: 'comparing', progress: 0 });
-        const { taskId } = await window.bidlens.startCompare(request);
-        set({ taskId });
-    },
-    cancelCompare: () => { /* ... */ },
-    reset: () => { /* ... */ },
-}));
-`
+## State And Data Rules
 
----
+- TanStack Query owns server/IPC state.
+- Zustand owns local selection, filters and view state.
+- A project ID must have one canonical navigation source; do not split active project identity across unrelated stores.
+- `ProjectStatus`, `AnalysisPhase` and per-submission processing state are separate concepts.
+- Progress events invalidate or update the corresponding project Query.
+- Production pages must never import fixture builders.
+- Do not show fixed or fabricated progress timing.
+- Partial results must never render as normal low risk.
 
-## 六、开发指南
+## UI Rules
 
-### 6.1 命令
+- Use existing Tailwind tokens and shadcn-style primitives.
+- Preserve risk, detector, task and Diff semantic separation.
+- Tables and matrices own horizontal scrolling; the app shell must not overflow.
+- Validate 1280x800, 1024x700 and a 760px equivalent viewport.
+- Persistent warnings such as no-baseline, degraded and partial states must not rely on transient toasts.
+- Use Lucide icons and accessible labels for icon controls.
+- Risk evidence may reuse the three-column review layout, but risk and Diff tabs remain explicitly configured.
 
-`ash
-# 开发模式
+## Commands
+
+```powershell
 pnpm --filter @bidlens/desktop dev
-
-# 测试
-pnpm --filter @bidlens/desktop test
-
-# 构建
 pnpm --filter @bidlens/desktop build
-`
-
-### 6.2 添加新组件
-
-`	ypescript
-// 1. 创建组件文件
-// src/renderer/components/MyComponent.tsx
-
-// 2. 创建测试文件
-// src/renderer/components/MyComponent.test.tsx
-
-// 3. 导出组件
-// src/renderer/components/index.ts
-export { MyComponent } from './MyComponent';
-`
-
-### 6.3 添加新的IPC处理器
-
-`	ypescript
-// 1. 在shared中定义API接口
-// packages/shared/src/ipc.ts
-
-// 2. 在主进程实现处理器
-// src/main/my-handlers.ts
-
-// 3. 在preload中桥接
-// src/preload/index.ts
-
-// 4. 在渲染进程中使用
-// window.bidlens.myMethod()
-`
-
----
-
-## 七、测试
-
-### 7.1 组件测试
-
-`	ypescript
-// src/renderer/components/TableDiffView.test.tsx
-import { render, screen } from '@testing-library/react';
-import { TableDiffView } from './TableDiffView';
-
-describe('TableDiffView', () => {
-    it('renders table with diff', () => {
-        render(<TableDiffView tableA={mockTableA} tableB={mockTableB} diffResult={mockDiff} />);
-        expect(screen.getByRole('table')).toBeInTheDocument();
-    });
-});
-`
-
-### 7.2 运行测试
-
-`ash
-# 运行所有桌面测试
 pnpm --filter @bidlens/desktop test
+pnpm --filter @bidlens/desktop exec vitest run
+pnpm --filter @bidlens/desktop exec tsc -p tsconfig.main.json --noEmit
+pnpm --filter @bidlens/desktop exec tsc -p tsconfig.json --noEmit
+```
 
-# 运行特定测试
-pnpm vitest run apps/desktop/src/renderer/components/TableDiffView.test.tsx
-`
+For `pnpm`, do not append `-- --run`; use `pnpm --filter @bidlens/desktop exec vitest run`.
 
----
+## Required Tests
 
-## 八、常见问题
+- Main service and handler unit tests.
+- Preload/Shared contract consistency.
+- Renderer component and Query tests.
+- Real-file integration tests for DOCX and text PDF.
+- Electron E2E for create, process, cancel, recover, review, history and export.
+- Accessibility and responsive regressions.
+- Production bundle check proving fixture projects are unreachable.
 
-| 问题 | 解决方案 |
-|------|----------|
-| Electron启动失败 | 检查Node.js版本，清理node_modules |
-| IPC通信无响应 | 检查preload脚本是否正确加载 |
-| 热更新失效 | 重启dev server |
-| 构建产物过大 | 检查externals配置 |
+## Documentation
 
----
-
-## 九、相关文档
-
-- [总架构设计](../../docs/01-总体架构设计.md)
-- [React前端设计](../../docs/03-模块设计-React前端.md)
-- [IPC协议设计](../../docs/06-IPC通信协议设计.md)
-
-## 四、Vite 配置规范（重要）
-
-## 四点五、产品窗口与标题栏
-
-- Renderer owns the product title bar and uses a drag region for frameless/hidden-titlebar windows.
-- Electron's native application menu is disabled; product commands belong in the renderer top bar.
-- Development tools are opt-in and must never open automatically with the application.
-
-## 四点六、间距与响应式布局
-
-- Renderer spacing follows the 4px scale defined in `src/renderer/styles/globals.css`: `--space-1` through `--space-8`.
-- Page shells use `.app-page` and the responsive `--layout-page-*` variables instead of fixed page padding.
-- Panel and dialog content use `--layout-panel` and `--layout-dialog-*`; avoid new inline pixel padding or margin unless the value is intrinsic to a fixed-format control.
-- At widths below 1280px, secondary filters may collapse; below 1080px, toolbars may wrap and optional labels may hide while icon commands remain available.
-- Tables and wide document content own their horizontal scrolling. The application shell must not create page-level horizontal overflow.
-- Validate UI changes at 1280x800, 1024x700, and a 760px equivalent viewport for high-scaling behavior.
-
-## 四点七、差异详情呈现
-
-- Prefer engine-provided `DiffItem.diffDetail` tokens when available.
-- When tokens are absent but `sourceA` or `sourceB` contains text, Renderer uses the `diff` package to generate character-level fallback tokens.
-- Text detail is a local presentation capability and remains available even when the engine returns an empty `capabilities` array. Only format, comment, and revision tabs are capability-gated.
-- Replacement diffs render baseline and review text on separate rows so dense numeric changes cannot visually concatenate.
-- Inputs above 20,000 combined characters use a bounded common-prefix/common-suffix fallback to avoid blocking the UI thread.
-
-## 四点八、审阅筛选语义
-
-- `全部` must show every result item, including `identical` items. It also clears match-type filtering and disables `hideIdentical`.
-- Identical items are hidden by default to keep the review queue focused, with an explicit control to show them again.
-- When identical items are hidden, the result count must state how many matching identical items were excluded by that filter.
-- Virtualized navigation may render only viewport rows in the DOM, but its item count must always use the complete filtered collection.
-
-### 4.1 开发服务器配置
-
-`typescript
-// apps/desktop/vite.config.ts
-export default defineConfig({
-  root: 'src/renderer',
-  base: './',
-  plugins: [react()],
-  server: {
-    port: 5173,
-    strictPort: true,  // 必须固定端口
-  },
-  build: {
-    outDir: '../../dist/renderer',
-    emptyOutDir: true,
-    rollupOptions: {
-      external: [
-        'fs/promises', 'crypto', 'path', 'os', 'fs',
-        'child_process', 'docx4js', 'pdf-parse'
-      ]
-    }
-  },
-});
-`
-
-### 4.2 为什么需要 strictPort: true
-
-Electron 主进程硬编码加载 http://127.0.0.1:5173：
-
-`typescript
-// src/main/index.ts
-if (isDev) {
-  win.loadURL('http://127.0.0.1:5173');
-}
-`
-
-如果端口 5173 被占用，Vite 会自动选择 5174、5175 等端口，但 Electron 仍然尝试连接 5173，导致加载空白页面。
-
-### 4.3 为什么需要 ase: './'
-
-打包后 Electron 使用 ile:// 协议加载 HTML：
-`typescript
-// src/main/index.ts
-win.loadFile(path.join(__dirname, '../renderer/index.html'));
-`
-
-如果 ase 是默认的 /，资源路径会变成 /assets/index.js（绝对路径），在 ile:// 协议下会指向错误位置。设置 ase: './' 后路径变为 ./assets/index.js（相对路径）。
-
----
-
-## 五、渲染进程导入规范（Critical）
-
-### 5.1 导入规则
-
-**渲染进程（src/renderer/）必须从 @bidlens/shared/types-only 导入：**
-
-`typescript
-// ✅ 正确
-import type { CompareResult, DiffItem } from '@bidlens/shared/types-only';
-import { isTableDiffItem } from '@bidlens/shared/types-only';
-
-// ❌ 错误 - 会导致 crypto 模块 externalize 错误
-import type { CompareResult } from '@bidlens/shared';
-import { isTableDiffItem } from '@bidlens/shared';
-`
-
-### 5.2 原因
-
-@bidlens/shared 的完整导出包含 docx4js 等依赖 Node.js 模块的解析器。渲染进程运行在浏览器环境，不能使用这些模块。
-
-### 5.3 检查清单
-
-- [ ] src/renderer/ 下所有 .tsx 文件的导入路径是否使用 @bidlens/shared/types-only
-- [ ] 新增组件时是否正确使用 types-only 导入
-
+- Product: `docs/product/PRD-v0.3-similarity-risk-review.md`
+- Architecture: `docs/architecture.md`
+- IPC: `docs/api/ipc.md`
+- UI implementation status: `docs/reports/vnext-ui-execution-status.md`
+- Roadmap: `docs/roadmap.md`

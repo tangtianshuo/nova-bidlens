@@ -81,10 +81,10 @@ describe('Persistence Layer', () => {
       expect(tableNames).toContain('migration_history');
     });
 
-    it('should set user_version to 1', () => {
+    it('should set user_version to 2', () => {
       dbManager.open();
       const version = dbManager.getDb().pragma('user_version') as Array<{ user_version: number }>;
-      expect(version[0].user_version).toBe(1);
+      expect(version[0].user_version).toBe(2);
     });
 
     it('should record migration in history', () => {
@@ -95,9 +95,11 @@ describe('Persistence Layer', () => {
         'SELECT * FROM migration_history ORDER BY version'
       ).all() as Array<{ version: number; name: string; checksum: string }>;
 
-      expect(migrations).toHaveLength(1);
+      expect(migrations).toHaveLength(2);
       expect(migrations[0].version).toBe(1);
       expect(migrations[0].name).toBe('initial_schema');
+      expect(migrations[1].version).toBe(2);
+      expect(migrations[1].name).toBe('risk_project_persistence');
     });
 
     it('should verify migration checksums', () => {

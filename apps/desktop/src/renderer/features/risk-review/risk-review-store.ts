@@ -104,13 +104,13 @@ export const useRiskReviewStore = create<RiskReviewState>((set, get) => ({
 // ─── Filter predicate ───────────────────────────────────────────────
 
 export function matchesFilter(
-  finding: { riskLevel: RiskLevel; detectorType: DetectorType; reviewStatus: FindingReviewStatus; involvedSubmissionIds: string[] },
+  finding: { riskLevel: RiskLevel; detectorType: DetectorType; reviewStatus: FindingReviewStatus; important: boolean; involvedSubmissionIds: string[] },
   filters: FindingFilterState,
 ): boolean {
   if (filters.riskLevels.size > 0 && !filters.riskLevels.has(finding.riskLevel)) return false;
   if (filters.detectorTypes.size > 0 && !filters.detectorTypes.has(finding.detectorType)) return false;
   if (filters.reviewStatuses.size > 0 && !filters.reviewStatuses.has(finding.reviewStatus)) return false;
-  if (filters.showImportantOnly && finding.reviewStatus !== 'important') return false;
+  if (filters.showImportantOnly && !finding.important) return false;
   if (filters.filePair) {
     const [a, b] = filters.filePair;
     if (!finding.involvedSubmissionIds.includes(a) || !finding.involvedSubmissionIds.includes(b)) {

@@ -191,24 +191,51 @@ export function SubmissionFileList({
     setIsDragging(false);
   }, []);
 
+  const addFilesFromList = useCallback(
+    (fileList: FileList) => {
+      const incoming: SubmissionFile[] = [];
+      for (const file of Array.from(fileList)) {
+        const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+        if (ext !== 'docx' && ext !== 'pdf') continue;
+        // Electron extends File with a `path` property containing the full filesystem path
+        const path = (file as File & { path?: string }).path ?? file.name;
+        const format = ext as 'docx' | 'pdf';
+        incoming.push({
+          id: crypto.randomUUID(),
+          path,
+          name: file.name,
+          format,
+          sizeBytes: file.size,
+          pageCount: null,
+          sha256: path, // ponytail: path as proxy, real sha256 computed server-side during validation
+        });
+      }
+      if (incoming.length > 0) {
+        const remaining = maxFiles - files.length;
+        onChange([...files, ...incoming.slice(0, remaining)]);
+      }
+    },
+    [files, onChange, maxFiles],
+  );
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
-      // In real implementation, read files from e.dataTransfer.files
-      // For now, this is a placeholder — actual file reading is IPC-bound
+      if (e.dataTransfer.files.length > 0) {
+        addFilesFromList(e.dataTransfer.files);
+      }
     },
-    [],
+    [addFilesFromList],
   );
 
-  const handleAddClick = useCallback(async () => {
-    const selected = await window.bidlens.selectFile();
-    if (!selected) return;
-    const format = selected.format.toLowerCase() as 'docx' | 'pdf';
-    onChange([...files, { id: crypto.randomUUID(), path: selected.path, name: selected.name, format, sizeBytes: selected.size, pageCount: null, sha256: selected.path }]);
-  }, [files, onChange]);
-
-  const handleFileInputChange = useCallback(() => undefined, []);
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) addFilesFromList(e.target.files);
+      e.target.value = '';
+    },
+    [addFilesFromList],
+  );
 
   const totalSize = files.reduce((sum, f) => sum + f.sizeBytes, 0);
 
@@ -239,11 +266,15 @@ export function SubmissionFileList({
         }`}
       >
         {files.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 text-xs text-[var(--color-text-muted)]">
+          <button
+            type="button"
+            className="flex flex-1 flex-col items-center justify-center gap-2 text-xs text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text)] transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <Upload className="h-5 w-5" />
-            <span>拖放投标文件到此处，或点击下方按钮添加</span>
+            <span>拖放投标文件到此处，或点击选择文件</span>
             <span>支持 .docx 和文字版 .pdf，{minFiles}-{maxFiles} 个文件</span>
-          </div>
+          </button>
         ) : (
           <div className="flex flex-col gap-1">
             {files.map((file, idx) => (
@@ -263,7 +294,7 @@ export function SubmissionFileList({
         {canAddMore && files.length > 0 && (
           <button
             type="button"
-          onClick={() => { void handleAddClick(); }}
+            onClick={() => fileInputRef.current?.click()}
             className="mt-1 flex items-center gap-1 self-start rounded-[var(--radius)] px-2 py-1 text-xs text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] transition-colors"
           >
             <Upload className="h-3.5 w-3.5" />

@@ -21,6 +21,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { PersistentBanner } from '@/components/feedback/persistent-banner';
 import { useProjectList } from './project-queries';
+import { useProgressSubscription } from '../../lib/progress-subscription';
 import { useProjectStore } from './project-store';
 import { ProjectTable } from './project-table';
 import type { AnalysisProjectStatus, RiskLevel } from '@bidlens/shared/types-only';
@@ -54,6 +55,7 @@ const PAGE_SIZE_OPTIONS = ['5', '10', '20'];
 // ─── Component ──────────────────────────────────────────────────────
 
 export function ProjectListPage({ onNewProject, onOpenProject }: { onNewProject?: () => void; onOpenProject?: (id: string) => void } = {}) {
+  useProgressSubscription(null); // auto-refresh list when any project updates
   const { data: projects, isLoading, error, refetch } = useProjectList();
 
   const {
@@ -137,13 +139,11 @@ export function ProjectListPage({ onNewProject, onOpenProject }: { onNewProject?
   }, [onOpenProject]);
 
   const handleDelete = useCallback((id: string) => {
-    // TODO: wire delete confirmation dialog
-    console.log('[ProjectList] delete project:', id);
+    void window.bidlens.deleteProject(id);
   }, []);
 
   const handleResume = useCallback((id: string) => {
-    // TODO: wire resume analysis
-    console.log('[ProjectList] resume project:', id);
+    void window.bidlens.resumeRiskProject(id);
   }, []);
 
   const hasFilters = searchText || statusFilter || riskFilter;

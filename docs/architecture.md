@@ -1,7 +1,17 @@
 # BidLens Architecture
 
-> Version: 2.0 (V0.2.2)
-> Last updated: 2026-07-18
+> Version: 2.1 (V0.2.2 current runtime / V0.3 transition)
+> Last updated: 2026-07-21
+> Product authority: `docs/product/PRD-v0.3-similarity-risk-review.md`
+
+## Architecture Status
+
+- **Current proven runtime:** V0.2.2 two-document parse, Diff, persistence, review and export pipeline.
+- **Current partial transition:** VNext risk-review UI, initial Shared risk types and initial `risk:*` IPC with an in-memory lexical fallback.
+- **V0.3.0 target:** ReviewNode extraction, four base detectors, tender filtering, aggregation, project persistence, checkpoints, review and reports.
+- **V0.3.1 target:** BGE-M3 ONNX provider, encrypted vectors, semantic Top-K and hybrid reranking.
+
+The standalone version-diff product flow is being retired. DiffAst and existing compare capabilities remain available as evidence tooling until the RiskFinding workflow has fully migrated. Target modules must not be represented as current implementation.
 
 ## Runtime Boundaries
 
@@ -59,6 +69,8 @@ Core crates are transport-neutral (no stdio or HTTP dependency):
 
 ## Data Flow
 
+### Current V0.2.2 Flow
+
 ```
 Renderer: file selection → validateFiles IPC
 Main: validate files, inspect capabilities → FileValidationResult[]
@@ -71,6 +83,23 @@ Main: encrypt + persist snapshots to SQLite
 Renderer: receives CompareResult, renders review workbench
 ```
 
+### Target V0.3.0 Flow
+
+```text
+Renderer: create risk project through typed risk:* IPC
+Main: validate 2-8 submissions and optional tender baseline
+Main: parse immutable DocumentAst snapshots
+Rust/analysis core: derive ReviewNode and extract entities/key facts
+Analysis core: filter tender common content
+Analysis core: sparse hash/ngram/entity-fact/table candidate recall
+Analysis core: run text/table/entity/key-fact detectors
+Analysis core: aggregate RiskFinding, file-pair and project risk
+Main: encrypt checkpoints, evidence, review decisions and reports
+Renderer: render overview, matrix, findings and evidence review
+```
+
+ProjectStatus, AnalysisPhase and per-submission processing state are separate contracts in the V0.3.0 target.
+
 ## IPC Surface (Spec §10)
 
 | Group | Operations |
@@ -82,6 +111,8 @@ Renderer: receives CompareResult, renders review workbench
 | Export | exportReport, openExportedFile, openExportFolder |
 | Settings | getSettings, updateSettings, getStorageReport, cleanup |
 | Engine | engineHandshake |
+
+Initial `risk:*` operations are also present for project list/detail, creation, cancellation, progress and finding review. The contract remains incomplete until it covers the PRD state, persistence, recovery and reporting requirements. `compare:*` remains registered during evidence migration.
 
 ## Task State Machine (Spec §9)
 
@@ -106,6 +137,8 @@ Running states discovered at launch become `interrupted`.
 
 ## References
 
+- [V0.3 Canonical PRD](product/PRD-v0.3-similarity-risk-review.md)
+- [Roadmap](roadmap.md)
 - [V0.2.2 Implementation Spec](v022-implementation-spec.md)
 - [V0.2.2 Task Breakdown](v022-task-breakdown.md)
 - [UI/UE Decision Log](v022-ui-ue-decision-log.md)

@@ -1,0 +1,193 @@
+{
+  "meta": {
+    "description": "V0.3 canonical JSON fixtures for BidLens similarity risk review",
+    "createdAt": "2026-07-21T10:00:00Z",
+    "ruleVersion": "v0.3.0",
+    "parserVersion": "v0.3.0"
+  },
+
+  "riskSubmission": {
+    "id": "sub-001",
+    "fileName": "中建三局投标文件-技术标.docx",
+    "fileFormat": "docx",
+    "fileSizeBytes": 4582912,
+    "pageCount": 156,
+    "sha256": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "status": "extracted",
+    "warnings": ["检测到扫描页3页，OCR精度可能降低"]
+  },
+
+  "evidence": {
+    "id": "ev-001",
+    "detectorType": "text",
+    "matchBasis": "lexical",
+    "similarityScore": 0.92,
+    "sourceSubmissionId": "sub-001",
+    "sourceNodeId": "node-t12",
+    "sourceOriginalText": "本工程质量目标为确保获得省级优质工程奖，争创国家级优质工程奖。",
+    "sourceNormalizedText": "本工程质量目标为确保获得省级优质工程奖争创国家级优质工程奖",
+    "sourceSectionPath": ["第三章 施工组织设计", "质量管理", "质量目标"],
+    "sourcePageRange": [42, 43],
+    "sourceTableLocation": null,
+    "targetSubmissionId": "sub-002",
+    "targetNodeId": "node-t34",
+    "targetOriginalText": "本工程质量目标为确保获得省级优质工程奖，争创国家级优质工程奖。",
+    "targetNormalizedText": "本工程质量目标为确保获得省级优质工程奖争创国家级优质工程奖",
+    "targetSectionPath": ["第三章 施工组织设计", "质量管理", "质量目标"],
+    "targetPageRange": [38, 39],
+    "targetTableLocation": null,
+    "contextBefore": "为实现上述质量目标，特制定以下措施：",
+    "contextAfter": "具体保障措施详见附件。",
+    "tenderFiltered": false,
+    "tenderFilterReason": null,
+    "ruleVersion": "v0.3.0"
+  },
+
+  "evidenceWithTable": {
+    "id": "ev-002",
+    "detectorType": "table",
+    "matchBasis": "structural",
+    "similarityScore": 0.88,
+    "sourceSubmissionId": "sub-001",
+    "sourceNodeId": "node-t55",
+    "sourceOriginalText": "主要施工机械设备一览表",
+    "sourceNormalizedText": "主要施工机械设备一览表",
+    "sourceSectionPath": ["第五章 资源配置", "机械设备"],
+    "sourcePageRange": [78, 79],
+    "sourceTableLocation": {
+      "tableIndex": 3,
+      "rowIndex": 2,
+      "cellIndex": 1,
+      "headerContext": ["序号", "设备名称", "规格型号", "数量"]
+    },
+    "targetSubmissionId": "sub-002",
+    "targetNodeId": "node-t67",
+    "targetOriginalText": "主要施工机械设备一览表",
+    "targetNormalizedText": "主要施工机械设备一览表",
+    "targetSectionPath": ["第五章 资源配置", "机械设备"],
+    "targetPageRange": [65, 66],
+    "targetTableLocation": {
+      "tableIndex": 2,
+      "rowIndex": 2,
+      "cellIndex": 1,
+      "headerContext": ["序号", "设备名称", "规格型号", "数量"]
+    },
+    "contextBefore": "",
+    "contextAfter": "",
+    "tenderFiltered": true,
+    "tenderFilterReason": "与招标文件配置清单一致，按模板内容折扣",
+    "ruleVersion": "v0.3.0"
+  },
+
+  "riskFinding": {
+    "id": "finding-001",
+    "detectorType": "text",
+    "riskLevel": "high",
+    "involvedSubmissionIds": ["sub-001", "sub-002"],
+    "evidence": ["ev-placeholder-001", "ev-placeholder-002"],
+    "symmetricSimilarity": 0.89,
+    "directionalCoverage": [
+      { "fromId": "sub-001", "toId": "sub-002", "coverage": 0.85 },
+      { "fromId": "sub-002", "toId": "sub-001", "coverage": 0.82 }
+    ],
+    "confidenceScore": 0.94,
+    "scoreBreakdown": {
+      "exactMatchScore": 0.78,
+      "lexicalScore": 0.85,
+      "structuralScore": 0.72,
+      "entityScore": 0.65,
+      "factScore": 0.55,
+      "tenderDiscount": 0.1,
+      "templateDiscount": 0.05,
+      "factConflictPenalty": 0.0,
+      "finalScore": 0.89,
+      "ruleVersion": "v0.3.0"
+    },
+    "ruleVersion": "v0.3.0",
+    "reviewStatus": "pending",
+    "important": false,
+    "reviewNote": "",
+    "reviewedAt": null
+  },
+
+  "filePairAssessment": {
+    "id": "fpa-001",
+    "projectId": "proj-001",
+    "submissionAId": "sub-001",
+    "submissionBId": "sub-002",
+    "directionalCoverageAB": 0.85,
+    "directionalCoverageBA": 0.82,
+    "symmetricSimilarity": 0.84,
+    "riskLevel": "high",
+    "topFindingIds": ["finding-001", "finding-002"],
+    "findingCount": {
+      "high": 3,
+      "medium": 5,
+      "low": 2
+    },
+    "ruleVersion": "v0.3.0",
+    "analysisStatus": "complete"
+  },
+
+  "projectRiskAssessment": {
+    "id": "assess-001",
+    "projectId": "proj-001",
+    "level": "high",
+    "rawRuleScore": 0.87,
+    "topContributingFindingIds": ["finding-001", "finding-003"],
+    "preset": "standard",
+    "ruleVersion": "v0.3.0",
+    "analysisStatus": "complete",
+    "highValueFindingCount": 3,
+    "involvedSubmissionCount": 4,
+    "strongEntityHitCount": 7,
+    "tenderDiscountApplied": true,
+    "incompleteReason": null
+  },
+
+  "reviewDecision": {
+    "id": "rd-001",
+    "projectId": "proj-001",
+    "findingId": "finding-001",
+    "status": "confirmed",
+    "important": true,
+    "note": "两份投标文件施工组织设计章节内容高度一致，建议标记为疑似雷同",
+    "createdAt": "2026-07-21T14:30:00Z",
+    "updatedAt": "2026-07-21T15:00:00Z"
+  },
+
+  "analysisCheckpoint": {
+    "id": "ckpt-001",
+    "projectId": "proj-001",
+    "phase": "detecting",
+    "inputHash": "b3a1d2e4f5c6b3a1d2e4f5c6b3a1d2e4f5c6b3a1d2e4f5c6b3a1d2e4f5c6b3a1",
+    "processingVersion": "v0.3.0",
+    "completedDetectors": ["text", "table"],
+    "intermediateResultRef": null,
+    "warnings": [],
+    "errors": [],
+    "createdAt": "2026-07-21T10:15:00Z"
+  },
+
+  "auditEvent": {
+    "id": "audit-001",
+    "projectId": "proj-001",
+    "eventType": "analysis-started",
+    "payload": {
+      "submissionCount": 4,
+      "preset": "standard",
+      "baselineId": "sub-001"
+    },
+    "createdAt": "2026-07-21T10:05:00Z"
+  },
+
+  "exportedReport": {
+    "id": "rpt-001",
+    "projectId": "proj-001",
+    "format": "pdf",
+    "scope": "confirmed",
+    "resultHash": "c4d5e6f7a8b9c4d5e6f7a8b9c4d5e6f7a8b9c4d5e6f7a8b9c4d5e6f7a8b9c4d5",
+    "filePath": "/reports/2026-07-21_雷同性审查报告_项目001.pdf",
+    "createdAt": "2026-07-21T16:00:00Z"
+  }
+}

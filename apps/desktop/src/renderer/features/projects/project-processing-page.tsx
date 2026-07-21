@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/feedback/loading-button';
 import { PersistentBanner } from '@/components/feedback/persistent-banner';
 import { StatusBadge } from '@/components/feedback/status-badge';
+import { ConfirmDialog } from '@/components/feedback/confirm-dialog';
 import { useProjectDetail } from './project-queries';
+import { useProgressSubscription } from '../../lib/progress-subscription';
 import { useProjectStore } from './project-store';
 import { AnalysisStageList, deriveStages } from './analysis-stage-list';
 import { SubmissionProgressTable } from './submission-progress-table';
 import { AnalysisRecoveryActions, type RecoveryAction } from './analysis-recovery-actions';
-import type { AnalysisProjectStatus } from '@bidlens/shared/types-only';
+import type { AnalysisPhase, ProjectStatus } from '@bidlens/shared/types-only';
+import type { RiskProgress } from '@bidlens/shared';
 import { useAppStore } from '../../stores/app-store';
 
 // ── Preset labels ─────────────────────────────────────────────────────
@@ -24,38 +28,129 @@ const PRESET_LABELS: Record<string, string> = {
 export function ProjectProcessingPage() {
   const { selectedProjectId, clearSelection } = useProjectStore();
   const setView = useAppStore((state) => state.setView);
+  useProgressSubscription(selectedProjectId);
   const { data: project, isLoading, error } = useProjectDetail(selectedProjectId);
 
+  // Real-time progress state from progress events (between query refreshes)
+  const [liveProgress, setLiveProgress] = useState<RiskProgress | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<RecoveryAction | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const handleCancel = useCallback(() => {
-    if (selectedProjectId) void window.bidlens.cancelRiskProject(selectedProjectId);
+    setCancelDialogOpen(true);
+  }, []);
+
+  const handleConfirmCancel = useCallback(async () => {
+    if (!selectedProjectId) return;
+    setLoadingAction('cancel');
+    setActionError(null);
+    try {
+      await window.bidlens.cancelRiskProject(selectedProjectId);
+    } catch (err) {
+      setActionError(`取消分析失败: ${err instanceof Error ? err.message : '未知错误'}`);
+    } finally {
+      setLoadingAction(null);
+    }
   }, [selectedProjectId]);
 
   useEffect(() => {
     if (!selectedProjectId) return;
     return window.bidlens.onRiskProgress((progress) => {
-      if (progress.projectId === selectedProjectId && progress.status === 'ready') setView('project-result');
+      if (progress.projectId !== selectedProjectId) return;
+      setLiveProgress(progress);
+      if (progress.status === 'ready') setView('project-result');
     });
   }, [selectedProjectId, setView]);
 
+  // Clear live progress when project data refreshes
+  useEffect(() => {
+    if (project) setLiveProgress(null);
+  }, [project]);
+
   const handleRecoveryAction = useCallback(
-    (action: RecoveryAction) => {
-      if (action === 'cancel' && selectedProjectId) void window.bidlens.cancelRiskProject(selectedProjectId);
+    async (action: RecoveryAction) => {
+      if (!selectedProjectId) return;
+
+      if (action === 'delete') {
+        setDeleteDialogOpen(true);
+        return;
+      }
+
+      setLoadingAction(action);
+      setActionError(null);
+      try {
+        switch (action) {
+          case 'resume':
+            await window.bidlens.resumeRiskProject(selectedProjectId);
+            break;
+          case 'retry': {
+            const failedSubmissions = (project?.submissions ?? []).filter(
+              (s) => s.status === 'failed',
+            );
+            if (failedSubmissions.length === 0) {
+              // No specific failed submissions, retry the whole project
+              await window.bidlens.resumeRiskProject(selectedProjectId);
+            } else {
+              await Promise.all(
+                failedSubmissions.map((s) =>
+                  window.bidlens.retryRiskSubmission(selectedProjectId, s.id),
+                ),
+              );
+            }
+            break;
+          }
+          case 'accept-partial':
+            await window.bidlens.acceptPartial(selectedProjectId);
+            break;
+          case 'cancel':
+            setCancelDialogOpen(true);
+            break;
+        }
+      } catch (err) {
+        const label = action === 'resume' ? '恢复分析'
+          : action === 'retry' ? '重试分析'
+          : action === 'accept-partial' ? '接受部分结果'
+          : '操作';
+        setActionError(`${label}失败: ${err instanceof Error ? err.message : '未知错误'}`);
+      } finally {
+        setLoadingAction(null);
+      }
     },
-    [selectedProjectId],
+    [selectedProjectId, project],
   );
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!selectedProjectId) return;
+    setLoadingAction('delete');
+    setActionError(null);
+    try {
+      await window.bidlens.deleteProject(selectedProjectId);
+      clearSelection();
+    } catch (err) {
+      setActionError(`删除项目失败: ${err instanceof Error ? err.message : '未知错误'}`);
+    } finally {
+      setLoadingAction(null);
+    }
+  }, [selectedProjectId, clearSelection]);
 
   const handleBack = useCallback(() => {
     clearSelection();
   }, [clearSelection]);
 
-  const stages = useMemo(() => {
-    if (!project) return [];
-    return deriveStages(project.status);
-  }, [project]);
+  // Derive stages from real project phase + live progress
+  const currentPhase: AnalysisPhase | null = liveProgress?.phase ?? project?.phase ?? null;
+  const currentStatus: ProjectStatus = (liveProgress?.status as ProjectStatus) ?? project?.status ?? 'draft';
+  const currentElapsedMs = liveProgress?.elapsedMs ?? project?.elapsedMs ?? 0;
+  const currentWarnings = liveProgress?.warnings ?? project?.warnings ?? [];
 
-  const isActive = project
-    ? !['ready', 'partial', 'interrupted', 'failed'].includes(project.status)
-    : false;
+  const stages = useMemo(() => {
+    if (!project && !liveProgress) return [];
+    return deriveStages(currentStatus, currentPhase);
+  }, [currentStatus, currentPhase, project, liveProgress]);
+
+  const isActive = !['ready', 'partial', 'interrupted', 'failed', 'cancelled'].includes(currentStatus);
 
   // ── Loading / No project selected ─────────────────────────────
 
@@ -107,20 +202,23 @@ export function ProjectProcessingPage() {
           <h1 className="text-lg font-semibold text-[var(--color-text)] truncate">
             {project.name}
           </h1>
-          <StatusBadge status={project.status} />
+          <StatusBadge status={currentStatus} />
         </div>
 
         <div className="mt-1 flex items-center gap-4 text-xs text-[var(--color-text-muted)]">
           <span>{project.submissions.length} 个文件</span>
           <span>预设：{PRESET_LABELS[project.preset] ?? project.preset}</span>
-          <span>耗时：{formatElapsedMs(project.elapsedMs)}</span>
+          <span>耗时：{formatElapsedMs(currentElapsedMs)}</span>
+          {liveProgress?.stageLabel && (
+            <span className="text-[var(--color-accent)]">{liveProgress.stageLabel}</span>
+          )}
         </div>
       </div>
 
-      {/* Warnings */}
-      {project.warnings.length > 0 && (
+      {/* Warnings — from project data or live progress */}
+      {currentWarnings.length > 0 && (
         <div className="mb-4 flex flex-col gap-2">
-          {project.warnings.map((w, i) => (
+          {currentWarnings.map((w, i) => (
             <PersistentBanner
               key={i}
               variant="warning"
@@ -144,7 +242,7 @@ export function ProjectProcessingPage() {
         </div>
       )}
 
-      {/* Stage list */}
+      {/* Stage list — derived from real phase */}
       <div className="mb-6">
         <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">
           分析阶段
@@ -152,14 +250,16 @@ export function ProjectProcessingPage() {
         <AnalysisStageList stages={stages} />
       </div>
 
-      {/* Recovery actions (UI-207) */}
+      {/* Recovery actions */}
       <AnalysisRecoveryActions
-        status={project.status}
+        status={currentStatus}
         degradationReason={project.degradationReason}
-        warnings={project.warnings}
+        warnings={currentWarnings}
         onAction={handleRecoveryAction}
         hasPartialResults={project.findings.length > 0}
-        elapsedMs={project.elapsedMs}
+        elapsedMs={currentElapsedMs}
+        loadingAction={loadingAction}
+        errorMessage={actionError}
       />
 
       {/* File progress table */}
@@ -175,12 +275,36 @@ export function ProjectProcessingPage() {
       {/* Cancel button */}
       {isActive && (
         <div className="mt-auto pt-4 border-t border-[var(--color-border)]">
-          <Button variant="destructive" size="md" onClick={handleCancel}>
+          <LoadingButton variant="destructive" size="md" loading={loadingAction === 'cancel'} onClick={handleCancel}>
             <XCircle className="h-3.5 w-3.5" />
             取消分析
-          </Button>
+          </LoadingButton>
         </div>
       )}
+
+      {/* Cancel confirmation dialog */}
+      <ConfirmDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        title="取消分析"
+        description="确定要取消当前分析任务吗？已处理的进度将丢失。"
+        confirmLabel="取消分析"
+        cancelLabel="继续分析"
+        variant="destructive"
+        onConfirm={() => { void handleConfirmCancel(); }}
+      />
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="删除项目"
+        description="确定要删除该项目吗？此操作不可撤销，所有分析数据将被永久删除。"
+        confirmLabel="删除项目"
+        cancelLabel="取消"
+        variant="destructive"
+        onConfirm={() => { void handleConfirmDelete(); }}
+      />
     </div>
   );
 }

@@ -5,7 +5,19 @@
  */
 
 export const BIDLENS_VERSION = '0.2.2';
-export type { AnalysisProjectStatus, RiskLevel, DetectorType, FindingReviewStatus, RiskPreset, RiskAnalysisStatus, RiskFileFormat, RiskSubmission, SubmissionSummary, RiskEvidence, Evidence, RiskFinding, RiskAssessment, AnalysisProjectSummary, AnalysisProjectDetail } from './risk-review.js';
+export type {
+  ProjectStatus, AnalysisPhase, SubmissionState, RiskLevel, DetectorType, FindingReviewStatus,
+  RiskPreset, RiskAnalysisStatus, RiskFileFormat, ReviewNodeType, BusinessLabel,
+  EntityStrength, StrongEntityType, WeakEntityType, KeyFactType, MatchBasis,
+  AuditEventType, ReportFormat, ReportScope,
+  TableLocation, Entity, KeyFact, ReviewNode, RiskSubmission, SubmissionSummary,
+  TenderBaseline, ScoreBreakdown, DetectorCandidate, Evidence, RiskFinding,
+  ReviewDecision, FilePairAssessment, ProjectRiskAssessment,
+  AnalysisCheckpoint, DetectorRun, AuditEvent, ExportedReport,
+  AnalysisProjectSummary, AnalysisProjectDetail,
+  // Backward compat
+  AnalysisProjectStatus, RiskEvidence, RiskAssessment,
+} from './risk-review.js';
 
 // Core document types
 export type { DocumentAst, BlockNode, ParagraphNode, SectionNode, ListNode, TableNode, Comment, CommentRange, Revision } from './document-ast.js';
@@ -63,6 +75,10 @@ export type {
   CreateRiskProjectRequest,
   CreateRiskProjectResponse,
   RiskProgress,
+  DetectorProgress,
+  StructuredRiskError,
+  ExportRiskReportRequest,
+  ExportRiskReportResponse,
 } from './ipc.js';
 
 // State machine utilities (pure functions, no Node deps)

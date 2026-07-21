@@ -1,112 +1,18 @@
 /**
  * Typed fixtures for the similarity risk review product.
- *
- * These types are LOCAL to the renderer fixtures. They will be replaced
- * by `@bidlens/shared/types-only` exports once the Shared contract is frozen.
- * Production code MUST NOT import these types — only the fixture builders.
+ * Imports canonical types from Shared — no local type definitions.
  */
 
-// ─── Local type definitions (will move to Shared) ───────────────────────
+import type {
+  ProjectStatus, AnalysisPhase, SubmissionState, RiskLevel, DetectorType,
+  FindingReviewStatus, RiskFileFormat, RiskSubmission, Evidence, RiskFinding,
+  ProjectRiskAssessment, AnalysisProjectSummary, AnalysisProjectDetail,
+  TenderBaseline, ScoreBreakdown,
+} from '@bidlens/shared/types-only';
 
-export type AnalysisProjectStatus =
-  | 'validating'
-  | 'parsing'
-  | 'filtering'
-  | 'embedding'
-  | 'retrieving'
-  | 'detecting'
-  | 'aggregating'
-  | 'ready'
-  | 'partial'
-  | 'interrupted'
-  | 'failed';
-
-export type RiskLevel = 'high' | 'medium' | 'low';
-
-export type DetectorType = 'text' | 'table' | 'entity';
-
-export type FindingReviewStatus = 'pending' | 'confirmed' | 'ignored' | 'important';
-
-export type FileFormat = 'docx' | 'pdf';
-
-export interface SubmissionSummary {
-  id: string;
-  fileName: string;
-  fileFormat: FileFormat;
-  fileSizeBytes: number;
-  pageCount: number | null;
-  sha256: string;
-  status: AnalysisProjectStatus;
-  warnings: string[];
-}
-
-export interface Evidence {
-  id: string;
-  submissionId: string;
-  blockIndex: number;
-  originalText: string;
-  normalizedText: string;
-  matchBasis: 'lexical' | 'semantic' | 'structural' | 'entity';
-  similarityScore: number;
-  contextBefore: string;
-  contextAfter: string;
-  tenderFiltered: boolean;
-  tenderFilterReason: string | null;
-}
-
-export interface RiskFinding {
-  id: string;
-  detectorType: DetectorType;
-  riskLevel: RiskLevel;
-  involvedSubmissionIds: string[];
-  evidence: Evidence[];
-  symmetricSimilarity: number;
-  directionalCoverage: { fromId: string; toId: string; coverage: number }[];
-  confidenceScore: number;
-  reviewStatus: FindingReviewStatus;
-  reviewNote: string;
-  ruleVersion: string;
-}
-
-export interface RiskAssessment {
-  level: RiskLevel | 'incomplete';
-  rawRuleScore: number;
-  topContributingFindingIds: string[];
-  preset: 'strict' | 'standard' | 'loose';
-  ruleVersion: string;
-  analysisStatus: 'complete' | 'degraded' | 'partial';
-}
-
-export interface AnalysisProjectSummary {
-  id: string;
-  name: string;
-  createdAt: string;
-  status: AnalysisProjectStatus;
-  submissionCount: number;
-  riskLevel: RiskLevel | 'incomplete' | null;
-  preset: 'strict' | 'standard' | 'loose';
-  hasBaseline: boolean;
-  elapsedMs: number;
-}
-
-export interface AnalysisProjectDetail {
-  id: string;
-  name: string;
-  createdAt: string;
-  status: AnalysisProjectStatus;
-  submissions: SubmissionSummary[];
-  baseline: SubmissionSummary | null;
-  findings: RiskFinding[];
-  assessment: RiskAssessment | null;
-  preset: 'strict' | 'standard' | 'loose';
-  modelVersion: string;
-  ruleVersion: string;
-  parserVersion: string;
-  matcherVersion: string;
-  elapsedMs: number;
-  warnings: string[];
-  degradationReason: string | null;
-}
+// Re-export for test files that import these from the fixture
+export type { ProjectStatus as AnalysisProjectStatus } from '@bidlens/shared/types-only';
+export type { AnalysisProjectSummary, RiskFinding, Evidence, SubmissionSummary } from '@bidlens/shared/types-only';
 
 // ─── Deterministic ID generator ─────────────────────────────────────────
 
@@ -122,7 +28,7 @@ export function resetFixtureIds(): void {
 
 // ─── Base builders ──────────────────────────────────────────────────────
 
-function makeSubmission(overrides: Partial<SubmissionSummary> = {}): SubmissionSummary {
+function makeSubmission(overrides: Partial<RiskSubmission> = {}): RiskSubmission {
   return {
     id: nextId('sub'),
     fileName: '投标文件.docx',
@@ -130,7 +36,7 @@ function makeSubmission(overrides: Partial<SubmissionSummary> = {}): SubmissionS
     fileSizeBytes: 2_500_000,
     pageCount: 120,
     sha256: 'a'.repeat(64),
-    status: 'ready',
+    status: 'extracted',
     warnings: [],
     ...overrides,
   };
@@ -139,19 +45,37 @@ function makeSubmission(overrides: Partial<SubmissionSummary> = {}): SubmissionS
 function makeEvidence(overrides: Partial<Evidence> = {}): Evidence {
   return {
     id: nextId('ev'),
-    submissionId: 'sub-fixture-001',
-    blockIndex: 42,
-    originalText: '本项目拟投入技术人员共计15人，其中高级工程师3人...',
-    normalizedText: '本项目拟投入技术人员共计15人其中高级工程师3人',
+    detectorType: 'text',
     matchBasis: 'semantic',
     similarityScore: 0.92,
+    sourceSubmissionId: 'sub-fixture-001',
+    sourceNodeId: 'node-42',
+    sourceOriginalText: '本项目拟投入技术人员共计15人，其中高级工程师3人...',
+    sourceNormalizedText: '本项目拟投入技术人员共计15人其中高级工程师3人',
+    sourceSectionPath: ['技术方案', '项目团队配置'],
+    sourcePageRange: null,
+    sourceTableLocation: null,
+    targetSubmissionId: 'sub-fixture-002',
+    targetNodeId: 'node-42',
+    targetOriginalText: '本项目拟投入技术人员共计15人，其中高级工程师3人...',
+    targetNormalizedText: '本项目拟投入技术人员共计15人其中高级工程师3人',
+    targetSectionPath: ['技术方案', '项目团队配置'],
+    targetPageRange: null,
+    targetTableLocation: null,
     contextBefore: '（三）项目团队配置',
     contextAfter: '（四）质量保证措施',
     tenderFiltered: false,
     tenderFilterReason: null,
+    ruleVersion: '1.0.0',
     ...overrides,
   };
 }
+
+const DEFAULT_SCORE: ScoreBreakdown = {
+  exactMatchScore: 0.9, lexicalScore: 0, structuralScore: 0,
+  entityScore: 0, factScore: 0, tenderDiscount: 0, templateDiscount: 0,
+  factConflictPenalty: 0, finalScore: 0.9, ruleVersion: '1.0.0',
+};
 
 function makeFinding(overrides: Partial<RiskFinding> = {}): RiskFinding {
   return {
@@ -166,21 +90,31 @@ function makeFinding(overrides: Partial<RiskFinding> = {}): RiskFinding {
       { fromId: 'sub-fixture-002', toId: 'sub-fixture-001', coverage: 0.78 },
     ],
     confidenceScore: 0.91,
-    reviewStatus: 'pending',
-    reviewNote: '',
+    scoreBreakdown: DEFAULT_SCORE,
     ruleVersion: '1.0.0',
+    reviewStatus: 'pending',
+    important: false,
+    reviewNote: '',
+    reviewedAt: null,
     ...overrides,
   };
 }
 
-function makeAssessment(overrides: Partial<RiskAssessment> = {}): RiskAssessment {
+function makeAssessment(overrides: Partial<ProjectRiskAssessment> = {}): ProjectRiskAssessment {
   return {
+    id: nextId('assess'),
+    projectId: 'proj-fixture-001',
     level: 'high',
     rawRuleScore: 82.5,
     topContributingFindingIds: ['find-fixture-001'],
     preset: 'standard',
     ruleVersion: '1.0.0',
     analysisStatus: 'complete',
+    highValueFindingCount: 2,
+    involvedSubmissionCount: 3,
+    strongEntityHitCount: 0,
+    tenderDiscountApplied: true,
+    incompleteReason: null,
     ...overrides,
   };
 }
@@ -208,14 +142,18 @@ export function buildReadyScenario(): AnalysisProjectDetail {
     name: 'XX道路改造工程招标项目',
     createdAt: '2026-07-20T10:00:00Z',
     status: 'ready',
+    phase: 'completed',
     submissions: subs,
-    baseline: makeSubmission({ id: 'sub-fixture-baseline', fileName: '招标文件.docx', sha256: '0'.repeat(64) }),
+    baseline: { id: 'bl-fixture-001', projectId: 'proj-fixture-001', submissionId: 'sub-fixture-baseline', status: 'parsed', parseWarnings: [] },
     findings,
+    filePairAssessments: [],
     assessment: makeAssessment({
       level: 'high',
       rawRuleScore: 82.5,
       topContributingFindingIds: ['find-fixture-001', 'find-fixture-002'],
     }),
+    detectorRuns: [],
+    checkpoints: [],
     preset: 'standard',
     modelVersion: 'bge-m3-1.0',
     ruleVersion: '1.0.0',
@@ -278,7 +216,7 @@ export function buildPartialScenario(): AnalysisProjectDetail {
 /** Interrupted: process crashed or was killed */
 export function buildInterruptedScenario(): AnalysisProjectDetail {
   const subs = [
-    makeSubmission({ id: 'sub-fixture-001', fileName: 'A公司投标文件.docx', status: 'embedding' }),
+    makeSubmission({ id: 'sub-fixture-001', fileName: 'A公司投标文件.docx', status: 'extracting' }),
     makeSubmission({ id: 'sub-fixture-002', fileName: 'B公司投标文件.docx', status: 'parsing' }),
   ];
   return {
@@ -286,10 +224,14 @@ export function buildInterruptedScenario(): AnalysisProjectDetail {
     name: 'XX道路改造工程（已中断）',
     createdAt: '2026-07-20T10:00:00Z',
     status: 'interrupted',
+    phase: 'extracting-entities',
     submissions: subs,
     baseline: null,
     findings: [],
+    filePairAssessments: [],
     assessment: null,
+    detectorRuns: [],
+    checkpoints: [],
     preset: 'standard',
     modelVersion: 'bge-m3-1.0',
     ruleVersion: '1.0.0',
@@ -304,7 +246,7 @@ export function buildInterruptedScenario(): AnalysisProjectDetail {
 /** Failed: analysis pipeline failed */
 export function buildFailedScenario(): AnalysisProjectDetail {
   const subs = [
-    makeSubmission({ id: 'sub-fixture-001', fileName: 'A公司投标文件.docx', status: 'embedding' }),
+    makeSubmission({ id: 'sub-fixture-001', fileName: 'A公司投标文件.docx', status: 'extracting' }),
     makeSubmission({ id: 'sub-fixture-002', fileName: 'B公司投标文件.docx', status: 'parsing' }),
   ];
   return {
@@ -312,10 +254,14 @@ export function buildFailedScenario(): AnalysisProjectDetail {
     name: 'XX道路改造工程（分析失败）',
     createdAt: '2026-07-20T08:00:00Z',
     status: 'failed',
+    phase: 'extracting-entities',
     submissions: subs,
     baseline: null,
     findings: [],
+    filePairAssessments: [],
     assessment: null,
+    detectorRuns: [],
+    checkpoints: [],
     preset: 'standard',
     modelVersion: 'bge-m3-1.0',
     ruleVersion: '1.0.0',
@@ -331,19 +277,23 @@ export function buildFailedScenario(): AnalysisProjectDetail {
 export function buildProcessingScenario(): AnalysisProjectDetail {
   resetFixtureIds();
   const subs = [
-    makeSubmission({ id: 'sub-fixture-001', fileName: 'A公司投标文件.docx', sha256: 'a'.repeat(64), status: 'detecting' }),
-    makeSubmission({ id: 'sub-fixture-002', fileName: 'B公司投标文件.docx', sha256: 'b'.repeat(64), status: 'detecting' }),
-    makeSubmission({ id: 'sub-fixture-003', fileName: 'C公司投标文件.docx', sha256: 'c'.repeat(64), status: 'embedding' }),
+    makeSubmission({ id: 'sub-fixture-001', fileName: 'A公司投标文件.docx', sha256: 'a'.repeat(64), status: 'extracted' }),
+    makeSubmission({ id: 'sub-fixture-002', fileName: 'B公司投标文件.docx', sha256: 'b'.repeat(64), status: 'extracted' }),
+    makeSubmission({ id: 'sub-fixture-003', fileName: 'C公司投标文件.docx', sha256: 'c'.repeat(64), status: 'extracting' }),
   ];
   return {
     id: 'proj-fixture-006',
     name: 'XX道路改造工程（处理中）',
     createdAt: '2026-07-20T14:00:00Z',
-    status: 'detecting',
+    status: 'running',
+    phase: 'detecting',
     submissions: subs,
-    baseline: makeSubmission({ id: 'sub-fixture-baseline', fileName: '招标文件.docx', sha256: '0'.repeat(64), status: 'ready' }),
+    baseline: { id: 'bl-fixture-002', projectId: 'proj-fixture-006', submissionId: 'sub-fixture-baseline', status: 'parsed', parseWarnings: [] },
     findings: [],
+    filePairAssessments: [],
     assessment: null,
+    detectorRuns: [],
+    checkpoints: [],
     preset: 'standard',
     modelVersion: 'bge-m3-1.0',
     ruleVersion: '1.0.0',
@@ -422,7 +372,7 @@ export function buildProjectSummaries(): AnalysisProjectSummary[] {
       id: 'proj-fixture-006',
       name: 'XX道路改造工程（处理中）',
       createdAt: '2026-07-20T14:00:00Z',
-      status: 'detecting',
+      status: 'running',
       submissionCount: 3,
       riskLevel: null,
       preset: 'standard',

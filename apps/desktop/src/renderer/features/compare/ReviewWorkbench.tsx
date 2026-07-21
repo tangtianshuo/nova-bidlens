@@ -1,5 +1,3 @@
-console.log('[ReviewWorkbench] Module loaded');
-
 import type { CompareResult, DiffItem } from '@bidlens/shared/types-only';
 import type { ParsedComment, ParsedRevision } from '@bidlens/shared/types-only';
 import { FormatDiffPanel } from '../../components/FormatDiffPanel';
@@ -23,16 +21,15 @@ export function ReviewWorkbench({
   revisionsA = [], 
   revisionsB = [] 
 }: ReviewWorkbenchProps) {
-  console.log('[ReviewWorkbench] Rendering with result:', result);
   const [selectedId, setSelectedId] = useState(result.diffAst.items[0]?.matchId ?? '');
   const selected = useMemo(() => result.diffAst.items.find((item) => item.matchId === selectedId) ?? result.diffAst.items[0], [result.diffAst.items, selectedId]);
 
-  const handleCellClick = (position: [number, number]) => {
-    console.log('Cell clicked:', position);
+  const handleCellClick = (_position: [number, number]) => {
+    // TODO: wire cell click navigation
   };
 
-  const handleJumpToPosition = (position: string) => {
-    console.log('Jump to position:', position);
+  const handleJumpToPosition = (_position: string) => {
+    // TODO: wire jump-to-position
   };
 
   return (

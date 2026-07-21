@@ -12,6 +12,10 @@ vi.mock('./project-queries', () => ({
   projectKeys: { all: ['projects'], list: () => [['projects', 'list']] },
 }));
 
+vi.mock('../../lib/progress-subscription', () => ({
+  useProgressSubscription: vi.fn(),
+}));
+
 const { useProjectList } = await import('./project-queries');
 const mockUseProjectList = vi.mocked(useProjectList);
 
@@ -52,9 +56,9 @@ beforeEach(() => {
   setMockReturn();
 });
 
-async function renderPage() {
+async function renderPage(onOpenProject?: (id: string) => void, onNewProject?: () => void) {
   const wrapper = createWrapper();
-  const result = render(<ProjectListPage />, { wrapper });
+  const result = render(<ProjectListPage onOpenProject={onOpenProject} onNewProject={onNewProject} />, { wrapper });
   await waitFor(() => {
     expect(screen.queryByText('项目列表')).toBeTruthy();
   });
@@ -216,14 +220,13 @@ describe('ProjectListPage', () => {
   });
 
   describe('row click', () => {
-    it('logs navigation on row click', async () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      await renderPage();
+    it('calls onOpenProject with project id on row click', async () => {
+      const onOpenProject = vi.fn();
+      await renderPage(onOpenProject);
 
       fireEvent.click(screen.getByText(/XX道路改造工程招标项目/));
 
-      expect(consoleSpy).toHaveBeenCalledWith('[ProjectList] navigate to project:', 'proj-fixture-001');
-      consoleSpy.mockRestore();
+      expect(onOpenProject).toHaveBeenCalledWith('proj-fixture-001');
     });
   });
 

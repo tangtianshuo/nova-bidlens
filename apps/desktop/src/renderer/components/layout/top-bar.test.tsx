@@ -51,18 +51,6 @@ describe('TopBar', () => {
     expect(screen.getByText('BidLens')).toBeDefined();
   });
 
-  it('renders risk review mode button', () => {
-    render(<TopBar />);
-    const buttons = screen.getAllByLabelText('雷同性审查');
-    expect(buttons.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('renders version diff mode button', () => {
-    render(<TopBar />);
-    const buttons = screen.getAllByLabelText('版本差异比对');
-    expect(buttons.length).toBeGreaterThanOrEqual(1);
-  });
-
   it('renders history button', () => {
     render(<TopBar />);
     const buttons = screen.getAllByLabelText('最近比对');
@@ -95,24 +83,4 @@ describe('TopBar', () => {
     expect(screen.getByTestId('settings-dialog-mock')).toBeDefined();
   });
 
-  it('calls setMode when risk review button is clicked', () => {
-    render(<TopBar />);
-    const button = screen.getAllByLabelText('雷同性审查')[0];
-    fireEvent.click(button);
-    expect(mockSetMode).toHaveBeenCalledWith('risk-review');
-  });
-
-  it('calls setMode when version diff button is clicked', () => {
-    render(<TopBar />);
-    const button = screen.getAllByLabelText('版本差异比对')[0];
-    fireEvent.click(button);
-    expect(mockSetMode).toHaveBeenCalledWith('version-diff');
-  });
-
-  it('highlights the active mode button', () => {
-    render(<TopBar />);
-    const riskButton = screen.getAllByLabelText('雷同性审查')[0];
-    // The active variant class should be present
-    expect(riskButton.className).toContain('accent-soft');
-  });
 });

@@ -89,9 +89,9 @@ const RISK_MARKER_COLOR: Record<string, string> = {
 
 const FindingRow = memo(function FindingRow({ finding, isSelected, isChecked, onClick, onCheckboxClick }: FindingRowProps) {
   const reviewLabel =
+    finding.important ? '重要' :
     finding.reviewStatus === 'confirmed' ? '已确认' :
-    finding.reviewStatus === 'ignored' ? '已忽略' :
-    finding.reviewStatus === 'important' ? '重要' : '待确认';
+    finding.reviewStatus === 'ignored' ? '已忽略' : '待确认';
 
   return (
     <div
@@ -145,7 +145,7 @@ const FindingRow = memo(function FindingRow({ finding, isSelected, isChecked, on
       </div>
 
       {/* Review status */}
-      <Badge variant={finding.reviewStatus === 'confirmed' ? 'added' : finding.reviewStatus === 'important' ? 'accent' : 'default'} className="text-[10px]">
+      <Badge variant={finding.reviewStatus === 'confirmed' ? 'added' : finding.important ? 'accent' : 'default'} className="text-[10px]">
         {reviewLabel}
       </Badge>
     </div>

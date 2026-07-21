@@ -7,16 +7,20 @@ import type { FindingReviewStatus } from '@bidlens/shared/types-only';
 interface EvidenceReviewControlsProps {
   findingId: string;
   currentStatus: FindingReviewStatus;
+  important?: boolean;
   reviewNote: string;
   onStatusChange?: (id: string, status: FindingReviewStatus) => void;
+  onImportantChange?: (id: string, important: boolean) => void;
   onNoteChange?: (id: string, note: string) => void;
 }
 
 export function EvidenceReviewControls({
   findingId,
   currentStatus,
+  important = false,
   reviewNote,
   onStatusChange,
+  onImportantChange,
   onNoteChange,
 }: EvidenceReviewControlsProps) {
   const handleConfirm = useCallback(
@@ -28,8 +32,8 @@ export function EvidenceReviewControls({
     [findingId, onStatusChange],
   );
   const handleImportant = useCallback(
-    () => onStatusChange?.(findingId, 'important'),
-    [findingId, onStatusChange],
+    () => onImportantChange?.(findingId, !important),
+    [findingId, important, onImportantChange],
   );
   const handleReset = useCallback(
     () => onStatusChange?.(findingId, 'pending'),
@@ -38,8 +42,7 @@ export function EvidenceReviewControls({
 
   const statusLabel =
     currentStatus === 'confirmed' ? '已确认' :
-    currentStatus === 'ignored' ? '已忽略' :
-    currentStatus === 'important' ? '重要' : '待确认';
+    currentStatus === 'ignored' ? '已忽略' : '待确认';
 
   return (
     <div className="flex flex-col gap-3 p-4 text-xs" role="region" aria-label="人工复核">
@@ -47,11 +50,14 @@ export function EvidenceReviewControls({
       <div className="flex items-center gap-2">
         <span className="text-[var(--color-text-muted)]">当前状态</span>
         <Badge
-          variant={currentStatus === 'confirmed' ? 'added' : currentStatus === 'important' ? 'accent' : 'default'}
+          variant={currentStatus === 'confirmed' ? 'added' : 'default'}
           className="text-[10px]"
         >
           {statusLabel}
         </Badge>
+        {important && (
+          <Badge variant="modified" className="text-[10px]">重要</Badge>
+        )}
       </div>
 
       {/* Action buttons */}
@@ -75,13 +81,12 @@ export function EvidenceReviewControls({
           忽略
         </Button>
         <Button
-          variant={currentStatus === 'important' ? 'primary' : 'secondary'}
+          variant={important ? 'primary' : 'secondary'}
           size="sm"
           onClick={handleImportant}
-          disabled={currentStatus === 'important'}
         >
           <Star className="h-3.5 w-3.5" />
-          标记重要
+          {important ? '取消重要' : '标记重要'}
         </Button>
         {currentStatus !== 'pending' && (
           <Button variant="secondary" size="sm" onClick={handleReset}>

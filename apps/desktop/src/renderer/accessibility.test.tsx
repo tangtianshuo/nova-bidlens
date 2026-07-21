@@ -607,8 +607,8 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
     it('RelationshipMatrix has grid role with label', async () => {
       const { RelationshipMatrix } = await import('./features/risk-review/relationship-matrix');
       const subs = [
-        { id: 's1', fileName: 'A.docx', fileFormat: 'docx' as const, fileSizeBytes: 1024, pageCount: 10, sha256: 'a1', status: 'ready' as const, warnings: [] },
-        { id: 's2', fileName: 'B.docx', fileFormat: 'docx' as const, fileSizeBytes: 2048, pageCount: 20, sha256: 'b1', status: 'ready' as const, warnings: [] },
+        { id: 's1', fileName: 'A.docx', fileFormat: 'docx' as const, fileSizeBytes: 1024, pageCount: 10, sha256: 'a1', status: 'extracted' as const, warnings: [] },
+        { id: 's2', fileName: 'B.docx', fileFormat: 'docx' as const, fileSizeBytes: 2048, pageCount: 20, sha256: 'b1', status: 'extracted' as const, warnings: [] },
       ];
       render(<RelationshipMatrix submissions={subs} findings={[]} />);
       expect(screen.getByRole('grid', { name: '文件关系矩阵' })).toBeTruthy();
@@ -617,8 +617,8 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
     it('RelationshipMatrix cells are keyboard accessible', async () => {
       const { RelationshipMatrix } = await import('./features/risk-review/relationship-matrix');
       const subs = [
-        { id: 's1', fileName: 'A.docx', fileFormat: 'docx' as const, fileSizeBytes: 1024, pageCount: 10, sha256: 'a1', status: 'ready' as const, warnings: [] },
-        { id: 's2', fileName: 'B.docx', fileFormat: 'docx' as const, fileSizeBytes: 2048, pageCount: 20, sha256: 'b1', status: 'ready' as const, warnings: [] },
+        { id: 's1', fileName: 'A.docx', fileFormat: 'docx' as const, fileSizeBytes: 1024, pageCount: 10, sha256: 'a1', status: 'extracted' as const, warnings: [] },
+        { id: 's2', fileName: 'B.docx', fileFormat: 'docx' as const, fileSizeBytes: 2048, pageCount: 20, sha256: 'b1', status: 'extracted' as const, warnings: [] },
       ];
       render(<RelationshipMatrix submissions={subs} findings={[]} />);
       const cells = screen.getAllByRole('gridcell');
@@ -634,6 +634,8 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
         involvedSubmissionIds: ['s1', 's2'], evidence: [], symmetricSimilarity: 0.9,
         directionalCoverage: [], confidenceScore: 0.95, reviewStatus: 'pending' as const,
         reviewNote: '', ruleVersion: '1.0.0',
+        scoreBreakdown: { exactMatchScore: 0.9, lexicalScore: 0, structuralScore: 0, entityScore: 0, factScore: 0, tenderDiscount: 0, templateDiscount: 0, factConflictPenalty: 0, finalScore: 0.9, ruleVersion: '1.0.0' },
+        important: false, reviewedAt: null,
       }];
       render(<FindingVirtualList findings={findings} />);
       expect(screen.getByRole('listbox', { name: '发现项列表' })).toBeTruthy();
@@ -646,6 +648,8 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
         involvedSubmissionIds: ['s1', 's2'], evidence: [], symmetricSimilarity: 0.9,
         directionalCoverage: [], confidenceScore: 0.95, reviewStatus: 'pending' as const,
         reviewNote: '', ruleVersion: '1.0.0',
+        scoreBreakdown: { exactMatchScore: 0.9, lexicalScore: 0, structuralScore: 0, entityScore: 0, factScore: 0, tenderDiscount: 0, templateDiscount: 0, factConflictPenalty: 0, finalScore: 0.9, ruleVersion: '1.0.0' },
+        important: false, reviewedAt: null,
       }];
       render(<FindingVirtualList findings={findings} />);
       const options = screen.getAllByRole('option');
@@ -661,6 +665,8 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
         directionalCoverage: [{ fromId: 's1', toId: 's2', coverage: 0.85 }],
         confidenceScore: 0.95, reviewStatus: 'pending' as const,
         reviewNote: '', ruleVersion: '1.0.0',
+        scoreBreakdown: { exactMatchScore: 0.9, lexicalScore: 0, structuralScore: 0, entityScore: 0, factScore: 0, tenderDiscount: 0, templateDiscount: 0, factConflictPenalty: 0, finalScore: 0.9, ruleVersion: '1.0.0' },
+        important: false, reviewedAt: null,
       };
       render(<EvidenceDetailTabs finding={finding} submissionNames={new Map()} />);
       expect(screen.getByRole('region', { name: '发现项详情' })).toBeTruthy();
@@ -669,9 +675,12 @@ describe('WCAG 2.2 AA Accessibility Audit', () => {
     it('EvidenceViewport has region role', async () => {
       const { EvidenceViewport } = await import('./features/risk-review/evidence-viewport');
       const evidence = [{
-        id: 'ev1', submissionId: 's1', blockIndex: 0, originalText: 'test',
-        normalizedText: 'test', matchBasis: 'semantic' as const, similarityScore: 0.9,
-        contextBefore: '', contextAfter: '', tenderFiltered: false, tenderFilterReason: null,
+        id: 'ev1', detectorType: 'text' as const, matchBasis: 'semantic' as const, similarityScore: 0.9,
+        sourceSubmissionId: 's1', sourceNodeId: 'n1', sourceOriginalText: 'test', sourceNormalizedText: 'test',
+        sourceSectionPath: [], sourcePageRange: null, sourceTableLocation: null,
+        targetSubmissionId: 's2', targetNodeId: 'n1', targetOriginalText: 'test', targetNormalizedText: 'test',
+        targetSectionPath: [], targetPageRange: null, targetTableLocation: null,
+        contextBefore: '', contextAfter: '', tenderFiltered: false, tenderFilterReason: null, ruleVersion: '1.0.0',
       }];
       render(<EvidenceViewport evidence={evidence} submissionNames={new Map()} />);
       expect(screen.getByRole('region', { name: '证据视图' })).toBeTruthy();

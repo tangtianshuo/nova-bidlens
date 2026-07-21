@@ -18,9 +18,12 @@ function makeFinding(overrides: Partial<RiskFinding> = {}): RiskFinding {
       { fromId: 'sub-2', toId: 'sub-1', coverage: 0.78 },
     ],
     confidenceScore: 0.91,
-    reviewStatus: 'pending',
-    reviewNote: '',
+    scoreBreakdown: { exactMatchScore: 0.9, lexicalScore: 0, structuralScore: 0, entityScore: 0, factScore: 0, tenderDiscount: 0, templateDiscount: 0, factConflictPenalty: 0, finalScore: 0.9, ruleVersion: '1.0.0' },
     ruleVersion: '1.0.0',
+    reviewStatus: 'pending',
+    important: false,
+    reviewNote: '',
+    reviewedAt: null,
     ...overrides,
   };
 }

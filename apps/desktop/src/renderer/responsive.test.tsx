@@ -5,6 +5,8 @@ import type { SubmissionSummary, RiskFinding } from './__fixtures__/risk-project
 
 afterEach(cleanup);
 
+const DEFAULT_SCORE = { exactMatchScore: 0.8, lexicalScore: 0, structuralScore: 0, entityScore: 0, factScore: 0, tenderDiscount: 0, templateDiscount: 0, factConflictPenalty: 0, finalScore: 0.8, ruleVersion: '1.0.0' };
+
 function makeSubmissions(count: number): SubmissionSummary[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `sub-${i + 1}`,
@@ -13,7 +15,7 @@ function makeSubmissions(count: number): SubmissionSummary[] {
     fileSizeBytes: 1024 * (i + 1),
     pageCount: 10 * (i + 1),
     sha256: `hash-${i + 1}`,
-    status: 'ready' as const,
+    status: 'extracted' as const,
     warnings: [],
   }));
 }
@@ -33,9 +35,12 @@ function makeFindings(submissions: SubmissionSummary[]): RiskFinding[] {
         { fromId: submissions[i + 1].id, toId: submissions[i].id, coverage: 0.78 },
       ],
       confidenceScore: 0.9,
-      reviewStatus: 'pending',
-      reviewNote: '',
+      scoreBreakdown: DEFAULT_SCORE,
       ruleVersion: '1.0.0',
+      reviewStatus: 'pending',
+      important: false,
+      reviewNote: '',
+      reviewedAt: null,
     });
   }
   return findings;

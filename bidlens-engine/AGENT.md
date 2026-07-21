@@ -1,99 +1,109 @@
-# AGENT.md - Rust Engine Layer
+# AGENT.md - Rust computation engine
 
-> Layer: Rust computation engine
-> Path: bidlens-engine/
-> Last updated: 2026-07-18 (V0.2.2)
+> Path: `bidlens-engine/`
+> Updated: 2026-07-21
+> Product authority: `docs/product/PRD-v0.3-similarity-risk-review.md`
 
-## Overview
+## Responsibilities
 
-The Rust engine is a transport-neutral computation core that performs document comparison. It communicates with Electron via stdio JSON-RPC but the core crates have no transport dependency, enabling future Axum HTTP deployment.
+The Rust workspace is a transport-neutral computation core. It communicates with Electron through stdio JSON-RPC, while reusable crates remain independent of Electron, SQLite and UI concerns.
 
-## Workspace Structure
+Current crates:
 
-```
-bidlens-engine/
-├── Cargo.toml              # Workspace config
-├── src/
-│   ├── main.rs             # stdio JSON-RPC transport adapter
-│   └── task_service.rs     # Transport-neutral task service
-├── crates/
-│   ├── common/             # Shared error types (BidLensError, Result)
-│   ├── document-ast/       # AST data structures (paragraphs, tables, comments, revisions)
-│   ├── diff-engine/        # Semantic diff algorithm (Jaccard matching)
-│   └── table-diff/         # Table-level diff (cell changes, structural alignment)
-└── tests/
-    ├── json_rpc.rs         # JSON-RPC integration tests (ping, handshake, shutdown)
-    └── field_mapping.rs    # TS/Rust field name consistency tests
-```
+- `common`: shared Rust errors and results.
+- `document-ast`: Rust document structures.
+- `diff-engine`: current Jaccard-based two-document matching.
+- `table-diff`: table comparison.
+- root binary: JSON-RPC bridge.
 
-## JSON-RPC Protocol
+V0.3 target crates must not be documented as implemented before they exist:
 
-Methods:
-- `ping` → `{ pong: true, engine_version, protocol_version, capabilities }`
-- `engine.handshake` → same as ping
-- `compare` → `{ diff, duration_ms }` or `{ error }`
-- `compare.cancel` → `{ cancelled: bool }`
-- `shutdown` → `{ shutting_down: true }` then process exits
+- ReviewNode extraction support.
+- tender common-content filter.
+- text detector.
+- table detector.
+- entity and key-fact detector.
+- finding aggregator.
+- deterministic risk engine.
 
-Error codes:
-- `-32700`: JSON parse error
-- `-32601`: Unknown method
-- `-32602`: Invalid params
-- `-32000`: Compare error
-- `-32001`: ENGINE_BUSY (another task running)
-- `-32002`: Task cancelled
-- `-32003`: Task join error (panic)
+V0.3.1 target:
 
-Notifications (no `id` field):
-- `compare.progress` → `{ task_id, phase, message, current, total }`
+- embedding provider contracts.
+- BGE-M3 ONNX provider.
+- semantic Top-K and hybrid reranking.
 
-## Transport-Neutral Architecture
+## Ownership Boundaries
 
-`task_service.rs` contains:
-- `TaskRequest` — input (doc_a, doc_b, options)
-- `TaskResult` — output (diff, duration_ms)
-- `TaskProgress` — phase updates
-- `CancellationToken` — cooperative cancellation via watch channel
-- `EngineInfo` — version, protocol, capabilities
-- `run_compare()` — runs comparison with progress callback and cancellation check
+Rust owns:
 
-`main.rs` is the stdio transport adapter. It:
-1. Reads JSON-RPC requests from stdin (one per line)
-2. Routes to handler by method name
-3. Writes JSON-RPC responses/notifications to stdout
-4. Manages single-task concurrency (ENGINE_BUSY)
-5. Handles shutdown cleanly
+- deterministic extraction, detection, aggregation and risk rules.
+- sparse candidate generation and conflict resolution.
+- model/provider contracts and inference in V0.3.1.
+- cancellation checks and progress production.
 
-## Field Naming Convention
+Electron Main owns:
 
-All JSON field names use `snake_case` (Rust) which maps to `camelCase` in TypeScript.
-The canonical fixture at `packages/shared/src/__fixtures__/canonical-ast.json` defines the contract.
-`tests/field_mapping.rs` verifies Rust serialization matches the fixture.
+- file validation and parser orchestration.
+- SQLite, encryption and retention.
+- model package lifecycle and cache orchestration.
+- project checkpoints and report export.
 
-## Build & Test
+Rust must not directly access the application SQLite database or Windows `safeStorage`.
 
-```bash
-# Build
+## JSON-RPC Rules
+
+- The root binary reads newline-delimited JSON-RPC from stdin and writes responses/events to stdout.
+- Stdout is protocol-only. Diagnostics go to stderr.
+- Every task request carries a stable task/project ID.
+- Long loops check cancellation and emit progress heartbeats.
+- Errors are structured and mapped to Shared error semantics.
+- TypeScript uses camelCase; Rust uses snake_case with explicit serde/adaptation boundaries.
+- Binary vector payloads in V0.3.1 use a documented binary encoding, not JSON float arrays.
+
+Current protocol behavior must remain backward-compatible while the risk protocol is introduced. Do not remove compare methods before the RiskFinding evidence workflow has replaced their product usage.
+
+## Detection Rules
+
+V0.3.0:
+
+- Only compare nodes from different submissions.
+- Use sparse indexes; do not build an unconditional full `N x M` matrix.
+- Preserve independent lexical, structural, entity, fact and discount contributions.
+- Tender-filtered evidence remains reviewable.
+- Merge duplicate detector hits into one Finding while retaining all bases.
+- Project risk is not a simple count sum.
+- Partial detector execution produces incomplete assessment, never normal low risk.
+- Equal inputs and versions produce deterministic output.
+
+V0.3.1:
+
+- Semantic output is an additional candidate/score source.
+- Fatal provider errors discard partial semantic output and trigger an explicit lexical fallback or task failure.
+- Cache keys include document, node text, section context, model, tokenizer, chunking and normalization versions.
+
+## Build And Test
+
+```powershell
 cargo build --manifest-path bidlens-engine/Cargo.toml
-
-# All tests
+cargo build --release --manifest-path bidlens-engine/Cargo.toml
 cargo test --manifest-path bidlens-engine/Cargo.toml
-
-# Specific crate
-cargo test -p document-ast
-cargo test -p diff-engine
-cargo test -p table-diff
-
-# Integration tests
-cargo test --test json_rpc
-cargo test --test field_mapping
+cargo clippy --manifest-path bidlens-engine/Cargo.toml --all-targets -- -D warnings
+cargo fmt --manifest-path bidlens-engine/Cargo.toml -- --check
 ```
 
-## Key Design Decisions
+Required coverage includes:
 
-- Core crates (`document-ast`, `diff-engine`, `table-diff`) have NO dependency on `tokio`, `serde_json` main loop, or stdio
-- `common` crate defines `BidLensError` used across all crates
-- `diff-engine` uses Jaccard similarity on character sets for paragraph matching
-- `table-diff` supports 3 match strategies (Position/Content/Hybrid) and 4 similarity algorithms
-- `DocumentAst` uses `runs: Vec<RunNode>` for text (not flat `text` field) — TypeScript must map accordingly
-- Comments and revisions are top-level fields on DocumentAst (not nested in blocks)
+- detector normalization and boundary cases.
+- deterministic ordering and aggregation.
+- cross-language field mapping.
+- JSON-RPC framing, errors, progress and cancellation.
+- malformed input and engine shutdown.
+- V0.3.1 provider dimensions, normalization, batching, OOM and fallback.
+
+## Documentation
+
+- Product: `docs/product/PRD-v0.3-similarity-risk-review.md`
+- Architecture: `docs/architecture.md`
+- Rust design: `docs/02-模块设计-Rust引擎.md`
+- JSON-RPC API: `docs/api/rust.md`
+- Semantic design reference: `docs/superpowers/specs/2026-07-19-bidlens-v03-semantic-matching-design.md`

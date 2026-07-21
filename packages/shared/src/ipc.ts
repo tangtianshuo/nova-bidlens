@@ -12,7 +12,11 @@ import type {
   TaskStatus,
   SensitivityLevel,
 } from './compare-task.js';
-import type { AnalysisProjectDetail, AnalysisProjectSummary, RiskPreset } from './risk-review.js';
+import type {
+  AnalysisProjectDetail, AnalysisProjectSummary, RiskPreset,
+  ProjectStatus, AnalysisPhase, DetectorType, RiskFinding,
+  FindingReviewStatus, AuditEvent,
+} from './risk-review.js';
 
 // --- File operations (Spec §10) ---
 export interface ValidateFilesRequest {
@@ -55,10 +59,20 @@ export interface CreateRiskProjectRequest {
 }
 export interface CreateRiskProjectResponse { projectId: string; }
 export interface RiskProgress {
-  projectId: string; status: AnalysisProjectStatus; stageLabel: string;
-  current?: number; total?: number; elapsedMs: number; warnings: string[];
+  projectId: string; status: ProjectStatus; phase: AnalysisPhase | null;
+  stageLabel: string; current?: number; total?: number; elapsedMs: number; warnings: string[];
 }
-type AnalysisProjectStatus = AnalysisProjectDetail['status'];
+export interface DetectorProgress {
+  projectId: string; detectorType: DetectorType; status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+  candidateCount: number; hitCount: number; elapsedMs: number;
+}
+export interface StructuredRiskError {
+  code: string; message: string; details?: Record<string, unknown>; retryable: boolean;
+}
+export interface ExportRiskReportRequest {
+  projectId: string; format: 'pdf' | 'html' | 'markdown'; scope: 'all' | 'confirmed' | 'important' | 'filtered';
+}
+export interface ExportRiskReportResponse { filePath: string; resultHash: string; }
 
 // --- Review operations ---
 export interface SaveAnnotationRequest {
@@ -131,8 +145,15 @@ export interface BidLensApi {
   getProject(projectId: string): Promise<AnalysisProjectDetail>;
   createRiskProject(request: CreateRiskProjectRequest): Promise<CreateRiskProjectResponse>;
   cancelRiskProject(projectId: string): Promise<{ projectId: string; cancelled: boolean }>;
+  resumeRiskProject(projectId: string): Promise<{ projectId: string }>;
+  retryRiskSubmission(projectId: string, submissionId: string, newFile?: RiskFileInput): Promise<{ projectId: string }>;
+  acceptPartial(projectId: string): Promise<{ projectId: string }>;
+  deleteProject(projectId: string): Promise<{ deleted: boolean }>;
   onRiskProgress(handler: (progress: RiskProgress) => void): () => void;
-  saveRiskFindingReview(request: { projectId: string; findingId: string; status?: string; important?: boolean; note?: string }): Promise<import('./risk-review.js').RiskFinding>;
+  onDetectorProgress(handler: (progress: DetectorProgress) => void): () => void;
+  saveRiskFindingReview(request: { projectId: string; findingId: string; status?: FindingReviewStatus; important?: boolean; note?: string }): Promise<RiskFinding>;
+  getAuditEvents(projectId: string): Promise<AuditEvent[]>;
+  exportRiskReport(request: ExportRiskReportRequest): Promise<ExportRiskReportResponse>;
   // File
   selectFile(): Promise<SelectFileResponse | null>;
   validateFiles(request: ValidateFilesRequest): Promise<ValidateFilesResponse>;

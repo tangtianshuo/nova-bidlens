@@ -89,9 +89,9 @@ describe('risk-project fixtures', () => {
   });
 
   describe('buildProjectSummaries', () => {
-    it('returns 5 summaries covering all states', () => {
+    it('returns 6 summaries covering all states', () => {
       const summaries = buildProjectSummaries();
-      expect(summaries).toHaveLength(5);
+      expect(summaries).toHaveLength(6);
       const statuses = summaries.map((s) => s.status);
       expect(statuses).toContain('ready');
       expect(statuses).toContain('partial');

@@ -85,7 +85,7 @@ function createWindow() {
     annotationRepo: persistence.annotationRepo,
     taskRepo: persistence.taskRepo,
   });
-  registerRiskReviewHandlers(win);
+  registerRiskReviewHandlers(win, persistence.db.getDb(), persistence.keyManager.getKey());
 
   // Listen for console messages from renderer
   win.webContents.on('console-message', (event, level, message, line, sourceId) => {

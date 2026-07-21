@@ -59,10 +59,10 @@ describe('useRiskReviewStore', () => {
   });
 
   it('sets review status filter', () => {
-    useRiskReviewStore.getState().setReviewStatusFilter(['confirmed', 'important']);
+    useRiskReviewStore.getState().setReviewStatusFilter(['confirmed', 'ignored']);
     const filters = useRiskReviewStore.getState().filters;
     expect(filters.reviewStatuses.has('confirmed')).toBe(true);
-    expect(filters.reviewStatuses.has('important')).toBe(true);
+    expect(filters.reviewStatuses.has('ignored')).toBe(true);
   });
 
   it('sets file pair filter', () => {
@@ -118,6 +118,7 @@ describe('matchesFilter', () => {
     riskLevel: 'high' as const,
     detectorType: 'text' as const,
     reviewStatus: 'pending' as const,
+    important: false,
     involvedSubmissionIds: ['sub-1', 'sub-2'],
   };
 
@@ -169,8 +170,8 @@ describe('matchesFilter', () => {
     expect(matchesFilter(finding, filters)).toBe(false);
   });
 
-  it('matches when showImportantOnly is true and status is important', () => {
-    const importantFinding = { ...finding, reviewStatus: 'important' as const };
+  it('matches when showImportantOnly is true and finding is important', () => {
+    const importantFinding = { ...finding, important: true };
     const filters: FindingFilterState = {
       riskLevels: new Set(),
       detectorTypes: new Set(),

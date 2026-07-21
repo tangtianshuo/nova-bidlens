@@ -63,23 +63,11 @@ describe('StatusBadge', () => {
     });
   }
 
-  const spinnerStatuses = [
-    'validating',
-    'parsing',
-    'filtering',
-    'embedding',
-    'retrieving',
-    'detecting',
-    'aggregating',
-  ] as const;
-
-  for (const status of spinnerStatuses) {
-    it(`renders ${status} with spinning icon`, () => {
-      const { container } = render(<StatusBadge status={status} />);
-      const spinIcon = container.querySelector('.animate-spin');
-      expect(spinIcon).toBeTruthy();
-    });
-  }
+  it('running status has spinning icon', () => {
+    const { container } = render(<StatusBadge status="running" />);
+    const spinIcon = container.querySelector('.animate-spin');
+    expect(spinIcon).toBeTruthy();
+  });
 
   it('ready status does not have spinning icon', () => {
     const { container } = render(<StatusBadge status="ready" />);
@@ -94,7 +82,6 @@ describe('ReviewBadge', () => {
     { status: 'pending' as const, label: '待审查' },
     { status: 'confirmed' as const, label: '已确认' },
     { status: 'ignored' as const, label: '已忽略' },
-    { status: 'important' as const, label: '重要' },
   ];
 
   for (const { status, label } of statuses) {
@@ -103,6 +90,11 @@ describe('ReviewBadge', () => {
       expect(screen.getByText(label)).toBeTruthy();
     });
   }
+
+  it('renders important badge when important=true', () => {
+    render(<ReviewBadge status="pending" important={true} />);
+    expect(screen.getByText('重要')).toBeTruthy();
+  });
 });
 
 // -- PersistentBanner --

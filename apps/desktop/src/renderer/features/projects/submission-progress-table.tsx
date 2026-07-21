@@ -1,9 +1,32 @@
-import { StatusBadge } from '@/components/feedback/status-badge';
-import type { SubmissionSummary } from '@bidlens/shared/types-only';
-import { STAGE_LABELS } from './stage-labels';
+import { Badge } from '@/components/ui/badge';
+import type { SubmissionSummary, SubmissionState } from '@bidlens/shared/types-only';
 
-function getStageLabel(status: string): string {
-  return STAGE_LABELS[status] ?? status;
+const SUBMISSION_STATE_LABELS: Record<SubmissionState, string> = {
+  pending: '待处理',
+  validated: '已校验',
+  parsing: '解析中',
+  parsed: '已解析',
+  extracting: '提取中',
+  extracted: '已提取',
+  failed: '失败',
+  removed: '已移除',
+};
+
+const STATE_VARIANT: Record<SubmissionState, string> = {
+  pending: 'default', validated: 'default', parsing: 'accent', parsed: 'accent',
+  extracting: 'accent', extracted: 'added', failed: 'deleted', removed: 'deleted',
+};
+
+function getStageLabel(status: SubmissionState): string {
+  return SUBMISSION_STATE_LABELS[status] ?? status;
+}
+
+function SubmissionStateBadge({ state }: { state: SubmissionState }) {
+  return (
+    <Badge variant={(STATE_VARIANT[state] ?? 'default') as 'default' | 'accent' | 'added' | 'deleted'}>
+      {getStageLabel(state)}
+    </Badge>
+  );
 }
 
 // ── Component ─────────────────────────────────────────────────────────
@@ -44,7 +67,7 @@ export function SubmissionProgressTable({ submissions }: SubmissionProgressTable
               {getStageLabel(sub.status)}
             </td>
             <td className="px-3 py-2">
-              <StatusBadge status={sub.status} />
+              <SubmissionStateBadge state={sub.status} />
             </td>
             <td className="px-3 py-2 text-xs text-[var(--color-modified)]">
               {sub.warnings.length > 0 ? sub.warnings.join('；') : '—'}

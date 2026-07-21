@@ -1,6 +1,6 @@
-import { FileText, History, Minus, Monitor, Moon, Settings, ShieldCheck, Square, Sun, X } from 'lucide-react';
+import { History, Minus, Monitor, Moon, Settings, ShieldCheck, Square, Sun, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { useAppStore, type AppMode } from '../../stores/app-store';
+import { useAppStore } from '../../stores/app-store';
 import { getThemePreference, setThemePreference, watchSystemTheme, type Theme } from '../../lib/theme';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -8,13 +8,8 @@ import { SimpleTooltip } from '../ui/tooltip';
 import { Separator } from '../ui/separator';
 import { SettingsDialog } from '../../features/settings/settings-dialog';
 
-const MODE_LABELS: Record<AppMode, string> = {
-  'risk-review': '雷同性审查',
-  'version-diff': '版本差异比对',
-};
-
 export function TopBar() {
-  const { mode, setMode, view, setView } = useAppStore();
+  const { view, setView } = useAppStore();
   const [theme, setTheme] = useState<Theme>(getThemePreference);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -61,25 +56,6 @@ export function TopBar() {
         <div className="flex items-center gap-3 pl-5" style={{ WebkitAppRegion: 'no-drag', minWidth: 190 } as React.CSSProperties}>
           <span className="grid h-7 w-7 place-items-center rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-sm font-bold text-white">B</span>
           <span className="font-bold text-[var(--color-text)]" style={{ fontSize: 17 }}>BidLens</span>
-          <Separator orientation="vertical" className="h-4" />
-          <Button
-            variant={mode === 'risk-review' ? 'active' : 'ghost'}
-            size="sm"
-            onClick={() => setMode('risk-review')}
-            aria-label={MODE_LABELS['risk-review']}
-          >
-            <ShieldCheck className="h-3.5 w-3.5" />
-            {MODE_LABELS['risk-review']}
-          </Button>
-          <Button
-            variant={mode === 'version-diff' ? 'active' : 'ghost'}
-            size="sm"
-            onClick={() => setMode('version-diff')}
-            aria-label={MODE_LABELS['version-diff']}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            {MODE_LABELS['version-diff']}
-          </Button>
           <Separator orientation="vertical" className="h-4" />
           <Button
             variant={view === 'history' ? 'active' : 'ghost'}

@@ -5,7 +5,15 @@ import type { ReactNode } from 'react';
 import { ProjectProcessingPage } from './project-processing-page';
 import { useProjectStore } from './project-store';
 import { deriveStages } from './analysis-stage-list';
-import type { AnalysisProjectStatus } from '../../__fixtures__/risk-project';
+import type { ProjectStatus } from '@bidlens/shared/types-only';
+import {
+  buildReadyScenario,
+  buildProcessingScenario,
+  buildInterruptedScenario,
+  buildFailedScenario,
+  buildPartialScenario,
+  buildDegradedScenario,
+} from '../../__fixtures__/risk-project';
 
 afterEach(cleanup);
 
@@ -22,6 +30,15 @@ function selectProject(id: string) {
   useProjectStore.setState({ selectedProjectId: id });
 }
 
+const details = [
+  buildReadyScenario,
+  buildProcessingScenario,
+  buildInterruptedScenario,
+  buildFailedScenario,
+  buildPartialScenario,
+  buildDegradedScenario,
+].map((b) => b());
+
 beforeEach(() => {
   useProjectStore.setState({
     selectedProjectId: null,
@@ -33,43 +50,54 @@ beforeEach(() => {
     page: 1,
     pageSize: 10,
   });
+  (window as any).bidlens = {
+    onRiskProgress: vi.fn(() => () => {}),
+    cancelRiskProject: vi.fn(() => Promise.resolve({ projectId: '', cancelled: true })),
+    resumeRiskProject: vi.fn(() => Promise.resolve({ projectId: '' })),
+    retryRiskSubmission: vi.fn(() => Promise.resolve({ projectId: '' })),
+    acceptPartial: vi.fn(() => Promise.resolve({ projectId: '' })),
+    deleteProject: vi.fn(() => Promise.resolve({ deleted: true })),
+    getProject: vi.fn((id: string) => {
+      const found = details.find((d) => d.id === id);
+      return found ? Promise.resolve(found) : Promise.reject(new Error('项目不存在'));
+    }),
+  };
 });
 
 describe('deriveStages', () => {
   it('marks stages before current as done', () => {
-    const stages = deriveStages('detecting' as AnalysisProjectStatus);
+    const stages = deriveStages('running', 'detecting');
     expect(stages[0].state).toBe('done'); // validating
     expect(stages[1].state).toBe('done'); // parsing
-    expect(stages[2].state).toBe('done'); // filtering
-    expect(stages[3].state).toBe('done'); // embedding
-    expect(stages[4].state).toBe('done'); // retrieving
-    expect(stages[5].state).toBe('active'); // detecting
+    expect(stages[2].state).toBe('done'); // extracting-nodes
+    expect(stages[3].state).toBe('done'); // extracting-entities
+    expect(stages[4].state).toBe('done'); // filtering-tender-content
+    expect(stages[5].state).toBe('done'); // recalling-candidates
+    expect(stages[6].state).toBe('active'); // detecting
   });
 
   it('marks stages after current as pending', () => {
-    const stages = deriveStages('detecting' as AnalysisProjectStatus);
-    expect(stages[6].state).toBe('pending'); // aggregating
-    expect(stages[7].state).toBe('pending'); // ready
-    expect(stages[8].state).toBe('pending'); // failed
+    const stages = deriveStages('running', 'detecting');
+    expect(stages[7].state).toBe('pending'); // aggregating
+    expect(stages[8].state).toBe('pending'); // persisting
+    expect(stages[9].state).toBe('pending'); // completed
   });
 
   it('marks all pipeline stages as done when project is ready', () => {
-    const stages = deriveStages('ready' as AnalysisProjectStatus);
-    for (let i = 0; i < 7; i++) {
+    const stages = deriveStages('ready');
+    for (let i = 0; i < 10; i++) {
       expect(stages[i].state).toBe('done');
     }
-    expect(stages[7].state).toBe('done'); // ready
-    expect(stages[8].state).toBe('pending'); // failed
+    expect(stages[10].state).toBe('done'); // ready terminal
   });
 
-  it('marks failed stage as error when project failed', () => {
-    const stages = deriveStages('failed' as AnalysisProjectStatus);
-    expect(stages[7].state).toBe('pending'); // ready
-    expect(stages[8].state).toBe('error'); // failed
+  it('marks failed stage as done when project failed', () => {
+    const stages = deriveStages('failed');
+    expect(stages[10].state).toBe('done'); // failed terminal (all stages done in terminal state)
   });
 
   it('uses stage timings when provided', () => {
-    const stages = deriveStages('detecting' as AnalysisProjectStatus, {
+    const stages = deriveStages('running', 'detecting', {
       validating: 2,
       parsing: 8,
     });
@@ -78,9 +106,9 @@ describe('deriveStages', () => {
     expect(stages[2].elapsedSec).toBeNull();
   });
 
-  it('returns 9 stages total', () => {
-    const stages = deriveStages('validating' as AnalysisProjectStatus);
-    expect(stages.length).toBe(9);
+  it('returns 11 stages total', () => {
+    const stages = deriveStages('running', 'validating');
+    expect(stages.length).toBe(11);
   });
 });
 
@@ -149,21 +177,18 @@ describe('ProjectProcessingPage', () => {
     });
   });
 
-  it('logs cancel on cancel button click', async () => {
+  it('does not call cancelRiskProject immediately on cancel button click', async () => {
     selectProject('proj-fixture-006');
     const wrapper = createWrapper();
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     render(<ProjectProcessingPage />, { wrapper });
     await waitFor(() => {
       expect(screen.getByText('取消分析')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('取消分析'));
-    expect(consoleSpy).toHaveBeenCalledWith(
-      '[ProjectProcessing] cancel analysis for:',
-      'proj-fixture-006',
-    );
-    consoleSpy.mockRestore();
+    const cancelBtn = screen.getByText('取消分析');
+    fireEvent.click(cancelBtn);
+    // Should NOT call cancelRiskProject immediately (confirmation dialog intercepts)
+    expect((window as any).bidlens.cancelRiskProject).not.toHaveBeenCalled();
   });
 
   it('navigates back on back button click', async () => {

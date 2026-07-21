@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/feedback/loading-button';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -10,12 +10,13 @@ import {
   Download,
   WifiOff,
   Cpu,
+  Trash2,
 } from 'lucide-react';
 import type { AnalysisProjectStatus } from '@bidlens/shared/types-only';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
-export type RecoveryAction = 'retry' | 'resume' | 'accept-partial' | 'cancel';
+export type RecoveryAction = 'retry' | 'resume' | 'accept-partial' | 'cancel' | 'delete';
 
 export interface AnalysisRecoveryActionsProps {
   status: AnalysisProjectStatus;
@@ -24,6 +25,8 @@ export interface AnalysisRecoveryActionsProps {
   onAction?: (action: RecoveryAction) => void;
   hasPartialResults?: boolean;
   elapsedMs?: number;
+  loadingAction?: RecoveryAction | null;
+  errorMessage?: string | null;
 }
 
 // ─── Degradation reason metadata ────────────────────────────────────
@@ -83,6 +86,8 @@ export function AnalysisRecoveryActions({
   onAction,
   hasPartialResults = false,
   elapsedMs = 0,
+  loadingAction = null,
+  errorMessage = null,
 }: AnalysisRecoveryActionsProps) {
   const handleRetry = useCallback(() => onAction?.('retry'), [onAction]);
   const handleResume = useCallback(() => onAction?.('resume'), [onAction]);
@@ -91,6 +96,7 @@ export function AnalysisRecoveryActions({
     [onAction],
   );
   const handleCancel = useCallback(() => onAction?.('cancel'), [onAction]);
+  const handleDelete = useCallback(() => onAction?.('delete'), [onAction]);
 
   const degradation = getDegradationInfo(degradationReason);
   const isFailed = status === 'failed';
@@ -105,6 +111,14 @@ export function AnalysisRecoveryActions({
 
   return (
     <div className="flex flex-col gap-3" role="region" aria-label="分析恢复操作">
+      {/* Error banner */}
+      {errorMessage && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <span className="text-sm">{errorMessage}</span>
+        </Alert>
+      )}
+
       {/* Degradation banner */}
       {isDegraded && degradation && (
         <Alert variant={degradation.severity === 'error' ? 'destructive' : 'default'}>
@@ -143,13 +157,17 @@ export function AnalysisRecoveryActions({
               )}
 
               <div className="flex items-center gap-2">
-                <Button variant="primary" size="sm" onClick={handleRetry}>
+                <LoadingButton variant="primary" size="sm" loading={loadingAction === 'retry'} onClick={handleRetry}>
                   <RotateCcw className="h-3.5 w-3.5" />
                   重试分析
-                </Button>
-                <Button variant="secondary" size="sm" onClick={handleCancel}>
+                </LoadingButton>
+                <LoadingButton variant="secondary" size="sm" loading={loadingAction === 'cancel'} onClick={handleCancel}>
                   返回项目列表
-                </Button>
+                </LoadingButton>
+                <LoadingButton variant="destructive" size="sm" loading={loadingAction === 'delete'} onClick={handleDelete}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  删除项目
+                </LoadingButton>
               </div>
             </div>
           </div>
@@ -173,17 +191,21 @@ export function AnalysisRecoveryActions({
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="primary" size="sm" onClick={handleResume}>
+                <LoadingButton variant="primary" size="sm" loading={loadingAction === 'resume'} onClick={handleResume}>
                   <Play className="h-3.5 w-3.5" />
                   恢复分析
-                </Button>
-                <Button variant="secondary" size="sm" onClick={handleRetry}>
+                </LoadingButton>
+                <LoadingButton variant="secondary" size="sm" loading={loadingAction === 'retry'} onClick={handleRetry}>
                   <RotateCcw className="h-3.5 w-3.5" />
                   重新开始
-                </Button>
-                <Button variant="secondary" size="sm" onClick={handleCancel}>
+                </LoadingButton>
+                <LoadingButton variant="secondary" size="sm" loading={loadingAction === 'cancel'} onClick={handleCancel}>
                   返回项目列表
-                </Button>
+                </LoadingButton>
+                <LoadingButton variant="destructive" size="sm" loading={loadingAction === 'delete'} onClick={handleDelete}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  删除项目
+                </LoadingButton>
               </div>
             </div>
           </div>
@@ -210,19 +232,23 @@ export function AnalysisRecoveryActions({
 
               <div className="flex items-center gap-2">
                 {hasPartialResults && (
-                  <Button variant="primary" size="sm" onClick={handleAcceptPartial}>
+                  <LoadingButton variant="primary" size="sm" loading={loadingAction === 'accept-partial'} onClick={handleAcceptPartial}>
                     <Download className="h-3.5 w-3.5" />
                     查看部分结果
-                  </Button>
+                  </LoadingButton>
                 )}
-                <Button variant="secondary" size="sm" onClick={handleRetry}>
+                <LoadingButton variant="secondary" size="sm" loading={loadingAction === 'retry'} onClick={handleRetry}>
                   <RotateCcw className="h-3.5 w-3.5" />
                   重新分析
-                </Button>
-                <Button variant="secondary" size="sm" onClick={handleResume}>
+                </LoadingButton>
+                <LoadingButton variant="secondary" size="sm" loading={loadingAction === 'resume'} onClick={handleResume}>
                   <Play className="h-3.5 w-3.5" />
                   继续分析
-                </Button>
+                </LoadingButton>
+                <LoadingButton variant="destructive" size="sm" loading={loadingAction === 'delete'} onClick={handleDelete}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  删除项目
+                </LoadingButton>
               </div>
             </div>
           </div>

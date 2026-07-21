@@ -1,7 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
-import { FileText, Upload, X } from 'lucide-react';
+import { FileText, Upload, X, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
 import { formatFileSize } from '@/lib/utils';
 
 interface BaselineFile {
@@ -14,6 +17,9 @@ interface BaselineFile {
 interface TenderBaselineSlotProps {
   value: BaselineFile | null;
   onChange: (file: BaselineFile | null) => void;
+  /** Whether the baseline file failed to parse. Warning persists through result/report. */
+  parseFailed?: boolean;
+  parseWarning?: string | null;
   accept?: string;
 }
 
@@ -22,30 +28,53 @@ const ACCEPT_DEFAULT = '.docx,.pdf';
 export function TenderBaselineSlot({
   value,
   onChange,
+  parseFailed = false,
+  parseWarning = null,
   accept = ACCEPT_DEFAULT,
 }: TenderBaselineSlotProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<BaselineFile | null>(null);
+
+  const confirmAndApply = useCallback(
+    (file: BaselineFile) => {
+      setPendingFile(file);
+      setConfirmOpen(true);
+    },
+    [],
+  );
+
+  const handleConfirm = useCallback(() => {
+    if (pendingFile) onChange(pendingFile);
+    setConfirmOpen(false);
+    setPendingFile(null);
+  }, [pendingFile, onChange]);
+
+  const handleCancelConfirm = useCallback(() => {
+    setConfirmOpen(false);
+    setPendingFile(null);
+  }, []);
 
   const selectBaseline = useCallback(async () => {
     const selected = await window.bidlens.selectFile();
     if (!selected) return;
-    onChange({ path: selected.path, name: selected.name, format: selected.format, sizeBytes: selected.size });
-  }, [onChange]);
+    confirmAndApply({ path: selected.path, name: selected.name, format: selected.format, sizeBytes: selected.size });
+  }, [confirmAndApply]);
 
   const extractFile = useCallback(
     (file: File) => {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-      onChange({ name: file.name, format: ext, sizeBytes: file.size });
+      const path = (file as File & { path?: string }).path ?? file.name;
+      confirmAndApply({ path, name: file.name, format: ext, sizeBytes: file.size });
     },
-    [onChange],
+    [confirmAndApply],
   );
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) extractFile(file);
-      // Reset so same file can be re-selected
       e.target.value = '';
     },
     [extractFile],
@@ -148,6 +177,36 @@ export function TenderBaselineSlot({
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Parse failure warning — persists through result/report state */}
+      {value && parseFailed && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <AlertDescription>
+            {parseWarning ?? '招标基线文件解析失败，招标内容过滤将跳过，误报可能增加'}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Confirmation dialog */}
+      <Dialog open={confirmOpen} onOpenChange={(open) => { if (!open) handleCancelConfirm(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认设置招标基线</DialogTitle>
+            <DialogDescription>
+              将 <strong>{pendingFile?.name}</strong> 设为招标基线文件。分析时会自动识别并过滤招标文件中的通用内容（如评分标准、资质要求等），减少因招标模板导致的误报。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 px-[var(--layout-dialog-x)] pb-[var(--layout-dialog-y)]">
+            <Button variant="secondary" size="sm" onClick={handleCancelConfirm}>
+              取消
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleConfirm}>
+              确认
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   CheckCircle2,
-  Circle,
   Clock,
   EyeOff,
   Flag,
@@ -15,6 +14,7 @@ import {
   getRiskLabel,
 } from '../../lib/semantic-state';
 import type { RiskLevel } from '../../lib/semantic-state';
+import type { ProjectStatus, FindingReviewStatus } from '@bidlens/shared/types-only';
 
 // ── Risk level badge ─────────────────────────────────────────────
 
@@ -39,101 +39,70 @@ export function RiskBadge({ level, className }: RiskBadgeProps) {
   );
 }
 
-// ── Analysis status badge ────────────────────────────────────────
-
-type AnalysisStatus =
-  | 'validating'
-  | 'parsing'
-  | 'filtering'
-  | 'embedding'
-  | 'retrieving'
-  | 'detecting'
-  | 'aggregating'
-  | 'ready'
-  | 'partial'
-  | 'interrupted'
-  | 'failed';
+// ── Project status badge ─────────────────────────────────────────
 
 export interface StatusBadgeProps {
-  status: AnalysisStatus;
+  status: ProjectStatus;
   className?: string;
 }
 
-const STATUS_ICONS: Record<AnalysisStatus, React.ElementType> = {
-  validating: Loader2,
-  parsing: Loader2,
-  filtering: Loader2,
-  embedding: Loader2,
-  retrieving: Loader2,
-  detecting: Loader2,
-  aggregating: Loader2,
+const STATUS_ICONS: Record<ProjectStatus, React.ElementType> = {
+  draft: Circle,
+  running: Loader2,
   ready: CheckCircle2,
   partial: AlertTriangle,
   interrupted: XCircle,
   failed: XCircle,
+  cancelled: XCircle,
 };
 
-const STATUS_VARIANT: Record<AnalysisStatus, string> = {
-  validating: 'accent',
-  parsing: 'accent',
-  filtering: 'accent',
-  embedding: 'accent',
-  retrieving: 'accent',
-  detecting: 'accent',
-  aggregating: 'accent',
+const STATUS_VARIANT: Record<ProjectStatus, string> = {
+  draft: 'default',
+  running: 'accent',
   ready: 'added',
   partial: 'modified',
   interrupted: 'deleted',
   failed: 'deleted',
+  cancelled: 'deleted',
 };
 
-const SPIN_STATUSES = new Set([
-  'validating',
-  'parsing',
-  'filtering',
-  'embedding',
-  'retrieving',
-  'detecting',
-  'aggregating',
-]);
+const SPIN_STATUSES = new Set<ProjectStatus>(['running']);
 
-const ANALYSIS_LABELS: Record<AnalysisStatus, string> = {
-  validating: '验证中',
-  parsing: '解析中',
-  filtering: '筛选中',
-  embedding: '向量化',
-  retrieving: '检索中',
-  detecting: '检测中',
-  aggregating: '聚合中',
+const STATUS_LABELS: Record<ProjectStatus, string> = {
+  draft: '草稿',
+  running: '处理中',
   ready: '已完成',
   partial: '部分结果',
   interrupted: '已中断',
   failed: '失败',
+  cancelled: '已取消',
 };
+
+// Need Circle import for draft
+import { Circle } from 'lucide-react';
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const Icon = STATUS_ICONS[status];
   const spinning = SPIN_STATUSES.has(status);
   return (
     <Badge
-      variant={STATUS_VARIANT[status] as 'accent' | 'added' | 'modified' | 'deleted'}
+      variant={STATUS_VARIANT[status] as 'accent' | 'added' | 'modified' | 'deleted' | 'default'}
       className={className}
     >
       <Icon
         className={`h-3 w-3 ${spinning ? 'animate-spin' : ''}`}
         aria-hidden="true"
       />
-      {ANALYSIS_LABELS[status]}
+      {STATUS_LABELS[status]}
     </Badge>
   );
 }
 
 // ── Review status badge ──────────────────────────────────────────
 
-type FindingReviewStatus = 'pending' | 'confirmed' | 'ignored' | 'important';
-
 export interface ReviewBadgeProps {
   status: FindingReviewStatus;
+  important?: boolean;
   className?: string;
 }
 
@@ -141,28 +110,33 @@ const REVIEW_ICONS: Record<FindingReviewStatus, React.ElementType> = {
   pending: Clock,
   confirmed: CheckCircle2,
   ignored: EyeOff,
-  important: Flag,
 };
 
 const REVIEW_VARIANT: Record<FindingReviewStatus, string> = {
   pending: 'uncertain',
   confirmed: 'added',
   ignored: 'default',
-  important: 'modified',
 };
 
 const REVIEW_LABELS: Record<FindingReviewStatus, string> = {
   pending: '待审查',
   confirmed: '已确认',
   ignored: '已忽略',
-  important: '重要',
 };
 
-export function ReviewBadge({ status, className }: ReviewBadgeProps) {
+export function ReviewBadge({ status, important, className }: ReviewBadgeProps) {
+  if (important) {
+    return (
+      <Badge variant="modified" className={className}>
+        <Flag className="h-3 w-3" aria-hidden="true" />
+        重要
+      </Badge>
+    );
+  }
   const Icon = REVIEW_ICONS[status];
   return (
     <Badge
-      variant={REVIEW_VARIANT[status] as 'uncertain' | 'added' | 'default' | 'modified'}
+      variant={REVIEW_VARIANT[status] as 'uncertain' | 'added' | 'default'}
       className={className}
     >
       <Icon className="h-3 w-3" aria-hidden="true" />

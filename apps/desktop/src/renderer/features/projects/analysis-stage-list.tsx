@@ -1,13 +1,13 @@
 import { Circle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import type { AnalysisProjectStatus } from '@bidlens/shared/types-only';
+import type { AnalysisPhase, ProjectStatus } from '@bidlens/shared/types-only';
 import { STAGE_LABELS } from './stage-labels';
 
 // ── Types ─────────────────────────────────────────────────────────────
 
-type StageState = 'pending' | 'active' | 'done' | 'error';
+type StageState = 'pending' | 'active' | 'done';
 
 export interface AnalysisStage {
-  key: AnalysisProjectStatus | 'ready' | 'failed';
+  key: AnalysisPhase | ProjectStatus;
   label: string;
   state: StageState;
   elapsedSec: number | null;
@@ -15,37 +15,34 @@ export interface AnalysisStage {
 
 // ── Stage definitions ─────────────────────────────────────────────────
 
-const PIPELINE_ORDER: (AnalysisProjectStatus | 'ready' | 'failed')[] = [
+const PIPELINE_ORDER: AnalysisPhase[] = [
   'validating',
   'parsing',
-  'filtering',
-  'embedding',
-  'retrieving',
+  'extracting-nodes',
+  'extracting-entities',
+  'filtering-tender-content',
+  'recalling-candidates',
   'detecting',
   'aggregating',
-  'ready',
-  'failed',
+  'persisting',
+  'completed',
 ];
 
-// ── Derive stages from project status ─────────────────────────────────
+// ── Derive stages from project status and phase ───────────────────────
 
 export function deriveStages(
-  projectStatus: AnalysisProjectStatus,
+  projectStatus: ProjectStatus,
+  currentPhase?: AnalysisPhase | null,
   /** Optional elapsed seconds when supplied by the main-process progress snapshot. */
   stageTimings?: Partial<Record<string, number>>,
 ): AnalysisStage[] {
   const failed = projectStatus === 'failed';
   const isTerminal = projectStatus === 'ready' || projectStatus === 'partial' || projectStatus === 'interrupted' || failed;
-  const currentIdx = PIPELINE_ORDER.indexOf(projectStatus);
+  const currentIdx = currentPhase ? PIPELINE_ORDER.indexOf(currentPhase) : -1;
 
-  return PIPELINE_ORDER.map((key, idx) => {
+  const pipelineStages = PIPELINE_ORDER.map((key, idx) => {
     let state: StageState;
-    if (key === 'failed') {
-      state = failed ? 'error' : 'pending';
-    } else if (key === 'ready') {
-      state = failed ? 'pending' : isTerminal ? 'done' : 'pending';
-    } else if (isTerminal) {
-      // All pipeline stages are done when terminal
+    if (isTerminal) {
       state = 'done';
     } else if (idx < currentIdx) {
       state = 'done';
@@ -62,6 +59,16 @@ export function deriveStages(
       elapsedSec: stageTimings?.[key] ?? null,
     };
   });
+
+  // Append terminal status indicator
+  pipelineStages.push({
+    key: 'completed' as AnalysisPhase,
+    label: failed ? '失败' : '完成',
+    state: failed ? 'done' : isTerminal ? 'done' : 'pending',
+    elapsedSec: null,
+  });
+
+  return pipelineStages;
 }
 
 // ── Component ─────────────────────────────────────────────────────────
@@ -74,14 +81,12 @@ const STATE_ICONS: Record<StageState, React.ElementType> = {
   pending: Circle,
   active: Loader2,
   done: CheckCircle2,
-  error: XCircle,
 };
 
 const STATE_COLORS: Record<StageState, string> = {
   pending: 'text-[var(--color-text-muted)]',
   active: 'text-[var(--color-accent)]',
   done: 'text-[var(--color-added)]',
-  error: 'text-[var(--color-danger)]',
 };
 
 function formatElapsed(sec: number | null): string {

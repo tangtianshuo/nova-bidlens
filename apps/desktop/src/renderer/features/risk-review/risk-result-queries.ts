@@ -35,24 +35,26 @@ export interface FindingCounts {
   byRisk: Record<RiskLevel, number>;
   byDetector: Record<DetectorType, number>;
   byReviewStatus: Record<FindingReviewStatus, number>;
+  important: number;
   confirmed: number;
   pending: number;
 }
 
 export function computeFindingCounts(findings: RiskFinding[]): FindingCounts {
   const byRisk: Record<RiskLevel, number> = { high: 0, medium: 0, low: 0 };
-  const byDetector: Record<DetectorType, number> = { text: 0, table: 0, entity: 0 };
+  const byDetector: Record<DetectorType, number> = { text: 0, table: 0, entity: 0, 'key-fact': 0 };
   const byReviewStatus: Record<FindingReviewStatus, number> = {
     pending: 0,
     confirmed: 0,
     ignored: 0,
-    important: 0,
   };
+  let important = 0;
 
   for (const f of findings) {
     byRisk[f.riskLevel]++;
     byDetector[f.detectorType]++;
     byReviewStatus[f.reviewStatus]++;
+    if (f.important) important++;
   }
 
   return {
@@ -60,6 +62,7 @@ export function computeFindingCounts(findings: RiskFinding[]): FindingCounts {
     byRisk,
     byDetector,
     byReviewStatus,
+    important,
     confirmed: byReviewStatus.confirmed,
     pending: byReviewStatus.pending,
   };

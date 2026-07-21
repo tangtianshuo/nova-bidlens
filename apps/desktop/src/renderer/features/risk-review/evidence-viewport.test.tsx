@@ -8,16 +8,28 @@ afterEach(cleanup);
 function makeEvidence(overrides: Partial<Evidence> = {}): Evidence {
   return {
     id: 'ev-test-001',
-    submissionId: 'sub-1',
-    blockIndex: 42,
-    originalText: '本项目拟投入技术人员共计15人',
-    normalizedText: '本项目拟投入技术人员共计15人',
+    detectorType: 'text',
     matchBasis: 'semantic',
     similarityScore: 0.92,
+    sourceSubmissionId: 'sub-1',
+    sourceNodeId: 'node-42',
+    sourceOriginalText: '本项目拟投入技术人员共计15人',
+    sourceNormalizedText: '本项目拟投入技术人员共计15人',
+    sourceSectionPath: [],
+    sourcePageRange: null,
+    sourceTableLocation: null,
+    targetSubmissionId: 'sub-2',
+    targetNodeId: 'node-42',
+    targetOriginalText: '本项目拟投入技术人员共计15人',
+    targetNormalizedText: '本项目拟投入技术人员共计15人',
+    targetSectionPath: [],
+    targetPageRange: null,
+    targetTableLocation: null,
     contextBefore: '（三）项目团队配置',
     contextAfter: '（四）质量保证措施',
     tenderFiltered: false,
     tenderFilterReason: null,
+    ruleVersion: '1.0.0',
     ...overrides,
   };
 }
@@ -25,7 +37,7 @@ function makeEvidence(overrides: Partial<Evidence> = {}): Evidence {
 describe('EvidenceViewport', () => {
   it('shows empty state when no evidence', () => {
     render(<EvidenceViewport evidence={[]} submissionNames={new Map()} />);
-    expect(screen.getByText('选择一个发现项查看证据')).toBeTruthy();
+    expect(screen.getByText('该发现项暂无证据')).toBeTruthy();
   });
 
   it('renders evidence count', () => {
@@ -37,14 +49,17 @@ describe('EvidenceViewport', () => {
   it('renders evidence original text', () => {
     const evidence = [makeEvidence()];
     render(<EvidenceViewport evidence={evidence} submissionNames={new Map()} />);
-    expect(screen.getByText(/本项目拟投入技术人员共计15人/)).toBeTruthy();
+    // Text appears in both source and target blocks
+    const matches = screen.getAllByText(/本项目拟投入技术人员共计15人/);
+    expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders submission name from map', () => {
-    const evidence = [makeEvidence({ submissionId: 'sub-1' })];
-    const names = new Map([['sub-1', 'A公司投标文件.docx']]);
+  it('renders submission names from map', () => {
+    const evidence = [makeEvidence({ sourceSubmissionId: 'sub-1', targetSubmissionId: 'sub-2' })];
+    const names = new Map([['sub-1', 'A公司投标文件.docx'], ['sub-2', 'B公司投标文件.docx']]);
     render(<EvidenceViewport evidence={evidence} submissionNames={names} />);
     expect(screen.getByText('A公司投标文件.docx')).toBeTruthy();
+    expect(screen.getByText('B公司投标文件.docx')).toBeTruthy();
   });
 
   it('renders similarity score', () => {
