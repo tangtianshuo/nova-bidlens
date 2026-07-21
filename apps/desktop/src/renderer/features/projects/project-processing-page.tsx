@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { ArrowLeft, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PersistentBanner } from '@/components/feedback/persistent-banner';
@@ -8,18 +8,8 @@ import { useProjectStore } from './project-store';
 import { AnalysisStageList, deriveStages } from './analysis-stage-list';
 import { SubmissionProgressTable } from './submission-progress-table';
 import { AnalysisRecoveryActions, type RecoveryAction } from './analysis-recovery-actions';
-import type { AnalysisProjectStatus } from '../../__fixtures__/risk-project';
-
-// ── Fixture per-stage timings (replaced by real IPC later) ────────────
-
-const FIXTURE_STAGE_TIMINGS: Record<string, Partial<Record<string, number>>> = {
-  'proj-fixture-001': { validating: 2, parsing: 8, filtering: 3, embedding: 12, retrieving: 5, detecting: 7, aggregating: 4, ready: 1 },
-  'proj-fixture-002': { validating: 2, parsing: 7, filtering: 3, embedding: 10, retrieving: 5, detecting: 6, aggregating: 3, ready: 1 },
-  'proj-fixture-003': { validating: 2, parsing: 9, filtering: 4, embedding: 14, retrieving: 6, detecting: 8, aggregating: 5, ready: 1 },
-  'proj-fixture-004': { validating: 2, parsing: 6, filtering: 3, embedding: 8 },
-  'proj-fixture-005': { validating: 2, parsing: 5 },
-  'proj-fixture-006': { validating: 2, parsing: 8, filtering: 3, embedding: 5 },
-};
+import type { AnalysisProjectStatus } from '@bidlens/shared/types-only';
+import { useAppStore } from '../../stores/app-store';
 
 // ── Preset labels ─────────────────────────────────────────────────────
 
@@ -33,17 +23,23 @@ const PRESET_LABELS: Record<string, string> = {
 
 export function ProjectProcessingPage() {
   const { selectedProjectId, clearSelection } = useProjectStore();
+  const setView = useAppStore((state) => state.setView);
   const { data: project, isLoading, error } = useProjectDetail(selectedProjectId);
 
   const handleCancel = useCallback(() => {
-    // IPC not wired yet — stub
-    console.log('[ProjectProcessing] cancel analysis for:', selectedProjectId);
+    if (selectedProjectId) void window.bidlens.cancelRiskProject(selectedProjectId);
   }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    return window.bidlens.onRiskProgress((progress) => {
+      if (progress.projectId === selectedProjectId && progress.status === 'ready') setView('project-result');
+    });
+  }, [selectedProjectId, setView]);
 
   const handleRecoveryAction = useCallback(
     (action: RecoveryAction) => {
-      // IPC not wired yet — stub
-      console.log('[ProjectProcessing] recovery action:', action, 'for:', selectedProjectId);
+      if (action === 'cancel' && selectedProjectId) void window.bidlens.cancelRiskProject(selectedProjectId);
     },
     [selectedProjectId],
   );
@@ -54,8 +50,7 @@ export function ProjectProcessingPage() {
 
   const stages = useMemo(() => {
     if (!project) return [];
-    const timings = FIXTURE_STAGE_TIMINGS[project.id];
-    return deriveStages(project.status, timings);
+    return deriveStages(project.status);
   }, [project]);
 
   const isActive = project
@@ -66,7 +61,7 @@ export function ProjectProcessingPage() {
 
   if (!selectedProjectId || isLoading) {
     return (
-      <div className="flex min-h-full flex-col" style={{ maxWidth: 960, padding: '34px 36px 28px' }}>
+      <div className="app-page" data-width="compact">
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div
@@ -83,7 +78,7 @@ export function ProjectProcessingPage() {
 
   if (error || !project) {
     return (
-      <div className="flex min-h-full flex-col items-center justify-center gap-3" style={{ maxWidth: 960, padding: '34px 36px 28px' }}>
+      <div className="app-page" data-width="compact" style={{ alignItems: 'center', justifyContent: 'center' }}>
         <p className="text-sm text-[var(--color-danger)]">
           加载项目详情失败: {error instanceof Error ? error.message : '项目不存在'}
         </p>
@@ -97,7 +92,7 @@ export function ProjectProcessingPage() {
   // ── Render ──────────────────────────────────────────────────────
 
   return (
-    <div className="flex min-h-full flex-col" style={{ maxWidth: 960, padding: '34px 36px 28px' }}>
+    <div className="app-page" data-width="compact">
       {/* Back + Header */}
       <div className="mb-4">
         <button

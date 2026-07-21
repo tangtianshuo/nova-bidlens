@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
-import type { SubmissionSummary, RiskFinding } from '../../__fixtures__/risk-project';
+import type { SubmissionSummary, RiskFinding } from '@bidlens/shared/types-only';
 
 interface RelationshipMatrixProps {
   submissions: SubmissionSummary[];

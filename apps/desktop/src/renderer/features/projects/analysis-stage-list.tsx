@@ -1,5 +1,5 @@
 import { Circle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import type { AnalysisProjectStatus } from '../../__fixtures__/risk-project';
+import type { AnalysisProjectStatus } from '@bidlens/shared/types-only';
 import { STAGE_LABELS } from './stage-labels';
 
 // ── Types ─────────────────────────────────────────────────────────────
@@ -31,7 +31,7 @@ const PIPELINE_ORDER: (AnalysisProjectStatus | 'ready' | 'failed')[] = [
 
 export function deriveStages(
   projectStatus: AnalysisProjectStatus,
-  /** Per-stage elapsed seconds — fixture data for now. */
+  /** Optional elapsed seconds when supplied by the main-process progress snapshot. */
   stageTimings?: Partial<Record<string, number>>,
 ): AnalysisStage[] {
   const failed = projectStatus === 'failed';

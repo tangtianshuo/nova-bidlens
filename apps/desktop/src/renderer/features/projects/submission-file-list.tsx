@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/alert';
 // ─── Types ──────────────────────────────────────────────────────────
 
 export interface SubmissionFile {
+  path?: string;
   id: string;
   name: string;
   format: 'docx' | 'pdf';
@@ -200,13 +201,14 @@ export function SubmissionFileList({
     [],
   );
 
-  const handleAddClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+  const handleAddClick = useCallback(async () => {
+    const selected = await window.bidlens.selectFile();
+    if (!selected) return;
+    const format = selected.format.toLowerCase() as 'docx' | 'pdf';
+    onChange([...files, { id: crypto.randomUUID(), path: selected.path, name: selected.name, format, sizeBytes: selected.size, pageCount: null, sha256: selected.path }]);
+  }, [files, onChange]);
 
-  const handleFileInputChange = useCallback(() => {
-    // Placeholder — actual file reading will be wired through IPC
-  }, []);
+  const handleFileInputChange = useCallback(() => undefined, []);
 
   const totalSize = files.reduce((sum, f) => sum + f.sizeBytes, 0);
 
@@ -261,7 +263,7 @@ export function SubmissionFileList({
         {canAddMore && files.length > 0 && (
           <button
             type="button"
-            onClick={handleAddClick}
+          onClick={() => { void handleAddClick(); }}
             className="mt-1 flex items-center gap-1 self-start rounded-[var(--radius)] px-2 py-1 text-xs text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)] transition-colors"
           >
             <Upload className="h-3.5 w-3.5" />

@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import type { RiskFinding, RiskLevel } from '../../__fixtures__/risk-project';
+import type { RiskFinding, RiskLevel } from '@bidlens/shared/types-only';
 
 interface EvidenceDetailTabsProps {
   finding: RiskFinding;

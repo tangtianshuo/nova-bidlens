@@ -1,5 +1,5 @@
 import { StatusBadge } from '@/components/feedback/status-badge';
-import type { SubmissionSummary } from '../../__fixtures__/risk-project';
+import type { SubmissionSummary } from '@bidlens/shared/types-only';
 import { STAGE_LABELS } from './stage-labels';
 
 function getStageLabel(status: string): string {

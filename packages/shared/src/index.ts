@@ -2,6 +2,7 @@ export const BIDLENS_VERSION = '0.2.2';
 
 // Core types and utilities
 export * from './compare-task.js';
+export * from './risk-review.js';
 export * from './diff-ast.js';
 export * from './document-ast.js';
 export * from './format-diff.js';

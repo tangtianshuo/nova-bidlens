@@ -6,6 +6,7 @@ import { SubmissionFileList, validateFiles, type SubmissionFile } from './submis
 import { DetectionPreset, type DetectionPresetId } from './detection-preset';
 
 interface BaselineFile {
+  path?: string;
   name: string;
   format: string;
   sizeBytes: number;
@@ -61,16 +62,13 @@ export function NewProjectPage({ onSubmit, onStartAnalysis }: NewProjectPageProp
   }
 
   return (
-    <div
-      className="flex min-h-full flex-col"
-      style={{ maxWidth: 1120, padding: '34px 36px 28px' }}
-    >
+    <div className="app-page" data-width="narrow">
       {/* Page Head */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">
+        <h1 className="app-page-title">
           新建项目
         </h1>
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+        <p className="app-page-meta">
           配置项目信息后添加投标文件
         </p>
       </div>

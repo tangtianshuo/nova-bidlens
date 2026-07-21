@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge, RiskBadge } from '@/components/feedback/status-badge';
 import { useProjectStore } from './project-store';
 import type { ProjectSortField } from './project-store';
-import type { AnalysisProjectSummary } from '../../__fixtures__/risk-project';
+import type { AnalysisProjectSummary } from '@bidlens/shared/types-only';
 
 // ─── Column definitions ─────────────────────────────────────────────
 

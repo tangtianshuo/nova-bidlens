@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
-import { Search, X, Plus, RefreshCw, FileQuestion } from 'lucide-react';
+import { Search, X, Plus, RefreshCw, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty';
 import {
   Select,
   SelectTrigger,
@@ -22,7 +23,7 @@ import { PersistentBanner } from '@/components/feedback/persistent-banner';
 import { useProjectList } from './project-queries';
 import { useProjectStore } from './project-store';
 import { ProjectTable } from './project-table';
-import type { AnalysisProjectStatus, RiskLevel } from '../../__fixtures__/risk-project';
+import type { AnalysisProjectStatus, RiskLevel } from '@bidlens/shared/types-only';
 
 // ─── Filter options ─────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ const PAGE_SIZE_OPTIONS = ['5', '10', '20'];
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export function ProjectListPage() {
+export function ProjectListPage({ onNewProject, onOpenProject }: { onNewProject?: () => void; onOpenProject?: (id: string) => void } = {}) {
   const { data: projects, isLoading, error, refetch } = useProjectList();
 
   const {
@@ -132,8 +133,8 @@ export function ProjectListPage() {
 
   const handleRowClick = useCallback((id: string) => {
     // Navigate to project detail — will be wired to app store in UI-206
-    console.log('[ProjectList] navigate to project:', id);
-  }, []);
+    onOpenProject?.(id);
+  }, [onOpenProject]);
 
   const handleDelete = useCallback((id: string) => {
     // TODO: wire delete confirmation dialog
@@ -151,7 +152,7 @@ export function ProjectListPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-full flex-col" style={{ maxWidth: 1240, padding: '34px 36px 28px' }}>
+      <div className="app-page" data-width="standard">
         <Skeleton className="mb-4 h-7 w-32" />
         <Skeleton className="mb-3 h-9 w-full max-w-xs" />
         <div className="space-y-3">
@@ -167,7 +168,7 @@ export function ProjectListPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-full flex-col items-center justify-center" style={{ maxWidth: 1240, padding: '34px 36px 28px' }}>
+      <div className="app-page" data-width="standard" style={{ alignItems: 'center', justifyContent: 'center' }}>
         <p className="text-sm text-[var(--color-danger)]">
           加载项目列表失败: {error instanceof Error ? error.message : '未知错误'}
         </p>
@@ -183,14 +184,22 @@ export function ProjectListPage() {
 
   if (!projects || projects.length === 0) {
     return (
-      <div className="flex min-h-full flex-col items-center justify-center" style={{ maxWidth: 1240, padding: '34px 36px 28px' }}>
-        <FileQuestion className="h-10 w-10 text-[var(--color-text-muted)]" aria-hidden="true" />
-        <p className="mt-3 text-sm font-medium text-[var(--color-text)]">暂无项目</p>
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]">创建一个新项目开始分析</p>
-        <Button size="sm" variant="primary" className="mt-3" onClick={() => console.log('[ProjectList] new project')}>
-          <Plus className="h-3.5 w-3.5" />
-          新建项目
-        </Button>
+      <div className="app-page" data-width="standard">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FolderOpen />
+            </EmptyMedia>
+            <EmptyTitle>暂无项目</EmptyTitle>
+            <EmptyDescription>创建一个新项目开始分析</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button size="lg" variant="primary" onClick={onNewProject}>
+              <Plus className="h-3.5 w-3.5" />
+              新建项目
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     );
   }
@@ -198,13 +207,13 @@ export function ProjectListPage() {
   // ── Render ──────────────────────────────────────────────────────
 
   return (
-    <div className="flex min-h-full flex-col" style={{ maxWidth: 1240, padding: '34px 36px 28px' }}>
+    <div className="app-page" data-width="standard">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-[var(--color-text)]">
+        <h1 className="app-page-title">
           项目列表
         </h1>
-        <Button size="sm" variant="primary" onClick={() => console.log('[ProjectList] new project')}>
+        <Button size="sm" variant="primary" onClick={onNewProject}>
           <Plus className="h-3.5 w-3.5" />
           新建项目
         </Button>

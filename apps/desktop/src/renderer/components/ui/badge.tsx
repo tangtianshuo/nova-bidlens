@@ -10,7 +10,7 @@ const badgeVariants = cva(
         default:
           "bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)] border-[var(--color-border)] px-1.5 py-0.5",
         accent:
-          "bg-[var(--color-accent-soft)] text-[var(--color-accent)] border-[var(--color-border)] px-1.5 py-0.5",
+          "bg-[var(--color-accent-soft)] text-[var(--color-accent)] border-[color-mix(in_srgb,var(--color-accent)_35%,var(--color-border))] px-1.5 py-0.5",
         added:
           "bg-[var(--color-added-bg)] text-[var(--color-added)] border-[var(--color-added-border)] px-1.5 py-0.5",
         deleted:

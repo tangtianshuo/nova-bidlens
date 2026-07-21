@@ -470,3 +470,17 @@ ipcMain.handle('compare:start', async (event, request) => {
   return { taskId };
 });
 ```
+# 雷同性风险审查 IPC（V0.3 主链）
+
+Renderer 通过 preload 调用以下项目级接口，主进程负责真实文件校验、AST 解析和确定性候选检测。所有结果均为审查线索，不构成串标认定。
+
+| Channel | Request | Response |
+|---|---|---|
+| `risk:listProjects` | 无 | `AnalysisProjectSummary[]` |
+| `risk:getProject` | `projectId` | `AnalysisProjectDetail` |
+| `risk:createProject` | 项目名、2-8 个文件路径、可选基线、预设 | `{ projectId }` |
+| `risk:cancelProject` | `projectId` | `{ projectId, cancelled }` |
+| `risk:saveFindingReview` | 项目、发现项、人工状态和备注 | 更新后的 `RiskFinding` |
+| `risk:progress` | 主进程推送 | `RiskProgress`（通过 `onRiskProgress` 订阅） |
+
+当前实现使用本地解析器和可解释的词法候选检测，并明确记录 `embedding_unavailable` 降级状态；BGE-M3/Rust 检测器接入保持同一契约。

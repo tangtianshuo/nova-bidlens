@@ -32,7 +32,7 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
   // Loading
   if (isLoading || !projectId) {
     return (
-      <div className="flex min-h-full flex-col" style={{ maxWidth: 1280, padding: '34px 36px 28px' }}>
+      <div className="app-page" data-width="wide">
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-12 animate-pulse rounded-[var(--radius)] bg-[var(--color-bg-subtle)]" />
@@ -45,7 +45,7 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
   // Error
   if (error || !project) {
     return (
-      <div className="flex min-h-full flex-col items-center justify-center gap-3" style={{ maxWidth: 1280, padding: '34px 36px 28px' }}>
+      <div className="app-page" data-width="wide" style={{ alignItems: 'center', justifyContent: 'center' }}>
         <p className="text-sm text-[var(--color-danger)]">
           加载结果失败: {error instanceof Error ? error.message : '项目不存在'}
         </p>
@@ -61,7 +61,7 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
   const counts = useFindingCounts(project.findings);
 
   return (
-    <div className="flex min-h-full flex-col" style={{ maxWidth: 1280, padding: '34px 36px 28px' }}>
+    <div className="app-page" data-width="wide">
       {/* Back + Header */}
       <div className="mb-4">
         <button
@@ -73,7 +73,7 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
         </button>
 
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-[var(--color-text)] truncate">
+          <h1 className="app-page-title truncate">
             {project.name}
           </h1>
           <StatusBadge status={project.status} />

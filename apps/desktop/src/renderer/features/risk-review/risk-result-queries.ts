@@ -1,18 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import {
-  buildReadyScenario,
-  buildNoBaselineScenario,
-  buildPartialScenario,
-  buildDegradedScenario,
-} from '../../__fixtures__/risk-project';
 import type {
   AnalysisProjectDetail,
   RiskFinding,
   RiskLevel,
   DetectorType,
   FindingReviewStatus,
-} from '../../__fixtures__/risk-project';
+} from '@bidlens/shared/types-only';
 
 // ─── Query keys ─────────────────────────────────────────────────────
 
@@ -21,18 +15,6 @@ export const riskResultKeys = {
   detail: (projectId: string) => [...riskResultKeys.all, 'detail', projectId] as const,
 };
 
-// ─── Fixture lookup ─────────────────────────────────────────────────
-
-function getFixtureDetail(projectId: string): AnalysisProjectDetail | undefined {
-  const details: Record<string, () => AnalysisProjectDetail> = {
-    'proj-fixture-001': buildReadyScenario,
-    'proj-fixture-002': buildNoBaselineScenario,
-    'proj-fixture-004': buildPartialScenario,
-    'proj-fixture-003': buildDegradedScenario,
-  };
-  return details[projectId]?.();
-}
-
 // ─── Hooks ──────────────────────────────────────────────────────────
 
 export function useRiskResultDetail(projectId: string | null) {
@@ -40,9 +22,7 @@ export function useRiskResultDetail(projectId: string | null) {
     queryKey: riskResultKeys.detail(projectId ?? ''),
     queryFn: () => {
       if (!projectId) throw new Error('projectId is required');
-      const detail = getFixtureDetail(projectId);
-      if (!detail) throw new Error(`Project not found: ${projectId}`);
-      return detail;
+      return window.bidlens.getProject(projectId);
     },
     enabled: projectId !== null,
   });

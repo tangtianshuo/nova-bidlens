@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, Star, MessageSquare } from 'lucide-react';
-import type { FindingReviewStatus } from '../../__fixtures__/risk-project';
+import type { FindingReviewStatus } from '@bidlens/shared/types-only';
 
 interface EvidenceReviewControlsProps {
   findingId: string;

@@ -5,6 +5,7 @@
  */
 
 export const BIDLENS_VERSION = '0.2.2';
+export type { AnalysisProjectStatus, RiskLevel, DetectorType, FindingReviewStatus, RiskPreset, RiskAnalysisStatus, RiskFileFormat, RiskSubmission, SubmissionSummary, RiskEvidence, Evidence, RiskFinding, RiskAssessment, AnalysisProjectSummary, AnalysisProjectDetail } from './risk-review.js';
 
 // Core document types
 export type { DocumentAst, BlockNode, ParagraphNode, SectionNode, ListNode, TableNode, Comment, CommentRange, Revision } from './document-ast.js';
@@ -58,6 +59,10 @@ export type {
   CleanupRequest,
   EngineHandshake,
   BidLensApi,
+  RiskFileInput,
+  CreateRiskProjectRequest,
+  CreateRiskProjectResponse,
+  RiskProgress,
 } from './ipc.js';
 
 // State machine utilities (pure functions, no Node deps)

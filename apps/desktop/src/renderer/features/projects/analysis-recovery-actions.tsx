@@ -11,7 +11,7 @@ import {
   WifiOff,
   Cpu,
 } from 'lucide-react';
-import type { AnalysisProjectStatus } from '../../__fixtures__/risk-project';
+import type { AnalysisProjectStatus } from '@bidlens/shared/types-only';
 
 // ─── Types ──────────────────────────────────────────────────────────
 

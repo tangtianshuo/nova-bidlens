@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import type {
   AnalysisProjectStatus,
   RiskLevel,
-} from '../../__fixtures__/risk-project';
+} from '@bidlens/shared/types-only';
 
 // ─── Sort types ──────────────────────────────────────────────────────────
 

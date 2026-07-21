@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { formatFileSize } from '@/lib/utils';
 
 interface BaselineFile {
+  path?: string;
   name: string;
   format: string;
   sizeBytes: number;
@@ -25,6 +26,12 @@ export function TenderBaselineSlot({
 }: TenderBaselineSlotProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+
+  const selectBaseline = useCallback(async () => {
+    const selected = await window.bidlens.selectFile();
+    if (!selected) return;
+    onChange({ path: selected.path, name: selected.name, format: selected.format, sizeBytes: selected.size });
+  }, [onChange]);
 
   const extractFile = useCallback(
     (file: File) => {
@@ -108,7 +115,7 @@ export function TenderBaselineSlot({
           <button
             type="button"
             className="flex w-full cursor-pointer items-center gap-4 p-5 text-left hover:bg-[var(--color-bg-hover)]"
-            onClick={() => inputRef.current?.click()}
+            onClick={() => { void selectBaseline(); }}
           >
             <div className="flex h-[58px] w-[48px] shrink-0 items-center justify-center rounded-[5px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-subtle)]">
               <Upload className="h-6 w-6 text-[var(--color-text-muted)]" />

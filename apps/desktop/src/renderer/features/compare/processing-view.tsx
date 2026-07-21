@@ -137,7 +137,7 @@ export function ProcessingView() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-8">
-      <div className="w-full" style={{ maxWidth: 820 }}>
+      <div className="w-full" style={{ maxWidth: 820, padding: '0 var(--layout-page-x)' }}>
         <h1 className="text-2xl font-semibold text-[var(--color-text)]">正在比对</h1>
         <p className="mt-1 text-xs text-[var(--color-text-muted)]">标准灵敏度</p>
 

@@ -10,10 +10,22 @@ import type {
   ExportRequest,
   UpdateSettingsRequest,
   CompareProgress,
+  CreateRiskProjectRequest,
+  RiskProgress,
 } from '@bidlens/shared';
 import { contextBridge, ipcRenderer } from 'electron';
 
 const api: BidLensApi = {
+  listProjects: () => ipcRenderer.invoke('risk:listProjects'),
+  getProject: (projectId: string) => ipcRenderer.invoke('risk:getProject', projectId),
+  createRiskProject: (request: CreateRiskProjectRequest) => ipcRenderer.invoke('risk:createProject', request),
+  cancelRiskProject: (projectId: string) => ipcRenderer.invoke('risk:cancelProject', projectId),
+  onRiskProgress: (handler: (progress: RiskProgress) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: unknown) => handler(progress as RiskProgress);
+    ipcRenderer.on('risk:progress', listener);
+    return () => { ipcRenderer.removeListener('risk:progress', listener); };
+  },
+  saveRiskFindingReview: (request) => ipcRenderer.invoke('risk:saveFindingReview', request),
   // File
   selectFile: () => ipcRenderer.invoke('file:select'),
   validateFiles: (request: ValidateFilesRequest) => ipcRenderer.invoke('file:validate', request),

@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import type { Evidence } from '../../__fixtures__/risk-project';
+import type { Evidence } from '@bidlens/shared/types-only';
 
 interface EvidenceViewportProps {
   evidence: Evidence[];

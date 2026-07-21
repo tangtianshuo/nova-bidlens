@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "schema_version": 1,
+  "generatedAt": "2026-07-19T11:16:08.357Z",
+  "generated_at": "2026-07-19T11:16:08.357Z",
+  "projectRoot": "D:\\Projects\\Nova\\nova-bidlens",
+  "project_root": "D:\\Projects\\Nova\\nova-bidlens",
+  "lockfile": "TokRepo.lock",
+  "lockfilePath": "D:\\Projects\\Nova\\nova-bidlens\\TokRepo.lock",
+  "lockfile_path": "D:\\Projects\\Nova\\nova-bidlens\\TokRepo.lock",
+  "statePath": "D:\\Projects\\Nova\\nova-bidlens\\.tokrepo\\state.json",
+  "state_path": "D:\\Projects\\Nova\\nova-bidlens\\.tokrepo\\state.json",
+  "count": 1,
+  "summary": {
+    "installed": 1,
+    "staged": 0,
+    "local_changes": 0,
+    "missing_files": 0
+  },
+  "assets": [
+    {
+      "uuid": "71a05a12-e5a9-45ec-84b4-815d567e592e",
+      "title": "Claude Official Skill: frontend-design",
+      "sourceUrl": "https://tokrepo.com/en/workflows/71a05a12-e5a9-45ec-84b4-815d567e592e",
+      "targetTool": "project",
+      "installMode": "skill",
+      "installedAt": "2026-07-19T11:16:08.347Z",
+      "contentHash": "95654d4a446145764d33db26ee6f468ff1b685aaf3bdce1b29b118006c4d4024",
+      "installPlanHash": "86852f65568836b389bb510dbae06707d0240702b72cd892f920ca952a4d48c0",
+      "sessionId": "",
+      "status": "installed",
+      "files": [
+        {
+          "path": ".claude/skills/Claude Official Skill- frontend-design.md",
+          "path_type": "project_relative",
+          "resolvedPath": "D:\\Projects\\Nova\\nova-bidlens\\.claude\\skills\\Claude Official Skill- frontend-design.md",
+          "sourceName": "Claude Official Skill- frontend-design",
+          "sha256": "5fe05b78b1bacf889d42dcf67d6d896c0d4a19847d2e02dc08ea1f7e2e159754",
+          "actualSha": "5fe05b78b1bacf889d42dcf67d6d896c0d4a19847d2e02dc08ea1f7e2e159754",
+          "exists": true,
+          "changed": false
+        }
+      ],
+      "rollback": [
+        {
+          "type": "remove_file",
+          "path": ".claude/skills/Claude Official Skill- frontend-design.md",
+          "path_type": "project_relative"
+        }
+      ]
+    }
+  ]
+}

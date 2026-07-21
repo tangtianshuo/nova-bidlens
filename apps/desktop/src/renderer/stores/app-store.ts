@@ -71,7 +71,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   mode: 'risk-review',
-  view: 'new',
+  view: 'project-list',
   taskId: null,
 
   setMode: (mode: AppMode) => {

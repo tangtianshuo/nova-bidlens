@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useRiskReviewStore } from './risk-review-store';
-import type { RiskLevel, DetectorType, FindingReviewStatus } from '../../__fixtures__/risk-project';
+import type { RiskLevel, DetectorType, FindingReviewStatus } from '@bidlens/shared/types-only';
 
 export function FindingFilterToolbar() {
   const { filters, setRiskFilter, setDetectorFilter, setReviewStatusFilter, setShowImportantOnly, clearFilters } = useRiskReviewStore();

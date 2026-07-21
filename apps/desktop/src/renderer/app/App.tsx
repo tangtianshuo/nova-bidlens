@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReviewAnnotation } from '@bidlens/shared/types-only';
 import { Toaster } from 'sonner';
 import { useAppStore } from '../stores/app-store';
@@ -12,6 +13,13 @@ import { ReviewWorkbench, DEFAULT_FILTERS, type FilterState } from '../features/
 import { TooltipProvider } from '../components/ui/tooltip';
 
 import { useResultStore } from '../stores/result-store';
+import { ProjectListPage, NewProjectPage } from '../features/projects';
+import { ProjectProcessingPage } from '../features/projects/project-processing-page';
+import { RiskResultPage } from '../features/risk-review/risk-result-page';
+import type { NewProjectFormData } from '../features/projects/new-project-page';
+import { useRiskReviewStore } from '../features/risk-review/risk-review-store';
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 export function App() {
   const view = useAppStore((s) => s.view);
@@ -24,9 +32,14 @@ export function App() {
   }, []);
 
   return (
+    <QueryClientProvider client={queryClient}>
     <ErrorBoundary>
       <TooltipProvider delayDuration={300}>
         <AppShell>
+          {view === 'project-list' && <ProjectListPage onNewProject={() => useAppStore.getState().setView('new-project')} onOpenProject={(id) => { useRiskReviewStore.getState().setProjectId(id); useAppStore.getState().setView('project-result'); }} />}
+          {view === 'new-project' && <NewProjectPage onStartAnalysis={startRiskProject} />}
+          {view === 'project-processing' && <ProjectProcessingPage />}
+          {view === 'project-result' && <RiskResultPage onBack={() => useAppStore.getState().setView('project-list')} />}
           {view === 'new' && <NewCompareView />}
           {view === 'processing' && <ProcessingView />}
           {view === 'result' && <ResultView />}
@@ -35,7 +48,16 @@ export function App() {
         <Toaster position="top-right" offset={52} />
       </TooltipProvider>
     </ErrorBoundary>
+    </QueryClientProvider>
   );
+}
+
+async function startRiskProject(data: NewProjectFormData) {
+  const paths = data.submissions.map((file) => file.path).filter((value): value is string => Boolean(value));
+  if (paths.length !== data.submissions.length) return;
+  const { projectId } = await window.bidlens.createRiskProject({ name: data.name, preset: data.preset, submissions: data.submissions.map((file) => ({ path: file.path!, name: file.name })), baseline: data.baseline?.path ? { path: data.baseline.path, name: data.baseline.name } : null });
+  useRiskReviewStore.getState().setProjectId(projectId);
+  useAppStore.getState().startTask(projectId);
 }
 
 function ResultView() {

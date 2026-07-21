@@ -3,7 +3,7 @@ import type {
   RiskLevel,
   DetectorType,
   FindingReviewStatus,
-} from '../../__fixtures__/risk-project';
+} from '@bidlens/shared/types-only';
 
 // ─── Tab type ───────────────────────────────────────────────────────
 

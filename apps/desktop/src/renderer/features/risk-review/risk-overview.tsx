@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import type { AnalysisProjectDetail } from '../../__fixtures__/risk-project';
+import type { AnalysisProjectDetail } from '@bidlens/shared/types-only';
 import type { FindingCounts } from './risk-result-queries';
 
 interface RiskOverviewProps {
@@ -11,10 +11,10 @@ export function RiskOverview({ project, counts }: RiskOverviewProps) {
   const assessment = project.assessment;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {/* Risk summary card */}
-      <div className="rounded-[var(--radius)] border border-[var(--color-border)] p-5">
-        <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">项目风险</h2>
+      <div className="panel-card">
+        <h2 className="panel-card-header">项目风险</h2>
         <div className="grid grid-cols-3 gap-4">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-[var(--color-text-muted)]">风险等级</span>
@@ -64,8 +64,8 @@ function DetectorSummary({ counts }: { counts: FindingCounts }) {
   ];
 
   return (
-    <div className="rounded-[var(--radius)] border border-[var(--color-border)] p-5">
-      <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">检测器摘要</h2>
+    <div className="panel-card">
+      <h2 className="panel-card-header">检测器摘要</h2>
       <div className="grid grid-cols-3 gap-4">
         {detectors.map((d) => (
           <div key={d.type} className="flex flex-col gap-1">
@@ -92,19 +92,22 @@ function TopFindings({ findings }: { findings: AnalysisProjectDetail['findings']
 
   if (topFindings.length === 0) {
     return (
-      <div className="rounded-[var(--radius)] border border-[var(--color-border)] p-5">
-        <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">主要发现</h2>
+      <div className="panel-card">
+        <h2 className="panel-card-header">主要发现</h2>
         <p className="text-xs text-[var(--color-text-muted)]">暂无发现项</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-[var(--radius)] border border-[var(--color-border)] p-5">
-      <h2 className="text-sm font-bold text-[var(--color-text)] mb-3">主要发现</h2>
-      <div className="flex flex-col gap-2">
+    <div className="panel-card">
+      <h2 className="panel-card-header">主要发现</h2>
+      <div className="flex flex-col gap-1.5">
         {topFindings.map((f) => (
-          <div key={f.id} className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] px-3 py-2">
+          <div
+            key={f.id}
+            className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-transparent px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
+          >
             <Badge variant={`risk-${f.riskLevel}`} className="text-[10px] shrink-0">
               {f.riskLevel === 'high' ? '高' : f.riskLevel === 'medium' ? '中' : '低'}
             </Badge>

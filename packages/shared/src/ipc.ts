@@ -12,6 +12,7 @@ import type {
   TaskStatus,
   SensitivityLevel,
 } from './compare-task.js';
+import type { AnalysisProjectDetail, AnalysisProjectSummary, RiskPreset } from './risk-review.js';
 
 // --- File operations (Spec §10) ---
 export interface ValidateFilesRequest {
@@ -47,6 +48,17 @@ export interface SelectFileResponse {
   size: number;
   format: string;
 }
+
+export interface RiskFileInput { path: string; name?: string; }
+export interface CreateRiskProjectRequest {
+  name: string; submissions: RiskFileInput[]; baseline?: RiskFileInput | null; preset: RiskPreset;
+}
+export interface CreateRiskProjectResponse { projectId: string; }
+export interface RiskProgress {
+  projectId: string; status: AnalysisProjectStatus; stageLabel: string;
+  current?: number; total?: number; elapsedMs: number; warnings: string[];
+}
+type AnalysisProjectStatus = AnalysisProjectDetail['status'];
 
 // --- Review operations ---
 export interface SaveAnnotationRequest {
@@ -114,6 +126,13 @@ export interface EngineHandshake {
 
 // --- Full IPC API surface (Spec §10) ---
 export interface BidLensApi {
+  // Similarity risk review
+  listProjects(): Promise<AnalysisProjectSummary[]>;
+  getProject(projectId: string): Promise<AnalysisProjectDetail>;
+  createRiskProject(request: CreateRiskProjectRequest): Promise<CreateRiskProjectResponse>;
+  cancelRiskProject(projectId: string): Promise<{ projectId: string; cancelled: boolean }>;
+  onRiskProgress(handler: (progress: RiskProgress) => void): () => void;
+  saveRiskFindingReview(request: { projectId: string; findingId: string; status?: string; important?: boolean; note?: string }): Promise<import('./risk-review.js').RiskFinding>;
   // File
   selectFile(): Promise<SelectFileResponse | null>;
   validateFiles(request: ValidateFilesRequest): Promise<ValidateFilesResponse>;

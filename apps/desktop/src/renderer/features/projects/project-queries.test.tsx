@@ -1,9 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import { useProjectList, useProjectDetail, projectKeys } from './project-queries';
+import { buildProjectSummaries, buildReadyScenario, buildNoBaselineScenario, buildDegradedScenario, buildPartialScenario, buildInterruptedScenario, buildProcessingScenario, buildFailedScenario } from '../../__fixtures__/risk-project';
+
+beforeEach(() => {
+  const details = [buildReadyScenario, buildNoBaselineScenario, buildDegradedScenario, buildPartialScenario, buildInterruptedScenario, buildProcessingScenario, buildFailedScenario];
+  const data = details.map((builder) => builder());
+  Object.assign(window, { bidlens: { listProjects: async () => buildProjectSummaries(), getProject: async (id: string) => data.find((item) => item.id === id), onRiskProgress: () => () => {} } });
+});
 
 function createWrapper() {
   const queryClient = new QueryClient({

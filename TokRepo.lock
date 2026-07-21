@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "schema_version": 1,
+  "lockfileVersion": 1,
+  "generatedBy": "tokrepo-cli/3.23.4",
+  "projectRoot": ".",
+  "project_root": ".",
+  "updatedAt": "2026-07-19T11:16:08.349Z",
+  "updated_at": "2026-07-19T11:16:08.349Z",
+  "assets": [
+    {
+      "uuid": "71a05a12-e5a9-45ec-84b4-815d567e592e",
+      "title": "Claude Official Skill: frontend-design",
+      "sourceUrl": "https://tokrepo.com/en/workflows/71a05a12-e5a9-45ec-84b4-815d567e592e",
+      "source_url": "https://tokrepo.com/en/workflows/71a05a12-e5a9-45ec-84b4-815d567e592e",
+      "targetTool": "project",
+      "target_tool": "project",
+      "installMode": "skill",
+      "install_mode": "skill",
+      "status": "installed",
+      "installedAt": "2026-07-19T11:16:08.347Z",
+      "installed_at": "2026-07-19T11:16:08.349Z",
+      "contentHash": "95654d4a446145764d33db26ee6f468ff1b685aaf3bdce1b29b118006c4d4024",
+      "content_hash": "95654d4a446145764d33db26ee6f468ff1b685aaf3bdce1b29b118006c4d4024",
+      "installPlanHash": "86852f65568836b389bb510dbae06707d0240702b72cd892f920ca952a4d48c0",
+      "install_plan_hash": "86852f65568836b389bb510dbae06707d0240702b72cd892f920ca952a4d48c0",
+      "sessionId": "",
+      "session_id": "",
+      "sessionPath": "",
+      "session_path": "",
+      "files": [
+        {
+          "path": ".claude/skills/Claude Official Skill- frontend-design.md",
+          "path_type": "project_relative",
+          "pathType": "project_relative",
+          "sourceName": "Claude Official Skill- frontend-design",
+          "source_name": "Claude Official Skill- frontend-design",
+          "type": "skill",
+          "sha256": "5fe05b78b1bacf889d42dcf67d6d896c0d4a19847d2e02dc08ea1f7e2e159754",
+          "bytes": 5164,
+          "riskFlags": [],
+          "risk_flags": []
+        }
+      ],
+      "rollback": [
+        {
+          "type": "remove_file",
+          "path": ".claude/skills/Claude Official Skill- frontend-design.md",
+          "path_type": "project_relative"
+        }
+      ],
+      "verification": null,
+      "policyDecision": null,
+      "policy_decision": null,
+      "permissionEnvelope": null,
+      "permission_envelope": null
+    }
+  ]
+}

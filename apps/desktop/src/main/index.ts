@@ -8,6 +8,7 @@ import {
 import { registerHistoryHandlers } from './ipc/history-handlers';
 import { registerSettingsHandlers } from './ipc/settings-handlers';
 import { registerAnnotationHandlers } from './ipc/annotation-handlers';
+import { registerRiskReviewHandlers } from './ipc/risk-review-handlers';
 import { PersistenceManager } from './services/persistence';
 
 const isDev = !app.isPackaged;
@@ -84,6 +85,7 @@ function createWindow() {
     annotationRepo: persistence.annotationRepo,
     taskRepo: persistence.taskRepo,
   });
+  registerRiskReviewHandlers(win);
 
   // Listen for console messages from renderer
   win.webContents.on('console-message', (event, level, message, line, sourceId) => {

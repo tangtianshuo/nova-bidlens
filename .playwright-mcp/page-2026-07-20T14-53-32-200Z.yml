@@ -1,0 +1,5 @@
+- generic [ref=e3]:
+  - generic [ref=e6]:
+    - heading "出现错误" [level=3] [ref=e7]
+    - paragraph [ref=e8]: Cannot read properties of undefined (reading 'windowIsMaximized')
+  - button "重试" [ref=e9]

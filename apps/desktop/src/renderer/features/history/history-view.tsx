@@ -13,6 +13,8 @@ import {
   ArrowUpDown,
   Filter,
 } from 'lucide-react';
+import { PersistentBanner } from '../../components/feedback/persistent-banner';
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '../../components/ui/empty';
 import { cn } from '../../lib/utils';
 import { useAppStore } from '../../stores/app-store';
 import { useResultStore } from '../../stores/result-store';
@@ -340,18 +342,22 @@ export function HistoryView() {
   // -- Empty state --
   if (items.length === 0 && !error) {
     return (
-      <div className="app-page flex flex-1 flex-col items-center justify-center overflow-auto" data-width="standard">
-        <Clock className="h-12 w-12 text-[var(--color-text-muted)]" />
-        <h2 className="mt-4 text-lg font-medium text-[var(--color-text)]">
-          暂无比对记录
-        </h2>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          完成的比对任务将显示在这里
-        </p>
-        <Button className="mt-4" onClick={() => setView('new')}>
-          <Plus className="h-4 w-4" />
-          新建比对
-        </Button>
+      <div className="app-page overflow-auto" data-width="standard">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Clock />
+            </EmptyMedia>
+            <EmptyTitle>暂无比对记录</EmptyTitle>
+            <EmptyDescription>完成的比对任务将显示在这里</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button onClick={() => setView('new')}>
+              <Plus className="h-4 w-4" />
+              新建比对
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     );
   }
@@ -360,7 +366,7 @@ export function HistoryView() {
     <div className="app-page flex flex-1 flex-col overflow-auto" data-width="standard">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-[var(--color-text)]">
+        <h1 className="app-page-title">
           最近比对
         </h1>
         <Button size="sm" onClick={() => setView('new')}>
@@ -371,16 +377,7 @@ export function HistoryView() {
 
       {/* Error banner */}
       {error && (
-        <div className="mt-3 flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-deleted)]/30 bg-[var(--color-deleted-bg)] px-4 py-2 text-sm text-[var(--color-deleted)]">
-          <span className="flex-1">{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="rounded p-0.5 hover:bg-[var(--color-deleted)]/10"
-            aria-label="关闭"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <PersistentBanner variant="warning" title={error} dismissable onDismiss={() => setError(null)} className="mt-3" />
       )}
 
       {/* Toolbar: search, filter, sort */}
