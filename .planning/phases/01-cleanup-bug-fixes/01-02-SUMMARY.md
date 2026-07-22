@@ -82,3 +82,12 @@ None - no external service configuration required.
 ---
 *Phase: 01-cleanup-bug-fixes*
 *Completed: 2026-07-22*
+
+## Self-Check: PASSED
+
+- [x] `apps/desktop/src/main/services/risk-review-service.ts` exists
+- [x] `.planning/phases/01-cleanup-bug-fixes/01-02-SUMMARY.md` exists
+- [x] Commit `8316339` exists
+- [x] `buildFindings` / `lexical-fallback` / `function normalize` / `function blockText` — 0 matches
+- [x] `engineManager: EngineManager` confirmed non-optional
+- [x] TypeScript compilation succeeds (main process)
