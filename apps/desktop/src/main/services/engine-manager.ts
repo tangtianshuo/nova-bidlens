@@ -240,6 +240,40 @@ export function toEngineDocumentAst(document: DocumentAst): EngineDocumentAst {
 
 export type ProgressCallback = (phase: string, current: number, total: number, message: string) => void;
 
+// --- Risk analysis types ---
+
+export interface RiskSubmissionAstInput {
+  submissionId: string;
+  fileHash: string;
+  ast: EngineDocumentAst;
+}
+
+export interface RiskTenderBaselineInput {
+  submissionId: string;
+  normalizedParagraphs: string[];
+}
+
+export interface RiskAnalyzeRequest {
+  projectId: string;
+  submissions: RiskSubmissionAstInput[];
+  baseline: RiskTenderBaselineInput | null;
+  preset: 'strict' | 'standard' | 'loose';
+  skipDetectors?: string[];
+}
+
+export interface RiskProgressNotification {
+  projectId: string;
+  status: string;
+  phase: string | null;
+  stageLabel: string;
+  current?: number;
+  total?: number;
+  elapsedMs: number;
+  warnings: string[];
+}
+
+export type RiskProgressCallback = (progress: RiskProgressNotification) => void;
+
 // --- Constants ---
 
 const ENGINE_REQUEST_TIMEOUT_MS = 300_000; // 5 minutes for compare
@@ -262,6 +296,7 @@ export class EngineManager {
   private stopping = false;
   private restartAttempts = 0;
   private onProgress: ProgressCallback | null = null;
+  private onRiskProgress: RiskProgressCallback | null = null;
   private enginePathOverride: string | null = null;
 
   /**
@@ -462,6 +497,35 @@ export class EngineManager {
   }
 
   /**
+   * Run risk analysis with pre-parsed ASTs via the Rust engine.
+   */
+  async riskAnalyzeWithAst(
+    request: RiskAnalyzeRequest,
+    signal?: AbortSignal,
+    onProgress?: RiskProgressCallback,
+  ): Promise<unknown> {
+    this.onRiskProgress = onProgress ?? null;
+
+    const abortHandler = () => {
+      void this.sendRequest('risk.cancelProject', { projectId: request.projectId }, SHUTDOWN_TIMEOUT_MS).catch(() => undefined);
+    };
+    signal?.addEventListener('abort', abortHandler, { once: true });
+    if (signal?.aborted) abortHandler();
+
+    try {
+      const result = await this.sendRequest(
+        'risk.analyzeWithAst',
+        request,
+        ENGINE_REQUEST_TIMEOUT_MS,
+      );
+      return result;
+    } finally {
+      signal?.removeEventListener('abort', abortHandler);
+      this.onRiskProgress = null;
+    }
+  }
+
+  /**
    * Check if the engine is running.
    */
   isRunning(): boolean {
@@ -561,6 +625,10 @@ export class EngineManager {
         params.total ?? 0,
         params.message ?? ''
       );
+    }
+    if (notification.method === 'risk.progress' && this.onRiskProgress) {
+      const params = notification.params as RiskProgressNotification;
+      this.onRiskProgress(params);
     }
   }
 

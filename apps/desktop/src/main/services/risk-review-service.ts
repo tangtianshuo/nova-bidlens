@@ -402,6 +402,12 @@ export class RiskReviewService {
 
         const baselineAst = request.baseline ? parsed[parsed.length - 1] : null;
 
+        // Checkpoint resume: skip detectors that already completed
+        const existingDetectorRuns = this.detectorRunRepo.getByProject(projectId);
+        const completedDetectorTypes = existingDetectorRuns
+          .filter(dr => dr.status === 'completed')
+          .map(dr => dr.detector_type);
+
         const analyzeRequest: RiskAnalyzeRequest = {
           projectId,
           submissions: submissionAsts.map((ast, i) => ({
@@ -416,6 +422,7 @@ export class RiskReviewService {
               .map(b => b.text),
           } : null,
           preset: (request.preset ?? 'standard') as 'strict' | 'standard' | 'loose',
+          skipDetectors: completedDetectorTypes,
         };
 
         const result = await this.engineManager.riskAnalyzeWithAst(

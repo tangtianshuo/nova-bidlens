@@ -50,6 +50,8 @@ pub struct RiskAnalysisInput {
     pub submissions: Vec<SubmissionAstInput>,
     pub baseline: Option<TenderBaselineInput>,
     pub preset: RiskPreset,
+    #[serde(default)]
+    pub skip_detectors: Vec<DetectorType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -259,70 +261,99 @@ impl RiskEngine {
         // ── Phase 6: Detecting ──
         let mut detector_runs: Vec<DetectorRunResult> = Vec::new();
         let total_detectors = 4u64;
+        let skip = &input.skip_detectors;
 
         // Text detector
-        emit(
-            AnalysisPhase::Detecting,
-            "文本检测...",
-            Some(1),
-            Some(total_detectors),
-        );
-        let text_start = std::time::Instant::now();
-        let text_evidence = run_detector_safe(
-            || detectors::TextDetector::detect(&candidates, &all_nodes, &preset_config),
-            &mut detector_runs,
-            DetectorType::Text,
-            candidates.len(),
-            text_start,
-        );
+        let text_evidence = if skip.contains(&DetectorType::Text) {
+            detector_runs.push(DetectorRunResult {
+                detector_type: DetectorType::Text,
+                status: DetectorRunStatus::Skipped,
+                candidate_count: 0,
+                hit_count: 0,
+                elapsed_ms: 0,
+                error_message: None,
+            });
+            Vec::new()
+        } else {
+            emit(AnalysisPhase::Detecting, "文本检测...", Some(1), Some(total_detectors));
+            let text_start = std::time::Instant::now();
+            run_detector_safe(
+                || detectors::TextDetector::detect(&candidates, &all_nodes, &preset_config),
+                &mut detector_runs,
+                DetectorType::Text,
+                candidates.len(),
+                text_start,
+            )
+        };
 
         // Table detector
-        emit(
-            AnalysisPhase::Detecting,
-            "表格检测...",
-            Some(2),
-            Some(total_detectors),
-        );
-        let table_start = std::time::Instant::now();
-        let table_evidence = run_detector_safe(
-            || detectors::TableDetector::detect(&candidates, &all_nodes, &preset_config),
-            &mut detector_runs,
-            DetectorType::Table,
-            candidates.len(),
-            table_start,
-        );
+        let table_evidence = if skip.contains(&DetectorType::Table) {
+            detector_runs.push(DetectorRunResult {
+                detector_type: DetectorType::Table,
+                status: DetectorRunStatus::Skipped,
+                candidate_count: 0,
+                hit_count: 0,
+                elapsed_ms: 0,
+                error_message: None,
+            });
+            Vec::new()
+        } else {
+            emit(AnalysisPhase::Detecting, "表格检测...", Some(2), Some(total_detectors));
+            let table_start = std::time::Instant::now();
+            run_detector_safe(
+                || detectors::TableDetector::detect(&candidates, &all_nodes, &preset_config),
+                &mut detector_runs,
+                DetectorType::Table,
+                candidates.len(),
+                table_start,
+            )
+        };
 
         // Entity detector
-        emit(
-            AnalysisPhase::Detecting,
-            "实体检测...",
-            Some(3),
-            Some(total_detectors),
-        );
-        let entity_start = std::time::Instant::now();
-        let entity_evidence = run_detector_safe(
-            || detectors::EntityDetector::detect(&candidates, &all_nodes, &preset_config),
-            &mut detector_runs,
-            DetectorType::Entity,
-            candidates.len(),
-            entity_start,
-        );
+        let entity_evidence = if skip.contains(&DetectorType::Entity) {
+            detector_runs.push(DetectorRunResult {
+                detector_type: DetectorType::Entity,
+                status: DetectorRunStatus::Skipped,
+                candidate_count: 0,
+                hit_count: 0,
+                elapsed_ms: 0,
+                error_message: None,
+            });
+            Vec::new()
+        } else {
+            emit(AnalysisPhase::Detecting, "实体检测...", Some(3), Some(total_detectors));
+            let entity_start = std::time::Instant::now();
+            run_detector_safe(
+                || detectors::EntityDetector::detect(&candidates, &all_nodes, &preset_config),
+                &mut detector_runs,
+                DetectorType::Entity,
+                candidates.len(),
+                entity_start,
+            )
+        };
 
         // Fact detector
-        emit(
-            AnalysisPhase::Detecting,
-            "事实检测...",
-            Some(4),
-            Some(total_detectors),
-        );
-        let fact_start = std::time::Instant::now();
-        let fact_evidence = run_detector_safe(
-            || detectors::FactDetector::detect(&candidates, &all_nodes, &preset_config),
-            &mut detector_runs,
-            DetectorType::KeyFact,
-            candidates.len(),
-            fact_start,
-        );
+        let fact_evidence = if skip.contains(&DetectorType::KeyFact) {
+            detector_runs.push(DetectorRunResult {
+                detector_type: DetectorType::KeyFact,
+                status: DetectorRunStatus::Skipped,
+                candidate_count: 0,
+                hit_count: 0,
+                elapsed_ms: 0,
+                error_message: None,
+            });
+            Vec::new()
+        } else {
+            emit(AnalysisPhase::Detecting, "事实检测...", Some(4), Some(total_detectors));
+            let fact_start = std::time::Instant::now();
+            run_detector_safe(
+                || detectors::FactDetector::detect(&candidates, &all_nodes, &preset_config),
+                &mut detector_runs,
+                DetectorType::KeyFact,
+                candidates.len(),
+                fact_start,
+            )
+        };
 
         // ── Phase 7: Aggregating ──
         emit(
@@ -707,6 +738,7 @@ mod tests {
             }],
             baseline: None,
             preset: RiskPreset::Standard,
+            skip_detectors: vec![],
         };
         let json = serde_json::to_string(&input).unwrap();
         assert!(json.contains("\"projectId\""));
@@ -714,5 +746,45 @@ mod tests {
         assert!(json.contains("\"fileHash\""));
         let back: RiskAnalysisInput = serde_json::from_str(&json).unwrap();
         assert_eq!(back.project_id, "proj-1");
+        assert!(back.skip_detectors.is_empty());
+    }
+
+    #[test]
+    fn analysis_input_skip_detectors_serde() {
+        let input = RiskAnalysisInput {
+            project_id: "proj-1".to_string(),
+            submissions: vec![SubmissionAstInput {
+                submission_id: "sub-1".to_string(),
+                file_hash: "abcdef1234567890".to_string(),
+                ast: DocumentAst {
+                    id: "ast-1".to_string(),
+                    filename: "test.docx".to_string(),
+                    sha256: "abc".to_string(),
+                    page_count: Some(10),
+                    word_count: 1000,
+                    parser_version: "0.2.2".to_string(),
+                    blocks: vec![],
+                    comments: vec![],
+                    revisions: vec![],
+                },
+            }],
+            baseline: None,
+            preset: RiskPreset::Standard,
+            skip_detectors: vec![DetectorType::Text, DetectorType::Table],
+        };
+        let json = serde_json::to_string(&input).unwrap();
+        assert!(json.contains("\"skipDetectors\""));
+        let back: RiskAnalysisInput = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.skip_detectors.len(), 2);
+        assert!(back.skip_detectors.contains(&DetectorType::Text));
+        assert!(back.skip_detectors.contains(&DetectorType::Table));
+    }
+
+    #[test]
+    fn analysis_input_skip_detectors_default() {
+        // Backward compat: omitting skipDetectors should default to empty vec
+        let json = r#"{"projectId":"p1","submissions":[],"baseline":null,"preset":"standard"}"#;
+        let back: RiskAnalysisInput = serde_json::from_str(json).unwrap();
+        assert!(back.skip_detectors.is_empty());
     }
 }
