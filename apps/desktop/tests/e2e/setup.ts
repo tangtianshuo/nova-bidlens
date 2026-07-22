@@ -52,6 +52,16 @@ export async function getBidlensApi(page: Page) {
   return page.evaluate(() => (window as any).bidlens);
 }
 
+/** Get the DB file path from test context. */
+export function getDbPath(context: TestContext): string {
+  return context.dbPath;
+}
+
+/** Check whether the DB file was created in the isolated directory. */
+export function verifyDbExists(context: TestContext): boolean {
+  return fs.existsSync(context.dbPath);
+}
+
 /** Clean up temp directories created during a test. */
 export function cleanupDir(dir: string): void {
   try {

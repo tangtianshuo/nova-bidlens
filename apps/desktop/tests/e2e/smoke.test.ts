@@ -1,9 +1,9 @@
 /**
  * Smoke tests for the Electron app E2E harness.
- * Verifies: app launches, window appears, IPC responds.
+ * Verifies: app launches, window appears, IPC responds, DB is isolated.
  */
 import { test, expect } from '@playwright/test';
-import { launchTestApp, type TestContext, cleanupDir } from './setup';
+import { launchTestApp, type TestContext, cleanupDir, verifyDbExists } from './setup';
 import { createTestProject, waitForStatus, getProjectDetail } from './helpers';
 
 let ctx: TestContext;
@@ -34,6 +34,20 @@ test('window.bidlens API is exposed', async () => {
   expect(typeof api.listProjects).toBe('function');
 });
 
+test('DB is created in isolated directory', async () => {
+  // The DB file should exist in the temp userDataDir, not the real user data dir
+  expect(verifyDbExists(ctx)).toBe(true);
+  expect(ctx.dbPath).toContain('bidlens-e2e-userdata');
+});
+
+test('project list returns empty array for fresh DB', async () => {
+  const projects = await ctx.page.evaluate(
+    () => (window as any).bidlens.listProjects(),
+  );
+  expect(Array.isArray(projects)).toBe(true);
+  expect(projects).toHaveLength(0);
+});
+
 test('can create a risk project via IPC', async () => {
   // This test verifies the IPC round-trip works.
   // Actual DOCX files are not available yet — the call will fail at
@@ -49,7 +63,11 @@ test('can create a risk project via IPC', async () => {
   } catch (e: unknown) {
     // Expected: files don't exist yet. The important thing is the IPC
     // call didn't crash the app — it returned an error response.
+    // Verify the error is about file validation, not a missing IPC handler.
     expect(e).toBeDefined();
+    const msg = String(e);
+    expect(msg).not.toContain('is not a function');
+    expect(msg).not.toContain('handler not registered');
   }
 });
 
