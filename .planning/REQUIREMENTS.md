@@ -19,8 +19,8 @@ V0.3.0 core pipeline (Waves 0-5) is substantially implemented. Requirements belo
 ### Integration Hardening
 
 - [x] **HARDEN-01**: Unify renderer project identity to single source of truth — consolidate `useProjectStore.selectedProjectId`, `useRiskReviewStore.projectId`, `useAppStore.taskId` (V3-121/V3-122)
-- [ ] **HARDEN-02**: Checkpoint resume should skip completed detectors instead of re-running all 4 (V3-412 improvement)
-- [ ] **HARDEN-03**: Implement `risk:detectorProgress` channel or remove dead wiring in preload (V3-404 cleanup)
+- [x] **HARDEN-02**: Checkpoint resume should skip completed detectors instead of re-running all 4 (V3-412 improvement)
+- [x] **HARDEN-03**: Implement `risk:detectorProgress` channel or remove dead wiring in preload (V3-404 cleanup)
 - [x] **HARDEN-04**: Wire hook ordering fix and remove production `console.log` command stubs in renderer (V3-123)
 
 ### Quality Gates

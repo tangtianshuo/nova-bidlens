@@ -49,7 +49,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Renderer identity unification + hook ordering fix (HARDEN-01, HARDEN-04)
-- [ ] 02-02-PLAN.md — Checkpoint resume detector skipping + remove dead detectorProgress wiring (HARDEN-02, HARDEN-03)
+- [x] 02-02-PLAN.md — Checkpoint resume detector skipping + remove dead detectorProgress wiring (HARDEN-02, HARDEN-03)
 
 ### Phase 3: E2E Foundation
 **Goal**: Automated E2E tests prove the full risk pipeline works end-to-end with real bid documents
