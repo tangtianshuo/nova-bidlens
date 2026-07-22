@@ -104,3 +104,10 @@ None - no external service configuration required.
 ---
 *Phase: 02-integration-hardening*
 *Completed: 2026-07-22*
+
+## Self-Check: PASSED
+
+All files found. All commits verified:
+- `e5a361a` feat(02-02): add skipDetectors for checkpoint resume
+- `cbe412f` refactor(02-02): remove dead risk:detectorProgress wiring
+- `64beb91` docs(02-02): complete plan metadata
