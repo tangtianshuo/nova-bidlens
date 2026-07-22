@@ -26,7 +26,7 @@ Remove dead code and fix known data issues in the Rust engine and detectors. The
   - These are never called by TypeScript — the real pipeline uses `risk.analyzeWithAst`
 
 ### Table Location Completeness (CLEAN-03)
-- **D-04:** Fully implement `table_location` in `build_review_nodes`. Extract `table_index`, `start_row`, `end_row`, `start_col`, `end_col` from the AST's table block data during traversal. This completes the evidence traceability contract.
+- **D-04:** Fully populate all `TableLocation` fields in `build_review_nodes`. The `TableLocation` struct (review-core/src/lib.rs:220) has: `table_index: usize`, `row_index: usize`, `cell_index: Option<usize>`, `header_context: Vec<String>`. Wire all fields from AST table data during traversal — `table_index` from a running counter, `row_index` and `cell_index` from the row/cell iteration indices, `header_context` as empty vec (deferred). This completes the evidence traceability contract.
 
 ### Claude's Discretion
 - Cleanup commit strategy: single commit per logical change (one for dead code removal, one per bug fix) or one combined commit — planner's choice
