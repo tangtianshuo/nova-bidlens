@@ -1,13 +1,50 @@
-# Requirements — Milestone v0.3.0
+# Requirements — Milestone v0.3.3 MinerU PDF 解析集成调研
 
 **Date:** 2026-07-22
-**Source:** Codebase research + task breakdown document gap analysis
+**Source:** MinerU + node-pdf-to-markdown 调研
 
-## Context
+## 目标
 
-V0.3.0 core pipeline (Waves 0-5) is substantially implemented. Requirements below cover the remaining gaps: bug fixes, integration hardening, quality gates, and cleanup. Each requirement maps back to the original task breakdown IDs where applicable.
+调研 MinerU 和 node-pdf-to-markdown 在 Electron 桌面应用中的集成可行性，确定最佳接入方式和实施路径。
 
 ---
+
+## v0.3.3 需求
+
+### Category 1: 可行性验证
+
+- [ ] **MINERU-01**: 验证 MinerU CLI 输出格式 — 运行 `magic-pdf` 命令处理真实投标 PDF，确认 `_content_list.json` schema 和字段结构
+- [ ] **MINERU-02**: 验证 MinerU 对中文投标文档的解析质量 — 测试扫描版和数字版 PDF 的 OCR/文本提取效果
+- [ ] **MINERU-03**: 评估 MinerU 依赖大小 — 运行 `pip install magic-pdf --dry-run` 确认实际下载/安装大小
+- [ ] **MINERU-04**: 评估 MinerU CPU-only 性能 — 在无 GPU 环境测试解析速度，确认是否可接受
+
+### Category 2: 集成方案设计
+
+- [ ] **INTEG-01**: 设计预处理工具模式 — 编写 Python CLI 工具，输入 PDF 目录，输出解析后的 JSON
+- [ ] **INTEG-02**: 设计 JSON → DocumentAst mapper — 定义 MinerU JSON 到现有 BlockNode (ParagraphNode/TableNode/SectionNode) 的映射规则
+- [ ] **INTEG-03**: 设计 parser registry 集成 — MinerU parser 实现 DocumentParser 接口，注册到 globalRegistry
+- [ ] **INTEG-04**: 设计 fallback 策略 — 简单数字 PDF 用 pdf-parse，复杂/扫描 PDF 用 MinerU，确定检测启发式规则
+
+### Category 3: 分发方案评估
+
+- [ ] **DIST-01**: 评估 Python 打包方案 — 对比 python-embed vs PyInstaller vs 用户自行安装的优劣
+- [ ] **DIST-02**: 评估模型分发方案 — 捆绑安装包 vs 首次下载 vs ModelScope 镜像，考虑中国网络环境
+- [ ] **DIST-03**: 设计预处理 CLI 分发 — 作为独立工具还是集成到 Electron 安装流程
+
+### Category 4: node-pdf-to-markdown 评估
+
+- [ ] **NODEPDF-01**: 验证 node-pdf-to-markdown 文本提取质量 — 对比 pdf-parse 的输出
+- [ ] **NODEPDF-02**: 评估 node-pdf-to-markdown 作为轻量替代方案的可行性 — 当前版本是否满足基本需求
+- [ ] **NODEPDF-03**: 跟踪 node-pdf-to-markdown 发展 — 表格识别和 OCR 功能是否计划实现
+
+---
+
+## v0.3.0 需求 (已封存)
+
+**说明:** v0.3.0 核心需求已封存，待 v0.3.3 调研完成后再决定是否继续。
+
+<details>
+<summary>点击展开 v0.3.0 需求</summary>
 
 ### Bug Fixes and Cleanup
 
@@ -43,32 +80,32 @@ V0.3.0 core pipeline (Waves 0-5) is substantially implemented. Requirements belo
 - [ ] **NZBTF-02**: Parse all XML metadata from nZBTF — TB.xml (bidder info, qualifications, personnel), Echo.xml (pricing, bill of quantities), hyChoose.xml (evaluation data)
 - [ ] **NZBTF-03**: Map nZBTF XML data to existing Submission/DocumentAst model — store parsed metadata in submission record for risk detection
 
+</details>
+
 ---
 
 ## Out of Scope
 
-- BGE-M3 semantic embedding — V0.3.1
-- Gold-set calibration and threshold tuning — V0.3.2
-- Standalone version-diff product removal — separate migration task
-- Template discount logic — no template detection exists yet, deferred
+- **MinerU 实时推理集成** — Electron 内嵌 Python 运行时，依赖过大
+- **自定义 MinerU fork** — 维护负担过重
+- **替代 pdf-parse** — MinerU 是增强，不是替代
+- **BGE-M3 语义增强** — 已封存到 v0.3.1
 
 ## Traceability
 
-| Requirement | Task Breakdown ID(s) | Wave | Phase | Status |
-|-------------|----------------------|------|-------|--------|
-| CLEAN-01 | V3-103 | W1 | Phase 1 | Pending |
-| CLEAN-02 | V3-302 | W3 | Phase 1 | Pending |
-| CLEAN-03 | V3-101 | W1 | Phase 1 | Pending |
-| CLEAN-04 | V3-411 | W4 | Phase 1 | Pending |
-| HARDEN-01 | V3-121, V3-122 | W1 | Phase 2 | Pending |
-| HARDEN-02 | V3-412 | W4 | Phase 2 | Pending |
-| HARDEN-03 | V3-404 | W4 | Phase 2 | Pending |
-| HARDEN-04 | V3-123 | W1 | Phase 2 | Pending |
-| QA-01 | V3-131 | W1 | Phase 3 | Pending |
-| QA-02 | V3-601, V3-602 | W6 | Phase 3 | Pending |
-| QA-03 | V3-603 | W6 | Phase 4 | Pending |
-| QA-04 | V3-604 | W6 | Phase 4 | Pending |
-| QA-05 | V3-605 | W6 | Phase 4 | Pending |
-| QA-06 | V3-606 | W6 | Phase 4 | Pending |
-| QA-07 | V3-132 | W1 | Phase 4 | Pending |
-| LABEL-01 | V3-102 | W1 | Phase 5 | Pending |
+| Requirement | Phase | Plan | Status |
+|-------------|-------|------|--------|
+| MINERU-01 | TBD | TBD | Pending |
+| MINERU-02 | TBD | TBD | Pending |
+| MINERU-03 | TBD | TBD | Pending |
+| MINERU-04 | TBD | TBD | Pending |
+| INTEG-01 | TBD | TBD | Pending |
+| INTEG-02 | TBD | TBD | Pending |
+| INTEG-03 | TBD | TBD | Pending |
+| INTEG-04 | TBD | TBD | Pending |
+| DIST-01 | TBD | TBD | Pending |
+| DIST-02 | TBD | TBD | Pending |
+| DIST-03 | TBD | TBD | Pending |
+| NODEPDF-01 | TBD | TBD | Pending |
+| NODEPDF-02 | TBD | TBD | Pending |
+| NODEPDF-03 | TBD | TBD | Pending |

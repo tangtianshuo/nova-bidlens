@@ -1,255 +1,277 @@
-# Domain Pitfalls: BidLens V0.3.0
+# MinerU Integration Pitfalls
 
-**Domain:** Desktop bid document similarity risk review (Electron + Rust)
+**Domain:** Python ML tool embedded in Electron desktop app
 **Researched:** 2026-07-22
-**Overall Confidence:** HIGH (all findings verified against actual code)
+**Overall confidence:** MEDIUM
 
 ---
 
-## Gap Analysis: Claimed vs Actual State
+## Critical Pitfalls
 
-### Gap 1: Risk Projects in Memory Map
+### Pitfall 1: Dependency Footprint Explosion
 
-**CLAIM (PROJECT.md):** "Risk projects live only in Main-process Map"
+**What goes wrong:** MinerU (`magic-pdf[full]`) pulls PyTorch + PaddlePaddle + PaddleOCR + transformers + ultralytics. Combined install is 5-10 GB on disk. BidLens Electron app is already ~200-400 MB; adding Python runtime + ML frameworks balloons installer to 3-6 GB.
 
-**ACTUAL STATE:** PARTIALLY RESOLVED — but Rust side is still in-memory.
+**Why it happens:** MinerU depends on two separate deep learning frameworks (PyTorch for layout detection, PaddlePaddle for OCR). Neither is optional in `[full]` install. MinerU v1.3.0 added option to skip PaddlePaddle, but core functionality still needs PyTorch.
 
-**Evidence:**
-- TypeScript `RiskReviewService` (`apps/desktop/src/main/services/risk-review-service.ts`) uses 13 SQLite repository instances (projectRepo, submissionRepo, findingRepo, evidenceRepo, reviewDecisionRepo, checkpointRepo, etc.). All project data persists to SQLite via `better-sqlite3`.
-- Rust `RiskEngine` (`bidlens-engine/src/risk_engine.rs:175`) still stores projects in `Arc<RwLock<HashMap<String, ProjectState>>>` — purely in-memory.
-- However, the real pipeline (`run_analysis_with_ast`) receives pre-parsed ASTs from TypeScript and returns results without using the in-memory map. The in-memory map is only used by the legacy `run_analysis` path (which is a placeholder that sleeps 10ms per phase).
-- TypeScript side is the persistence source of truth. Rust side is ephemeral by design (process restarts lose nothing).
+**Consequences:**
+- Users in China on typical office networks face 30-60 min download on first install
+- Distribution via USB/offline media becomes impractical
+- Auto-update mechanism (electron-updater) must now handle multi-GB deltas
 
-**Risk:** LOW for TS side. The Rust in-memory map is a non-issue because `run_analysis_with_ast` doesn't persist anything — it's stateless. The legacy `run_analysis` path should be removed to avoid confusion.
+**Prevention:**
+- Use `pip install magic-pdf` (without `[full]`) for lighter footprint if features suffice
+- Consider MinerU v1.3.0+ which made PaddlePaddle optional
+- Evaluate if only a subset of MinerU's pipeline is needed (layout detection only? OCR only?)
 
-**Action:** Remove legacy `run_analysis` and `ProjectState` from Rust engine. Mark as dead code.
-
----
-
-### Gap 2: Status Conflation
-
-**CLAIM (PROJECT.md):** "Project status, analysis phase and submission status are conflated"
-
-**ACTUAL STATE:** RESOLVED.
-
-**Evidence:**
-- `packages/shared/src/risk-review.ts` defines three separate types:
-  - `ProjectStatus`: `'draft' | 'running' | 'ready' | 'partial' | 'interrupted' | 'failed' | 'cancelled'`
-  - `AnalysisPhase`: `'validating' | 'parsing' | 'extracting-nodes' | ... | 'completed'`
-  - `SubmissionState`: `'pending' | 'validated' | 'parsing' | 'parsed' | 'extracting' | 'extracted' | 'failed' | 'removed'`
-- `risk_projects` table stores `status` and `phase` as separate columns (`repositories.ts:181-182`).
-- `risk_submissions` table has its own `status` column (`repositories.ts:251`).
-- `RiskReviewService.updateStatus()` accepts `ProjectStatus` and optional `AnalysisPhase` independently (`repositories.ts:213-222`).
-
-**Risk:** NONE. Clean separation is implemented.
+**Detection:** Run `pip install magic-pdf[full] --dry-run` to measure actual download size before committing.
 
 ---
 
-### Gap 3: ReviewDecision Embedded in RiskFinding
+### Pitfall 2: Model Download at Runtime (Violates Offline-First)
 
-**CLAIM (PROJECT.md):** "ReviewDecision is embedded in RiskFinding and important is modeled as a status"
+**What goes wrong:** MinerU downloads ML models from HuggingFace on first use. Models are 4-8 GB (PDF-Extract-Kit-1.0, DocLayoutYOLO, UniMERNet, PaddleOCR models). First PDF parse triggers multi-GB download, hangs for minutes, fails on slow/offline networks.
 
-**ACTUAL STATE:** RESOLVED.
+**Why it happens:** Models are not bundled with pip package. HuggingFace Hub downloads them lazily. BidLens is offline-first by design — this directly violates the product constraint.
 
-**Evidence:**
-- `ReviewDecision` is a separate interface in `risk-review.ts:196-205` with its own `id`, `projectId`, `findingId`, `status`, `important`, `note`, timestamps.
-- `FindingReviewStatus = 'pending' | 'confirmed' | 'ignored'` — `important` is a separate `boolean` field, not a status value.
-- `RiskFinding` stores `reviewStatus`, `important`, `reviewNote`, `reviewedAt` as denormalized fields for query convenience.
-- `ReviewDecisionRepository` (`repositories.ts:449-510`) persists decisions separately with upsert logic.
-- `saveRiskFindingReview()` updates both `risk_findings` and `review_decisions` tables atomically.
+**Consequences:**
+- First-run experience is broken: user opens app, loads PDF, waits 10+ min for model download
+- Offline users (common in Chinese government/enterprise offices) cannot use the feature at all
+- HuggingFace is sometimes slow/blocked in China
 
-**Risk:** NONE. Proper denormalization with separate source of truth.
+**Prevention:**
+- Bundle models with the app installer (adds 4-8 GB to distribution)
+- Download models during app installation/setup wizard (one-time, with progress bar)
+- Use `MINERU_MODEL_SOURCE=local` env var to point to bundled model directory
+- Mirror models to domestic CDN (ModelScope, modelscope.cn) for Chinese users
+- Consider ONNX-converted smaller models if MinerU supports them
 
----
-
-### Gap 4: Evidence Lacks Complete Location Info
-
-**CLAIM (PROJECT.md):** "Evidence lacks complete AST/ReviewNode/page/table location"
-
-**ACTUAL STATE:** RESOLVED in type system. Data completeness depends on Rust engine output.
-
-**Evidence:**
-- `Evidence` interface (`risk-review.ts:149-173`) includes:
-  - `sourceSectionPath: string[]` / `targetSectionPath: string[]`
-  - `sourcePageRange: [number, number] | null` / `targetPageRange: [number, number] | null`
-  - `sourceTableLocation: TableLocation | null` / `targetTableLocation: TableLocation | null`
-- `ReviewNode` (`risk-review.ts:81-97`) has `sectionPath`, `pageRange`, `tableLocation`.
-- Rust `ReviewNode` (`review-core/src/lib.rs:266-285`) mirrors this with `section_path`, `page_range`, `table_location`.
-- Rust `Evidence` (`review-core/src/lib.rs:315-342`) has all location fields.
-- `Traverser` (`review-core/src/lib.rs:543-604`) tracks `section_path` and `page_range` during AST traversal.
-- DB schema (`repositories.ts:97-123`) stores all location fields as encrypted JSON.
-
-**Remaining concern:** `page_range` depends on parser output. DOCX parsers may not always provide page info (it's layout-dependent). `table_location` is populated by `build_review_nodes` but currently sets `table_location: None` for all nodes (`risk_engine.rs:725`). The `table_location` field exists in the type but isn't populated by the Rust engine yet.
-
-**Risk:** MEDIUM. Type contract is correct. Page ranges may be null for DOCX (expected). Table location is not populated by Rust engine — needs wiring.
+**Detection:** Delete `~/.cache/huggingface/` and run a parse — if it hangs or fails, models aren't bundled.
 
 ---
 
-### Gap 5: Renderer Identity Split
+### Pitfall 3: Python Runtime Packaging in Electron
 
-**CLAIM (task breakdown):** "Renderer project identity is split across stores"
+**What goes wrong:** Electron bundles Node.js but not Python. Must either require users to install Python 3.10+ separately, or bundle an embedded Python (via PyInstaller, Nuitka, or python-embed).
 
-**ACTUAL STATE:** STILL EXISTS — three stores hold overlapping project identity.
+**Why it happens:** MinerU is a Python library. There is no Node.js/Rust/WASM port. Every integration path requires a Python interpreter somewhere.
 
-**Evidence:**
-- `useProjectStore` (`features/projects/project-store.ts`): `selectedProjectId: string | null`
-- `useRiskReviewStore` (`features/risk-review/risk-review-store.ts`): `projectId: string | null`
-- `useAppStore` (`stores/app-store.ts`): `taskId: string | null`
+**Consequences:**
+- **Option A (require system Python):** Users must install Python 3.10+, pip, then `pip install magic-pdf`. Installation guide becomes 10 steps. Support tickets explode.
+- **Option B (bundle with PyInstaller):** Adds 150-500 MB. Hidden imports frequently missing (numpy, scipy, torch). Must build on each target OS (no cross-compilation). macOS code signing is painful. Windows Defender flags unsigned EXEs.
+- **Option C (bundle python-embed):** Smaller (~50 MB for base Python), but pip doesn't work out of the box. Must manually manage site-packages.
 
-**How they interact:**
-1. Creating a project (`App.tsx:58-60`): sets `useRiskReviewStore.projectId` AND `useAppStore.taskId`
-2. Opening from list (`App.tsx:39`): sets `useRiskReviewStore.projectId` only (not `useProjectStore.selectedProjectId`)
-3. Processing page (`project-processing-page.tsx:29`): reads `useProjectStore.selectedProjectId`
-4. Result page (`risk-result-page.tsx:25`): reads `useRiskReviewStore.projectId`
+**Prevention:**
+- Start with Option C (python-embed + pre-installed site-packages) for smallest footprint
+- Use `child_process.spawn()` from Electron main process — never from renderer
+- Always use `-u` flag or `PYTHONUNBUFFERED=1` to prevent stdout deadlocks
+- Build PyInstaller/embed bundles on CI for each target OS (Windows, macOS, Linux)
+- Test with Windows Defender / macOS Gatekeeper early
 
-**The bug:** `App.tsx:39` navigates to `project-result` after setting `useRiskReviewStore.projectId`, but `ProjectProcessingPage` reads from `useProjectStore.selectedProjectId`. These are different stores. If a user opens a project from the list, `RiskResultPage` works (reads from risk-review-store), but if they navigate to processing, it would read null from project-store.
-
-**Risk:** MEDIUM. Works in practice because the happy path goes through `startRiskProject` which sets both, and the result page uses risk-review-store. But the split is fragile and confusing. A single source of truth for `projectId` would prevent future bugs.
-
----
-
-### Gap 6: Rust IDs — Random vs Deterministic
-
-**CLAIM (task breakdown):** "current Diff IDs are random"
-
-**ACTUAL STATE:** RESOLVED for node IDs. Entity/KeyFact IDs remain random (acceptable).
-
-**Evidence:**
-- `generate_node_id()` (`review-core/src/lib.rs:505-514`): SHA-256 of `file_hash + node_path` → 32-char hex. Deterministic: same file + same position = same ID. Tested (`lib.rs:1028-1035`).
-- `content_hash()` (`review-core/src/lib.rs:749-754`): SHA-256 of normalized text. Deterministic.
-- Entity IDs and KeyFact IDs use `uuid::Uuid::new_v4()` (random). This is acceptable — entities are identified by their normalized value + type, not by ID. IDs are just database keys.
-
-**Risk:** NONE. Node IDs are stable across re-runs. Entity/KeyFact random IDs are fine.
+**Detection:** Fresh Windows VM without Python installed — does the app work?
 
 ---
 
-### Gap 7: No Real E2E Testing
+### Pitfall 4: Subprocess Communication Deadlocks
 
-**CLAIM (task breakdown):** "Is there actual Electron E2E testing or just component tests?"
+**What goes wrong:** Electron main process spawns Python subprocess, communicates via stdin/stdout with JSON messages. Python's print() buffers output when stdout is not a TTY. Node.js `child_process` waits for data that never arrives. App freezes.
 
-**ACTUAL STATE:** NO Electron E2E. Only V0.2.2 workflow tests with mocked IPC.
+**Why it happens:** Python buffers stdout by default when not connected to a terminal. Electron's `child_process.spawn()` creates pipes, not TTYs. Large JSON payloads (full document ASTs) can also overflow buffers.
 
-**Evidence:**
-- `tests/e2e/v022-workflow.test.ts` and `tests/e2e/document-comparison-workflow.test.ts` exist — but they test shared logic (report generation, diff computation) with mock fixtures, not real Electron IPC.
-- No Playwright, Spectron, or Electron E2E framework configured.
-- No `*.e2e.*` files found in `apps/desktop/`.
-- Component tests exist in `features/risk-review/*.test.tsx` — these use `vitest` + `@testing-library/react` with mocked `window.bidlens`.
-- The roadmap claims "真实文件 Electron E2E" as complete — this likely refers to the integration-level workflow tests, not actual Electron E2E.
+**Consequences:**
+- App hangs silently during PDF parsing
+- No error message — just frozen UI
+- Intermittent: works for small files, fails for large ones
 
-**Risk:** HIGH. No automated verification that the full IPC → main → Rust → DB → renderer pipeline works end-to-end. Manual testing is the only gate.
+**Prevention:**
+- Always spawn Python with `-u` (unbuffered) flag
+- Set `PYTHONUNBUFFERED=1` in spawn environment
+- Use `print(..., flush=True)` in Python code
+- For large payloads, use file-based IPC (write JSON to temp file, pass path over stdout) instead of piping multi-MB JSON through stdout
+- Set `maxBuffer` option in `child_process.execSync` if using exec
 
----
-
-## Additional Pitfalls Discovered
-
-### Pitfall 8: Rust Engine Has Two Parallel Paths
-
-**What:** `RiskEngine` has `run_analysis` (legacy, placeholder) and `run_analysis_with_ast` (real pipeline).
-
-**Evidence:**
-- `run_analysis` (`risk_engine.rs:579-682`): sleeps 10ms per phase, returns fake "Ready" status. Uses in-memory `ProjectState`.
-- `run_analysis_with_ast` (`risk_engine.rs:307-575`): real pipeline — traverses ASTs, builds ReviewNodes, runs 4 detectors, aggregates.
-- TypeScript always calls `riskAnalyzeWithAst` (`risk-review-service.ts:421`), never the legacy path.
-- The JSON-RPC `risk.createProject` method in `main.rs:138-176` calls `run_analysis` (legacy) in background — this path is dead code for the TS-driven flow.
-
-**Consequence:** Confusing. Legacy path could mislead developers into thinking it does real work.
-
-**Prevention:** Delete `run_analysis`, `ProjectState`, and the `risk.createProject`/`risk.cancelProject`/`risk.getProject` JSON-RPC methods (they're only used by the legacy path that TypeScript doesn't call).
+**Detection:** Parse a 50-page PDF. If it hangs but 1-page works, it's a buffer issue.
 
 ---
 
-### Pitfall 9: Entity Extraction is Regex-Only
+### Pitfall 5: Startup Latency (Python Cold Start)
 
-**What:** All entity and key fact extraction uses regex patterns (`review-core/src/lib.rs:879-914`).
+**What goes wrong:** Python process + PyTorch + model loading takes 5-15 seconds on first launch. User clicks "analyze" and waits with no feedback. Second invocation is faster (models cached in memory), but first-run is brutal.
 
-**Evidence:**
-- Credit code, phone, email, ID card → strong entities (high confidence, regex works well)
-- Company name, person name → weak entities (regex `[一-鿿]{2,4}[:：]项目经理...` is fragile)
-- Amounts, percentages, dates, periods → key facts (regex works for standard formats)
+**Why it happens:** PyTorch initialization + loading layout detection models into memory is inherently slow. Even CPU-only mode takes 3-8 seconds for cold start.
 
-**Consequence:** Company name regex (`[一-鿿（）()]{2,30}(?:有限公司|...)`) will miss abbreviated names, joint ventures, and foreign companies. Person name regex requires the pattern `名字:职位` — won't catch names in prose.
+**Consequences:**
+- First PDF parse feels broken — 10-20 second delay with no progress indication
+- Users kill the app thinking it's frozen
+- BidLens currently parses DOCX in <1 second — the UX regression is jarring
 
-**Prevention:** Acceptable for V0.3.0 (lexical fallback mode). V0.3.1 BGE-M3 semantic enhancement should improve recall. Keep confidence scores honest (0.6-0.7 for weak entities).
+**Prevention:**
+- Start Python subprocess at app launch (not on first parse) — "warm up" in background
+- Show explicit loading state: "PDF 分析引擎初始化中..." with progress
+- Keep Python process alive across parses (don't spawn/kill per file)
+- Cache loaded models in process memory (MinerU does this by default within a session)
+- Consider lazy initialization: only start Python if user imports a PDF (not DOCX-only projects)
 
----
-
-### Pitfall 10: Fallback Path Generates Fake Evidence
-
-**What:** When `engineManager` is null, `buildFindings()` generates evidence with synthetic node IDs.
-
-**Evidence:**
-- `risk-review-service.ts:936`: `sourceNodeId: 'node-${index}'` — not real AST node IDs.
-- `sourceSectionPath: []` — empty.
-- `sourcePageRange: null`, `sourceTableLocation: null` — no location info.
-
-**Consequence:** If the Rust engine fails to start, the fallback produces findings with untraceable evidence. Users can't navigate to the source location.
-
-**Prevention:** The engine manager lazy-starts on first use. If it fails, the service should report an error rather than producing degraded results silently. Consider making engine availability a hard requirement.
+**Detection:** Time from app launch to first PDF parse completing. Target: <10s with loading indicator.
 
 ---
 
-### Pitfall 11: Checkpoint Resume Doesn't Resume Detectors
+## Moderate Pitfalls
 
-**What:** Checkpoint stores `phase` but resume always re-runs from `validating` or the checkpoint phase — it doesn't skip completed detectors.
+### Pitfall 6: Windows + CUDA GPU Detection Failures
 
-**Evidence:**
-- `risk-review-service.ts:166-195`: `resumeRiskProject()` finds latest checkpoint, sets `resumePhase`, then calls `run()` with `startPhase`.
-- `run()` skips phases before `startPhase` but re-runs the entire Rust engine call for all detectors.
-- `checkpoint.completedDetectors` is stored but never checked during resume.
+**What goes wrong:** MinerU on Windows frequently fails to detect NVIDIA GPUs, silently falling back to CPU. PyTorch CUDA version must match installed CUDA toolkit version exactly. Mismatched versions = CPU fallback with no error.
 
-**Consequence:** Resuming from `detecting` re-runs all 4 detectors instead of skipping completed ones. Wasted work on large documents.
+**Why it happens:** Windows CUDA ecosystem is fragmented. User may have CUDA 12.x driver but PyTorch built for CUDA 11.8. PaddlePaddle has its own CUDA version requirements separate from PyTorch.
 
-**Prevention:** Check `completedDetectors` before calling each detector. Or accept the re-run as acceptable for V0.3.0 (documents are small, 2-8 files).
+**Consequences:**
+- GPU users get CPU performance (10-50x slower) without knowing why
+- Support team cannot reproduce — depends on user's GPU driver version
 
----
+**Prevention:**
+- Bundle CPU-only PyTorch for consistency (sacrifice speed for reliability)
+- OR: detect GPU at startup, log `torch.cuda.is_available()` result, show GPU/CPU status in UI
+- Document supported CUDA versions explicitly
+- Consider ONNX Runtime as inference backend (better Windows GPU support)
 
-### Pitfall 12: TODO/FIXME Items
-
-**Found in codebase:**
-
-| File | Line | TODO |
-|------|------|------|
-| `apps/desktop/src/main/ipc/history-handlers.ts` | 108 | `// TODO: Trigger actual comparison via engine` — legacy compare path, not risk-review |
-| `apps/desktop/src/renderer/features/compare/ReviewWorkbench.tsx` | 28 | `// TODO: wire cell click navigation` |
-| `apps/desktop/src/renderer/features/compare/ReviewWorkbench.tsx` | 32 | `// TODO: wire jump-to-position` |
-
-**Assessment:** All TODOs are in the legacy `compare:*` path, not the risk-review flow. Non-blocking for V0.3.0.
+**Detection:** Check logs for `torch.cuda.is_available()` return value on target machines.
 
 ---
 
-### Pitfall 13: PDF Generation via Hidden BrowserWindow
+### Pitfall 7: HuggingFace Access in China
 
-**What:** `generatePdfFromHtml()` (`risk-review-service.ts:295-315`) creates a hidden `BrowserWindow`, loads HTML, and calls `printToPDF`.
+**What goes wrong:** HuggingFace (huggingface.co) is slow or intermittently blocked in China. Model downloads fail or take 30+ minutes.
 
-**Consequence:** Works but is fragile — depends on Chromium print behavior, may have layout differences from the HTML version. Creates a temporary file that could leak on crash.
+**Why it happens:** GFW (Great Firewall) throttles/blocks certain international CDNs. HuggingFace is on the list intermittently.
 
-**Prevention:** Acceptable for V0.3.0. Consider `puppeteer` or `pdf-lib` for more control in future versions.
+**Consequences:**
+- First-run model download fails for majority of Chinese users
+- Users assume the app is broken
+
+**Prevention:**
+- Mirror models to ModelScope (modelscope.cn) — Alibaba's HuggingFace equivalent for China
+- Bundle models with installer to avoid runtime download entirely
+- Set `HF_ENDPOINT=https://hf-mirror.com` as fallback (community mirror)
+- Use MinerU's `MINERU_MODEL_SOURCE=local` to bypass HuggingFace entirely
+
+**Detection:** Test model download from a machine in mainland China without VPN.
+
+---
+
+### Pitfall 8: macOS Code Signing + Notarization
+
+**What goes wrong:** Bundled Python executable (PyInstaller output) is unsigned. macOS Gatekeeper blocks it. electron-builder notarization process doesn't cover child executables automatically.
+
+**Why it happens:** Apple requires all executables to be signed and notarized. PyInstaller outputs a standalone binary that needs separate signing. electron-builder signs the Electron app but not arbitrary child processes.
+
+**Consequences:**
+- macOS users see "app is damaged" or "cannot be opened" dialog
+- App Store rejection if targeting Mac App Store
+
+**Prevention:**
+- Sign the Python binary separately in build script: `codesign --deep --force --sign "Developer ID" python-worker`
+- Include Python binary in `extraResources` and sign it during electron-builder `afterSign` hook
+- Test on clean macOS machine without developer tools installed
+
+**Detection:** Download app on fresh macOS, try to open — does Gatekeeper block?
+
+---
+
+### Pitfall 9: Document AST Schema Mismatch
+
+**What goes wrong:** MinerU outputs Markdown/JSON with its own schema (headings, tables, images, formulas). BidLens expects `DocumentAst` with `BlockNode[]` (paragraph | section | list | table). Mapping is lossy and incomplete.
+
+**Why it happens:** MinerU's output format is designed for LLM data extraction, not bid document risk review. Its table representation differs from BidLens's `TableNode`. Its section detection uses different heuristics than the existing DOCX parser.
+
+**Consequences:**
+- Evidence linking breaks — MinerU's page/position info doesn't map to existing AST node IDs
+- Table diff engine may not work on MinerU-extracted tables
+- Two different "views" of the same document confuse the review UI
+
+**Prevention:**
+- Write a MinerU-to-DocumentAst adapter layer (same pattern as existing `PdfParser` adapter in `packages/shared/src/parser/pdf/index.ts`)
+- Map MinerU blocks to existing `BlockNode` types, generate compatible node IDs
+- Run table-diff engine on MinerU output to verify compatibility early
+- Consider using MinerU only for PDF text/table extraction, not for the full AST
+
+**Detection:** Parse same PDF with current parser and MinerU, compare AST structure.
+
+---
+
+## Minor Pitfalls
+
+### Pitfall 10: Process Cleanup on App Quit
+
+**What goes wrong:** User closes Electron app while Python subprocess is mid-parse. Zombie Python process remains, holding GPU memory and file locks.
+
+**Prevention:**
+- Listen for `app.on('before-quit')` and `pythonProcess.kill('SIGTERM')`
+- Use `pythonProcess.kill('SIGKILL')` as fallback after 5s timeout
+- On Windows, use `taskkill /pid` since SIGTERM doesn't work on Windows processes
+
+---
+
+### Pitfall 11: Virtual Environment Path Fragility
+
+**What goes wrong:** Hardcoded venv paths break when app is moved or installed to path with spaces/non-ASCII characters (common in Chinese Windows: `C:\Users\张三\AppData\...`).
+
+**Prevention:**
+- Use `app.getPath('userData')` for venv location (stable, no spaces guaranteed)
+- Test with Chinese username paths explicitly
+- Use `process.resourcesPath` for bundled Python
+
+---
+
+### Pitfall 12: Concurrent Parse Requests
+
+**What goes wrong:** User imports 4 PDFs simultaneously. Single Python process handles them sequentially (GIL). Or: spawning 4 Python processes crashes on 8GB RAM machines.
+
+**Prevention:**
+- Queue parse requests in main process, process one at a time
+- Show progress per document: "正在解析 2/4..."
+- Monitor Python process memory, kill if >2GB
 
 ---
 
 ## Phase-Specific Warnings
 
 | Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Rust engine cleanup | Legacy `run_analysis` path confuses new contributors | Delete it; keep only `run_analysis_with_ast` |
-| Renderer identity unification | Three stores with overlapping projectId | Consolidate to single source of truth |
-| Table location wiring | Rust engine returns `None` for all `table_location` | Wire table index from AST traversal |
-| E2E testing | No real Electron E2E exists | Add Playwright E2E for critical path |
-| Engine fallback | Fallback produces untraceable evidence | Make engine a hard requirement or improve fallback |
-| Checkpoint resume | Re-runs completed detectors | Check `completedDetectors` before re-running |
+|---|---|---|
+| Python runtime bundling | PyInstaller hidden imports, platform-specific builds | CI builds per-OS, test on clean VMs |
+| Model distribution | HuggingFace blocked in China, 4-8GB download | Bundle with installer or use ModelScope mirror |
+| Subprocess IPC | stdout deadlocks on large PDFs | `-u` flag + file-based IPC for payloads >1MB |
+| First-run UX | 10-20s cold start with no feedback | Background warm-up at app launch + loading indicator |
+| Windows GPU | CUDA version mismatch, silent CPU fallback | Bundle CPU-only PyTorch OR log GPU detection status |
+| macOS signing | Unsigned Python binary blocked by Gatekeeper | Sign in afterSign hook, test on clean Mac |
+| AST integration | MinerU output schema != DocumentAst | Adapter layer, early table-diff compatibility test |
+| Memory | 4 PDFs * 2GB model memory = OOM | Queue + memory monitoring + kill threshold |
+
+---
+
+## Decision Matrix: Integration Approach
+
+| Approach | Size Impact | Offline | Complexity | Recommended |
+|---|---|---|---|---|
+| Require system Python + pip install | 0 MB bundled | No (needs pip) | Low dev, high user cost | No |
+| Bundle python-embed + pre-installed packages | +500MB-1GB | Yes | Medium | Maybe |
+| Bundle PyInstaller binary | +500MB-1.5GB | Yes | High (signing, hidden imports) | Maybe |
+| Run MinerU as separate service (Docker/standalone) | Separate install | Partial | Low coupling | No (violates local-only) |
+| Use MinerU's CLI from subprocess | Same as above | Depends on bundling | Lowest code change | Yes for PoC |
 
 ---
 
 ## Sources
 
-All findings verified against actual source code:
-- `apps/desktop/src/main/services/risk-review-service.ts` — TS service implementation
-- `apps/desktop/src/main/db/repositories.ts` — SQLite persistence layer
-- `packages/shared/src/risk-review.ts` — Shared type contracts
-- `bidlens-engine/src/risk_engine.rs` — Rust engine implementation
-- `bidlens-engine/crates/review-core/src/lib.rs` — Core types, ID generation, traversal
-- `apps/desktop/src/renderer/features/risk-review/risk-review-store.ts` — Renderer store
-- `apps/desktop/src/renderer/features/projects/project-store.ts` — Project store
-- `apps/desktop/src/renderer/stores/app-store.ts` — App store
-- `apps/desktop/src/renderer/app/App.tsx` — App entry point
-- `tests/e2e/` — E2E test directory
+- MinerU GitHub: https://github.com/opendatalab/MinerU (Python 3.10+, PyTorch + PaddlePaddle)
+- MinerU Installation Guide: https://github.com/opendatalab/MinerU/blob/master/docs/Installation.md
+- MinerU v1.3.0 Release: https://github.com/opendatalab/MinerU/releases/tag/v1.3.0 (PaddlePaddle optional)
+- PyPI magic-pdf: https://pypi.org/project/magic-pdf/
+- HuggingFace models: https://huggingface.co/opendatalab/PDF-Extract-Kit
+- python-shell npm: https://www.npmjs.com/package/python-shell (subprocess IPC patterns)
+- PyInstaller docs: https://pyinstaller.org/ (hidden imports, platform builds)
+
+**Confidence notes:**
+- Dependency sizes (5-10 GB): MEDIUM — based on PyTorch (~2GB) + PaddlePaddle (~2GB) + models (~4-8GB), but exact sizes vary by version
+- Model download behavior: MEDIUM — confirmed HuggingFace-based, but MinerU may have added ModelScope support since last check
+- Windows CUDA issues: MEDIUM — widely reported but not verified against latest MinerU version
+- HuggingFace blocking in China: HIGH — well-documented, ongoing issue
