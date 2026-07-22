@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { PersistentBanner } from '@/components/feedback/persistent-banner';
 import { StatusBadge } from '@/components/feedback/status-badge';
 import { useRiskResultDetail, useFindingCounts } from './risk-result-queries';
@@ -20,9 +21,12 @@ interface RiskResultPageProps {
   onBack?: () => void;
 }
 
+const EMPTY_FINDINGS: never[] = [];
+
 export function RiskResultPage({ onBack }: RiskResultPageProps) {
   const { projectId, selectedFindingId, selectFinding, setFilePair, filters } = useRiskReviewStore();
   const { data: project, isLoading, error } = useRiskResultDetail(projectId);
+  const counts = useFindingCounts(project?.findings ?? EMPTY_FINDINGS);
 
   const handleBack = useCallback(() => {
     onBack?.();
@@ -114,7 +118,6 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
 
   const isPartial = project.status === 'partial';
   const isDegraded = project.degradationReason !== null;
-  const counts = useFindingCounts(project.findings);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -154,6 +157,29 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
         <div className="mt-2">
           <RiskResultToolbar counts={counts} />
         </div>
+
+        {/* Risk assessment summary */}
+        {project.assessment && (
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[var(--color-text-muted)]">项目风险</span>
+              <Badge variant={`risk-${project.assessment.level === 'incomplete' ? 'low' : project.assessment.level}`} className="text-[10px]">
+                {project.assessment.level === 'high' ? '高' : project.assessment.level === 'medium' ? '中' : project.assessment.level === 'low' ? '低' : '不完整'}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[var(--color-text-muted)]">规则评分</span>
+              <span className="font-medium text-[var(--color-text)]">{project.assessment.rawRuleScore}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[var(--color-text-muted)]">实体命中</span>
+              <span className="font-medium text-[var(--color-text)]">{project.assessment.strongEntityHitCount}</span>
+            </div>
+            {project.assessment.tenderDiscountApplied && (
+              <span className="text-[var(--color-accent)]">已应用招标内容折扣</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Filter toolbar */}
@@ -208,6 +234,7 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
               <RelationshipMatrix
                 submissions={project.submissions}
                 findings={project.findings}
+                filePairAssessments={project.filePairAssessments}
                 onCellClick={handleMatrixCellClick}
               />
             </div>
