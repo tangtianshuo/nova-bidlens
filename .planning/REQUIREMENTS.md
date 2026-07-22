@@ -95,17 +95,17 @@
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| MINERU-01 | TBD | TBD | Pending |
-| MINERU-02 | TBD | TBD | Pending |
-| MINERU-03 | TBD | TBD | Pending |
-| MINERU-04 | TBD | TBD | Pending |
-| INTEG-01 | TBD | TBD | Pending |
-| INTEG-02 | TBD | TBD | Pending |
-| INTEG-03 | TBD | TBD | Pending |
-| INTEG-04 | TBD | TBD | Pending |
-| DIST-01 | TBD | TBD | Pending |
-| DIST-02 | TBD | TBD | Pending |
-| DIST-03 | TBD | TBD | Pending |
-| NODEPDF-01 | TBD | TBD | Pending |
-| NODEPDF-02 | TBD | TBD | Pending |
-| NODEPDF-03 | TBD | TBD | Pending |
+| MINERU-01 | 7 | TBD | Pending |
+| MINERU-02 | 7 | TBD | Pending |
+| MINERU-03 | 7 | TBD | Pending |
+| MINERU-04 | 7 | TBD | Pending |
+| INTEG-01 | 8 | TBD | Pending |
+| INTEG-02 | 8 | TBD | Pending |
+| INTEG-03 | 8 | TBD | Pending |
+| INTEG-04 | 8 | TBD | Pending |
+| DIST-01 | 9 | TBD | Pending |
+| DIST-02 | 9 | TBD | Pending |
+| DIST-03 | 9 | TBD | Pending |
+| NODEPDF-01 | 10 | TBD | Pending |
+| NODEPDF-02 | 10 | TBD | Pending |
+| NODEPDF-03 | 10 | TBD | Pending |

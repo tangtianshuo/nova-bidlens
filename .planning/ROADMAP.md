@@ -1,121 +1,88 @@
-# Roadmap: BidLens V0.3.0 — Non-Embedding Similarity Risk Review Completion
+# Roadmap: BidLens
 
 ## Overview
 
-V0.3.0 core pipeline (Waves 0-5) is substantially implemented. This roadmap covers the remaining gaps: bug fixes and dead code removal, integration hardening, E2E test infrastructure, quality gate expansion, and optional business label extraction. Each phase builds on the previous, ensuring a clean pipeline before testing against it.
+BidLens is a local Electron desktop app for bid document similarity risk review. This roadmap tracks milestones from v0.3.0 through v0.3.3. V0.3.0 phases 1-6 are complete; v0.3.3 is a research milestone to evaluate MinerU and node-pdf-to-markdown integration feasibility.
+
+## Milestones
+
+<details>
+<summary>v0.3.0 Non-Embedding Similarity Risk Review (Phases 1-6) — COMPLETE</summary>
+
+**Milestone Goal:** Complete local, explainable, multi-submission similarity risk review product using text, table, entity and key-fact detectors.
+
+- [x] **Phase 1: Cleanup & Bug Fixes** - Remove dead code and fix known data issues in Rust engine and detectors
+- [x] **Phase 2: Integration Hardening** - Unify renderer identity, fix checkpoint resume, wire missing IPC channels
+- [x] **Phase 3: E2E Foundation** - Playwright harness + first full risk pipeline E2E test with real DOCX files
+- [x] **Phase 4: Quality Gates** - Security, performance, Diff regression, viewport, and bundle scanning tests
+- [ ] **Phase 5: Business Labels** - Extract BusinessLabel data for ReviewNode (deferrable to post-V0.3.0)
+- [x] **Phase 6: nZBTF File Support** - Parse nZBTF bid documents (ZIP/XML) alongside DOCX/PDF
+
+</details>
+
+### v0.3.3 MinerU PDF 解析集成调研 (Phases 7-10)
+
+**Milestone Goal:** 调研 MinerU 和 node-pdf-to-markdown 在 Electron 桌面应用中的集成可行性，确定最佳接入方式和实施路径。
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [ ] **Phase 1: Cleanup & Bug Fixes** - Remove dead code and fix known data issues in Rust engine and detectors
-- [ ] **Phase 2: Integration Hardening** - Unify renderer identity, fix checkpoint resume, wire missing IPC channels
-- [ ] **Phase 3: E2E Foundation** - Playwright harness + first full risk pipeline E2E test with real DOCX files
-- [ ] **Phase 4: Quality Gates** - Security, performance, Diff regression, viewport, and bundle scanning tests
-- [ ] **Phase 5: Business Labels** - Extract BusinessLabel data for ReviewNode (deferrable to post-V0.3.0)
-- [ ] **Phase 6: nZBTF File Support** - Parse nZBTF bid documents (ZIP/XML) alongside DOCX/PDF
+- [ ] **Phase 7: MinerU 可行性验证** - 运行 MinerU 真实测试，验证输出格式、中文解析质量、依赖大小和 CPU 性能
+- [ ] **Phase 8: 集成方案设计** - 设计预处理工具模式、JSON→DocumentAst 映射、parser registry 集成和 fallback 策略
+- [ ] **Phase 9: 分发方案评估** - 评估 Python 打包、模型分发和预处理 CLI 分发方案
+- [ ] **Phase 10: node-pdf-to-markdown 评估** - 评估 node-pdf-to-markdown 作为轻量替代方案的可行性和发展跟踪
 
 ## Phase Details
 
-### Phase 1: Cleanup & Bug Fixes
-**Goal**: Codebase is clean and all detector outputs are correct — no dead code, no fake evidence, no missing data
-**Depends on**: Nothing (first phase)
-**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04
+### Phase 7: MinerU 可行性验证
+**Goal**: 确认 MinerU 能否满足中文投标文档的 PDF 解析需求
+**Depends on**: Nothing (本里程碑首个 phase)
+**Requirements**: MINERU-01, MINERU-02, MINERU-03, MINERU-04
 **Success Criteria** (what must be TRUE):
-  1. `run_analysis` stub, `ProjectState`, and unused JSON-RPC methods no longer exist in Rust engine
-  2. Table detector output contains correct `source_submission_id` and `target_submission_id` (not empty strings)
-  3. `table_location` is populated in review nodes when the source document contains table position data
-  4. Engine fallback path either does not exist or cannot produce untraceable evidence with fake node IDs
-**Plans**: 2 plans in 1 wave
-
-Plans:
-- [x] 01-01-PLAN.md — Rust engine cleanup: remove dead code, wire table_location, fix submission_id (CLEAN-01, CLEAN-02, CLEAN-03)
-- [x] 01-02-PLAN.md — Remove TypeScript engine fallback path (CLEAN-04)
-
-### Phase 2: Integration Hardening
-**Goal**: Renderer and main process communicate cleanly — single project identity, working checkpoint resume, no dead wiring
-**Depends on**: Phase 1
-**Requirements**: HARDEN-01, HARDEN-02, HARDEN-03, HARDEN-04
-**Success Criteria** (what must be TRUE):
-  1. All renderer stores reference the same project ID — no desync between `useProjectStore`, `useRiskReviewStore`, and `useAppStore`
-  2. Checkpoint resume skips detectors that already have results in DB instead of re-running all 4
-  3. `risk:detectorProgress` channel is either functional (pushes real progress) or removed from preload
-  4. No production `console.log` stubs remain in renderer; hook ordering is correct
-**Plans**: 2 plans in 1 wave
-
-Plans:
-- [x] 02-01-PLAN.md — Renderer identity unification + hook ordering fix (HARDEN-01, HARDEN-04)
-- [x] 02-02-PLAN.md — Checkpoint resume detector skipping + remove dead detectorProgress wiring (HARDEN-02, HARDEN-03)
-
-### Phase 3: E2E Foundation
-**Goal**: Automated E2E tests prove the full risk pipeline works end-to-end with real bid documents
-**Depends on**: Phase 2
-**Requirements**: QA-01, QA-02
-**Success Criteria** (what must be TRUE):
-  1. Playwright E2E harness can launch Electron (dev and packaged), exercise IPC through real app flows
-  2. Full risk pipeline E2E creates a project with real DOCX files, processes them, and verifies findings/evidence/assessments exist in DB
-**Plans**: 2 plans in 2 waves
-
-Plans:
-- [x] 03-01-PLAN.md — E2E harness hardening: wire test isolation, add build script, harden smoke tests (QA-01)
-- [x] 03-02-PLAN.md — Full risk pipeline E2E: DOCX fixtures, create-process-verify pipeline test (QA-02)
-
-### Phase 4: Quality Gates
-**Goal**: Automated tests cover security, performance, compatibility, and production readiness
-**Depends on**: Phase 3
-**Requirements**: QA-03, QA-04, QA-05, QA-06, QA-07
-**Success Criteria** (what must be TRUE):
-  1. Security tests verify offline operation, log redaction, encrypted DB/WAL, and deletion closure
-  2. Performance tests handle sparse recall on 4000-page documents and render 1000+ findings without degradation
-  3. Diff regression tests pass — evidence compatibility with existing Diff tooling preserved
-  4. Viewport/accessibility screenshots captured at 1280x800, 1024x700, and 760 equivalent widths
-  5. Production-bundle fixture scan fails build if test fixtures leak into production chunks
-**Plans**: 3 plans in 2 waves
-
-Plans:
-- [x] 04-01-PLAN.md — Security tests + production bundle fixture scanning (QA-03, QA-07)
-- [x] 04-02-PLAN.md — Performance tests + Diff regression tests (QA-04, QA-05)
-- [x] 04-03-PLAN.md — Viewport/accessibility screenshots at 3 widths (QA-06)
-
-### Phase 5: Business Labels
-**Goal**: ReviewNode carries meaningful business labels for downstream filtering and reporting
-**Depends on**: Nothing (independent, deferrable)
-**Requirements**: LABEL-01
-**Success Criteria** (what must be TRUE):
-  1. ReviewNode `labels` field contains extracted business labels (not always empty Vec)
+  1. MinerU `_content_list.json` schema 和字段结构已确认，可用真实投标 PDF 复现
+  2. 中文扫描版和数字版 PDF 的 OCR/文本提取质量已有对比报告
+  3. MinerU 的实际下载/安装大小已量化（`pip install` 数据）
+  4. 无 GPU 环境下的解析速度已测量，有明确的可接受/不可接受判断
 **Plans**: TBD
 
-Plans:
-- [ ] 05-01: TBD
-
-### Phase 6: nZBTF File Support
-**Goal**: Support parsing nZBTF bid documents (ZIP archive with XML metadata) alongside existing DOCX/PDF formats
-**Depends on**: Phase 1 (cleanup must be complete)
-**Requirements**: NZBTF-01, NZBTF-02, NZBTF-03
+### Phase 8: 集成方案设计
+**Goal**: 确定 MinerU 输出到现有 BidLens DocumentAst 的完整集成路径
+**Depends on**: Phase 7
+**Requirements**: INTEG-01, INTEG-02, INTEG-03, INTEG-04
 **Success Criteria** (what must be TRUE):
-  1. User can select .nZBTF files in the project creation dialog
-  2. nZBTF files are extracted and all XML metadata (TB.xml, Echo.xml, hyChoose.xml) is parsed
-  3. Parsed nZBTF data is stored in Submission and available for risk detection
-**Plans**: 2 plans in 2 waves
+  1. 预处理 CLI 工具模式已设计，输入输出接口明确（PDF 目录 → JSON）
+  2. MinerU JSON 到 ParagraphNode/TableNode/SectionNode 的映射规则已定义
+  3. MinerU parser 实现 DocumentParser 接口的方案已明确
+  4. pdf-parse 与 MinerU 的 fallback 检测启发式规则已确定
+**Plans**: TBD
 
-Plans:
-- [ ] 06-01-PLAN.md — Type system and UI: add 'nzbtf' to RiskFileFormat, update file selection dialogs and validators (NZBTF-01, NZBTF-03)
-- [ ] 06-02-PLAN.md — NzbtfParser implementation: ZIP extraction, XML parsing, DocumentAst mapping (NZBTF-01, NZBTF-02, NZBTF-03)
+### Phase 9: 分发方案评估
+**Goal**: 确定 MinerU Python 依赖和模型权重的分发策略
+**Depends on**: Phase 7
+**Requirements**: DIST-01, DIST-02, DIST-03
+**Success Criteria** (what must be TRUE):
+  1. python-embed vs PyInstaller vs 用户自行安装三种方案的优劣对比已完成
+  2. 模型分发方案（捆绑/首次下载/ModelScope 镜像）已有推荐，考虑中国网络环境
+  3. 预处理 CLI 的分发方式已确定（独立工具 vs 集成到 Electron 安装流程）
+**Plans**: TBD
+
+### Phase 10: node-pdf-to-markdown 评估
+**Goal**: 确认 node-pdf-to-markdown 是否可作为轻量级 PDF 解析替代方案
+**Depends on**: Phase 7
+**Requirements**: NODEPDF-01, NODEPDF-02, NODEPDF-03
+**Success Criteria** (what must be TRUE):
+  1. node-pdf-to-markdown 与 pdf-parse 的文本提取质量对比已完成
+  2. node-pdf-to-markdown 作为轻量替代方案的可行性已有结论
+  3. node-pdf-to-markdown 的表格识别和 OCR 功能路线图已跟踪
+**Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 7 → 8 → 9 → 10
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Cleanup & Bug Fixes | 2/2 | Complete | - |
-| 2. Integration Hardening | 2/2 | Complete | - |
-| 3. E2E Foundation | 2/2 | Complete | - |
-| 4. Quality Gates | 3/3 | Complete | - |
-| 5. Business Labels | 0/1 | Not started | - |
-| 6. nZBTF File Support | 0/2 | Planning complete | - |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 7. MinerU 可行性验证 | v0.3.3 | 0/TBD | Not started | - |
+| 8. 集成方案设计 | v0.3.3 | 0/TBD | Not started | - |
+| 9. 分发方案评估 | v0.3.3 | 0/TBD | Not started | - |
+| 10. node-pdf-to-markdown 评估 | v0.3.3 | 0/TBD | Not started | - |
