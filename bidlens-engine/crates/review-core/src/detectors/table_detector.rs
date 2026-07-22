@@ -42,6 +42,8 @@ pub struct TableEvidence {
 
 /// Aggregated data for a single table-pair candidate group.
 struct TablePairGroup {
+    source_submission_id: String,
+    target_submission_id: String,
     source_table_index: usize,
     target_table_index: usize,
     source_row_range: (usize, usize),
@@ -113,6 +115,8 @@ fn group_by_table_pair<'a>(
         );
 
         let group = groups.entry(key).or_insert_with(|| TablePairGroup {
+            source_submission_id: cand.source_id.clone(),
+            target_submission_id: cand.target_id.clone(),
             source_table_index: source_loc.table_index,
             target_table_index: target_loc.table_index,
             source_row_range: (usize::MAX, 0),
@@ -252,12 +256,12 @@ fn to_evidence(index: usize, group: TablePairGroup) -> TableEvidence {
         detector_type: DetectorType::Table,
         match_basis,
         similarity_score,
-        source_submission_id: String::new(), // ponytail: filled by caller or orchestrator
+        source_submission_id: group.source_submission_id,
         source_table_index: group.source_table_index,
         source_row_range: group.source_row_range,
         source_col_range: group.source_col_range,
         source_cell_refs: group.source_cell_refs,
-        target_submission_id: String::new(),
+        target_submission_id: group.target_submission_id,
         target_table_index: group.target_table_index,
         target_row_range: group.target_row_range,
         target_col_range: group.target_col_range,
@@ -351,6 +355,8 @@ mod tests {
         assert!(evidence[0].content_similarity > 0.9);
         assert!(evidence[0].structural_similarity > 0.9);
         assert!(evidence[0].similarity_score > 0.9);
+        assert_eq!(evidence[0].source_submission_id, "sub-1");
+        assert_eq!(evidence[0].target_submission_id, "sub-2");
     }
 
     #[test]
