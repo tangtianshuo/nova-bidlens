@@ -45,11 +45,11 @@ Plans:
   2. Checkpoint resume skips detectors that already have results in DB instead of re-running all 4
   3. `risk:detectorProgress` channel is either functional (pushes real progress) or removed from preload
   4. No production `console.log` stubs remain in renderer; hook ordering is correct
-**Plans**: TBD
+**Plans**: 2 plans in 1 wave
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Renderer identity unification + hook ordering fix (HARDEN-01, HARDEN-04)
+- [ ] 02-02-PLAN.md — Checkpoint resume detector skipping + remove dead detectorProgress wiring (HARDEN-02, HARDEN-03)
 
 ### Phase 3: E2E Foundation
 **Goal**: Automated E2E tests prove the full risk pipeline works end-to-end with real bid documents
@@ -112,8 +112,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Cleanup & Bug Fixes | 0/2 | Planning complete | - |
-| 2. Integration Hardening | 0/2 | Not started | - |
+| 1. Cleanup & Bug Fixes | 2/2 | Complete | - |
+| 2. Integration Hardening | 0/2 | Planning complete | - |
 | 3. E2E Foundation | 0/2 | Not started | - |
 | 4. Quality Gates | 0/2 | Not started | - |
 | 5. Business Labels | 0/1 | Not started | - |
