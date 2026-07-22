@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { BrowserWindow } from 'electron';
 import type Database from 'better-sqlite3';
-import type { DocumentAst, BlockNode } from '@bidlens/shared';
+import type { DocumentAst } from '@bidlens/shared';
 import type {
   AnalysisProjectDetail, AnalysisProjectSummary, CreateRiskProjectRequest, RiskFinding,
   RiskProgress, RiskSubmission, RiskLevel, ProjectStatus, AnalysisPhase, TenderBaseline,
@@ -12,9 +12,11 @@ import type {
 import { parseDocumentFile, type ParserServiceOptions } from './parser-service.js';
 import { validateFile } from './file-validator.js';
 import { generateMarkdownReport, generateHtmlReport, computeReportHash } from './report-generator.js';
+import { EngineManager, toEngineDocumentAst, type RiskAnalyzeRequest, type RiskProgressNotification } from './engine-manager.js';
 import {
   createProjectRepository,
   createSubmissionRepository,
+  createDocumentVersionRepository,
   createFindingRepository,
   createEvidenceRepository,
   createReviewDecisionRepository,
@@ -22,8 +24,11 @@ import {
   createAuditEventRepository,
   createExportedReportRepository,
   createFilePairAssessmentRepository,
+  createTenderBaselineRepository,
+  createDetectorRunRepository,
+  createProjectRiskAssessmentRepository,
 } from '../db/repositories.js';
-import { decrypt } from '../db/crypto.js';
+import { decrypt, encrypt } from '../db/crypto.js';
 
 // ── phase order for checkpoint/resume ──
 
@@ -46,6 +51,7 @@ export class RiskReviewService {
 
   private readonly projectRepo;
   private readonly submissionRepo;
+  private readonly documentVersionRepo;
   private readonly findingRepo;
   private readonly evidenceRepo;
   private readonly reviewDecisionRepo;
@@ -53,14 +59,19 @@ export class RiskReviewService {
   private readonly auditEventRepo;
   private readonly exportReportRepo;
   private readonly filePairAssessmentRepo;
+  private readonly tenderBaselineRepo;
+  private readonly detectorRunRepo;
+  private readonly projectRiskAssessmentRepo;
 
   constructor(
     private readonly window: BrowserWindow,
     db: Database.Database,
     private readonly encryptionKey: Buffer,
+    private readonly engineManager: EngineManager,
   ) {
     this.projectRepo = createProjectRepository(db);
     this.submissionRepo = createSubmissionRepository(db);
+    this.documentVersionRepo = createDocumentVersionRepository(db);
     this.findingRepo = createFindingRepository(db);
     this.evidenceRepo = createEvidenceRepository(db);
     this.reviewDecisionRepo = createReviewDecisionRepository(db);
@@ -68,6 +79,9 @@ export class RiskReviewService {
     this.auditEventRepo = createAuditEventRepository(db);
     this.exportReportRepo = createExportedReportRepository(db);
     this.filePairAssessmentRepo = createFilePairAssessmentRepository(db);
+    this.tenderBaselineRepo = createTenderBaselineRepository(db);
+    this.detectorRunRepo = createDetectorRunRepository(db);
+    this.projectRiskAssessmentRepo = createProjectRiskAssessmentRepository(db);
   }
 
   // ── public API ──
@@ -78,12 +92,7 @@ export class RiskReviewService {
       const submissions = this.submissionRepo.getByProject(row.id);
       const findings = this.findingRepo.getByProject(row.id);
       const level = this.deriveRiskLevel(findings);
-      const hasBaseline = submissions.some((s) => {
-        // baseline is stored as a submission with file_name starting with special convention,
-        // but simpler: check if there's a tender_baselines row
-        // ponytail: no tender_baseline repo yet, derive from project warnings
-        return false;
-      });
+      const hasBaseline = Boolean(this.tenderBaselineRepo.getByProject(row.id));
       const elapsedMs = row.status === 'running' && this.activeRuns.has(row.id)
         ? Date.now() - this.activeRuns.get(row.id)!.startedAt
         : row.elapsed_ms;
@@ -108,7 +117,7 @@ export class RiskReviewService {
     const projectId = this.projectRepo.create({
       name: request.name.trim(),
       preset: request.preset,
-      modelVersion: 'lexical-fallback',
+      modelVersion: 'rust-engine',
       ruleVersion: '1.0.0',
       parserVersion: '0.2.2',
       matcherVersion: 'lexical-1.0.0',
@@ -194,7 +203,7 @@ export class RiskReviewService {
     // Re-trigger full analysis since findings are pairwise
     const request: CreateRiskProjectRequest = {
       name: row.name,
-      files: this.submissionRepo.getByProject(projectId).map(s => ({ path: '', name: s.file_name })),
+      submissions: this.submissionRepo.getByProject(projectId).map(s => ({ path: '', name: s.file_name })),
       preset: row.preset as CreateRiskProjectRequest['preset'],
     };
     const abort = new AbortController();
@@ -335,16 +344,26 @@ export class RiskReviewService {
           const result = await parseDocumentFile(inputs[i].path, { signal: abort.signal } satisfies ParserServiceOptions);
           if (!result.success || !result.ast) throw new Error(result.error?.message ?? '文档解析失败');
           parsed.push(result.ast);
+          // Cache AST to document_versions for resume
+          this.cacheDocumentAst(result.ast);
           this.emitProgress(projectId, 'running', 'parsing', `已解析 ${i + 1}/${inputs.length}`, i + 1, inputs.length);
           this.checkCancelled(abort, projectId);
         }
       } else {
-        // resuming past parsing — we'd need cached ASTs; for now re-parse
+        // Resuming past parsing — try cached ASTs first, re-parse on miss
+        const submissionRowsForCache = this.submissionRepo.getByProject(projectId);
         parsed = [];
-        for (const file of inputs) {
-          const result = await parseDocumentFile(file.path, { signal: abort.signal } satisfies ParserServiceOptions);
-          if (!result.success || !result.ast) throw new Error(result.error?.message ?? '文档解析失败');
-          parsed.push(result.ast);
+        for (let i = 0; i < inputs.length; i++) {
+          const cachedHash = submissionRowsForCache[i]?.sha256;
+          const cached = cachedHash ? this.loadCachedAstByHash(cachedHash) : null;
+          if (cached) {
+            parsed.push(cached);
+          } else {
+            const result = await parseDocumentFile(inputs[i].path, { signal: abort.signal } satisfies ParserServiceOptions);
+            if (!result.success || !result.ast) throw new Error(result.error?.message ?? '文档解析失败');
+            parsed.push(result.ast);
+            this.cacheDocumentAst(result.ast);
+          }
         }
       }
 
@@ -354,37 +373,160 @@ export class RiskReviewService {
         this.submissionRepo.updateStatus(sub.id, 'extracted');
       }
 
-      // ── extracting-nodes (placeholder) ──
-      if (startIdx <= 2) {
-        this.setPhase(projectId, 'extracting-nodes');
-      }
-
-      // ── extracting-entities (placeholder) ──
-      if (startIdx <= 3) {
-        this.setPhase(projectId, 'extracting-entities');
-      }
-
-      // ── filtering-tender-content ──
-      if (startIdx <= 4) {
-        this.setPhase(projectId, 'filtering-tender-content');
-        this.emitProgress(projectId, 'running', 'filtering-tender-content', '正在过滤招标公共内容...');
-      }
-
-      // ── recalling-candidates (placeholder) ──
-      if (startIdx <= 5) {
-        this.setPhase(projectId, 'recalling-candidates');
-      }
-
-      // ── detecting ──
-      if (startIdx <= 6) {
-        this.setPhase(projectId, 'detecting');
-        this.emitProgress(projectId, 'running', 'detecting', '正在检测跨文件相似内容...');
-      }
-
+      // ── Call Rust engine for the real analysis pipeline ──
       const submissions = toSubmissions(submissionRows, parsed.slice(0, request.submissions.length), inputs);
-      const baselineAst = request.baseline ? parsed[parsed.length - 1] : null;
+      const submissionAsts = parsed.slice(0, request.submissions.length);
 
-      const findings = buildFindings(submissions, parsed.slice(0, request.submissions.length), baselineAst);
+      let findings: RiskFinding[];
+      let filePairResults: Array<{
+        submissionAId: string; submissionBId: string;
+        directionalCoverageAB: number; directionalCoverageBA: number;
+        symmetricSimilarity: number; riskLevel: RiskLevel;
+        topFindingIds: string[]; findingCount: { high: number; medium: number; low: number };
+        ruleVersion: string; analysisStatus: string;
+      }> = [];
+      let projectRisk: {
+        level: RiskLevel; rawRuleScore: number; topContributingFindingIds: string[];
+        highValueFindingCount: number; involvedSubmissionCount: number;
+        strongEntityHitCount: number; tenderDiscountApplied: boolean; incompleteReason: string | null;
+      } | null = null;
+      let detectorRunResults: Array<{
+        detectorType: string; status: string; candidateCount: number;
+        hitCount: number; elapsedMs: number; errorMessage: string | null;
+      }> = [];
+
+      if (this.engineManager) {
+        // ── Real pipeline: send ASTs to Rust engine ──
+        this.setPhase(projectId, 'extracting-nodes');
+        this.emitProgress(projectId, 'running', 'extracting-nodes', '正在调用分析引擎...');
+
+        const baselineAst = request.baseline ? parsed[parsed.length - 1] : null;
+
+        const analyzeRequest: RiskAnalyzeRequest = {
+          projectId,
+          submissions: submissionAsts.map((ast, i) => ({
+            submissionId: submissions[i].id,
+            fileHash: submissions[i].sha256 || '0'.repeat(64),
+            ast: toEngineDocumentAst(ast),
+          })),
+          baseline: baselineAst ? {
+            submissionId: submissions[request.submissions.length]?.id ?? 'baseline',
+            normalizedParagraphs: baselineAst.blocks
+              .filter((b): b is import('@bidlens/shared').ParagraphNode => b.type === 'paragraph')
+              .map(b => b.text),
+          } : null,
+          preset: (request.preset ?? 'standard') as 'strict' | 'standard' | 'loose',
+        };
+
+        const result = await this.engineManager.riskAnalyzeWithAst(
+          analyzeRequest,
+          abort.signal,
+          (progress: RiskProgressNotification) => {
+            if (progress.phase) {
+              this.setPhase(projectId, progress.phase as AnalysisPhase);
+            }
+            this.emitProgress(projectId, 'running', progress.phase as AnalysisPhase, progress.stageLabel, progress.current, progress.total);
+          },
+        ) as {
+          findings: Array<{
+            id: string; detectorType: string; riskLevel: string;
+            involvedSubmissionIds: string[]; symmetricSimilarity: number;
+            directionalCoverage: Array<{ fromId: string; toId: string; coverage: number }>;
+            confidenceScore: number; scoreBreakdown: Record<string, unknown>;
+            ruleVersion: string; evidence: Array<{
+              id: string; detectorType: string; matchBasis: string; similarityScore: number;
+              sourceSubmissionId: string; sourceNodeId: string;
+              sourceOriginalText: string; sourceNormalizedText: string;
+              sourceSectionPath: string[]; sourcePageRange: [number, number] | null;
+              sourceTableLocation: Record<string, unknown> | null;
+              targetSubmissionId: string; targetNodeId: string;
+              targetOriginalText: string; targetNormalizedText: string;
+              targetSectionPath: string[]; targetPageRange: [number, number] | null;
+              targetTableLocation: Record<string, unknown> | null;
+              contextBefore: string; contextAfter: string;
+              tenderFiltered: boolean; tenderFilterReason: string | null; ruleVersion: string;
+            }>;
+          }>;
+          filePairAssessments: Array<{
+            submissionAId: string; submissionBId: string;
+            directionalCoverageAB: number; directionalCoverageBA: number;
+            symmetricSimilarity: number; riskLevel: string;
+            topFindingIds: string[]; findingCount: { high: number; medium: number; low: number };
+            ruleVersion: string; analysisStatus: string;
+          }>;
+          projectRisk: {
+            level: string; rawRuleScore: number; topContributingFindingIds: string[];
+            highValueFindingCount: number; involvedSubmissionCount: number;
+            strongEntityHitCount: number; tenderDiscountApplied: boolean; incompleteReason: string | null;
+          };
+          detectorRuns: Array<{
+            detectorType: string; status: string; candidateCount: number;
+            hitCount: number; elapsedMs: number; errorMessage: string | null;
+          }>;
+        };
+
+        // Map Rust findings to shared RiskFinding type
+        findings = result.findings.map(f => ({
+          id: f.id, detectorType: f.detectorType as RiskFinding['detectorType'],
+          riskLevel: f.riskLevel as RiskLevel,
+          involvedSubmissionIds: f.involvedSubmissionIds,
+          evidence: f.evidence.map(ev => ({
+            id: ev.id, detectorType: ev.detectorType as Evidence['detectorType'],
+            matchBasis: ev.matchBasis as Evidence['matchBasis'],
+            similarityScore: ev.similarityScore,
+            sourceSubmissionId: ev.sourceSubmissionId, sourceNodeId: ev.sourceNodeId,
+            sourceOriginalText: ev.sourceOriginalText, sourceNormalizedText: ev.sourceNormalizedText,
+            sourceSectionPath: ev.sourceSectionPath, sourcePageRange: ev.sourcePageRange,
+            sourceTableLocation: ev.sourceTableLocation as Evidence['sourceTableLocation'],
+            targetSubmissionId: ev.targetSubmissionId, targetNodeId: ev.targetNodeId,
+            targetOriginalText: ev.targetOriginalText, targetNormalizedText: ev.targetNormalizedText,
+            targetSectionPath: ev.targetSectionPath, targetPageRange: ev.targetPageRange,
+            targetTableLocation: ev.targetTableLocation as Evidence['targetTableLocation'],
+            contextBefore: ev.contextBefore, contextAfter: ev.contextAfter,
+            tenderFiltered: ev.tenderFiltered, tenderFilterReason: ev.tenderFilterReason,
+            ruleVersion: ev.ruleVersion,
+          })),
+          symmetricSimilarity: f.symmetricSimilarity,
+          directionalCoverage: f.directionalCoverage,
+          confidenceScore: f.confidenceScore,
+          scoreBreakdown: f.scoreBreakdown as unknown as RiskFinding['scoreBreakdown'],
+          ruleVersion: f.ruleVersion,
+          reviewStatus: 'pending', important: false, reviewNote: '', reviewedAt: null,
+        }));
+
+        filePairResults = result.filePairAssessments.map(fp => ({
+          submissionAId: fp.submissionAId, submissionBId: fp.submissionBId,
+          directionalCoverageAB: fp.directionalCoverageAB, directionalCoverageBA: fp.directionalCoverageBA,
+          symmetricSimilarity: fp.symmetricSimilarity, riskLevel: fp.riskLevel as RiskLevel,
+          topFindingIds: fp.topFindingIds, findingCount: fp.findingCount,
+          ruleVersion: fp.ruleVersion, analysisStatus: fp.analysisStatus,
+        }));
+
+        projectRisk = {
+          level: result.projectRisk.level as RiskLevel,
+          rawRuleScore: result.projectRisk.rawRuleScore,
+          topContributingFindingIds: result.projectRisk.topContributingFindingIds,
+          highValueFindingCount: result.projectRisk.highValueFindingCount,
+          involvedSubmissionCount: result.projectRisk.involvedSubmissionCount,
+          strongEntityHitCount: result.projectRisk.strongEntityHitCount,
+          tenderDiscountApplied: result.projectRisk.tenderDiscountApplied,
+          incompleteReason: result.projectRisk.incompleteReason,
+        };
+
+        detectorRunResults = result.detectorRuns;
+
+        // Persist detector runs
+        for (const dr of detectorRunResults) {
+          this.detectorRunRepo.create({
+            projectId, detectorType: dr.detectorType, status: dr.status,
+            candidateCount: dr.candidateCount, hitCount: dr.hitCount,
+            elapsedMs: dr.elapsedMs, errorMessage: dr.errorMessage ?? undefined,
+            ruleVersion: '0.3.0',
+          });
+        }
+      } else {
+        throw new Error('分析引擎不可用');
+      }
 
       // ── aggregating ──
       this.setPhase(projectId, 'aggregating');
@@ -423,35 +565,44 @@ export class RiskReviewService {
 
       // compute and persist file pair assessments
       this.filePairAssessmentRepo.deleteByProject(projectId);
-      const pairMap = new Map<string, { findings: typeof findings; submissionAId: string; submissionBId: string }>();
-      for (const finding of findings) {
-        const ids = [...finding.involvedSubmissionIds].sort();
-        for (let i = 0; i < ids.length; i++) {
-          for (let j = i + 1; j < ids.length; j++) {
-            const key = `${ids[i]}|${ids[j]}`;
-            if (!pairMap.has(key)) pairMap.set(key, { findings: [], submissionAId: ids[i], submissionBId: ids[j] });
-            pairMap.get(key)!.findings.push(finding);
-          }
+      if (filePairResults.length > 0) {
+        // Use Rust-computed file pair assessments
+        for (const fp of filePairResults) {
+          this.filePairAssessmentRepo.create({
+            projectId, submissionAId: fp.submissionAId, submissionBId: fp.submissionBId,
+            directionalCoverageAB: fp.directionalCoverageAB, directionalCoverageBA: fp.directionalCoverageBA,
+            symmetricSimilarity: fp.symmetricSimilarity, riskLevel: fp.riskLevel,
+            topFindingIds: fp.topFindingIds, findingCount: fp.findingCount,
+            ruleVersion: fp.ruleVersion, analysisStatus: fp.analysisStatus as 'complete' | 'partial',
+          });
         }
-      }
-      for (const [, pair] of pairMap) {
-        const high = pair.findings.filter(f => f.riskLevel === 'high').length;
-        const medium = pair.findings.filter(f => f.riskLevel === 'medium').length;
-        const low = pair.findings.filter(f => f.riskLevel === 'low').length;
-        const maxSim = Math.max(0, ...pair.findings.map(f => f.symmetricSimilarity));
-        const topIds = pair.findings.filter(f => f.riskLevel === 'high').slice(0, 5).map(f => f.id);
-        const level: RiskLevel = maxSim >= 0.6 ? 'high' : maxSim >= 0.3 ? 'medium' : 'low';
-        this.filePairAssessmentRepo.create({
-          projectId, submissionAId: pair.submissionAId, submissionBId: pair.submissionBId,
-          directionalCoverageAB: 0, directionalCoverageBA: 0,
-          symmetricSimilarity: maxSim, riskLevel: level,
-          topFindingIds: topIds, findingCount: { high, medium, low },
-          ruleVersion: '1.0.0', analysisStatus: 'complete',
-        });
+      } else {
+        throw new Error('引擎未返回文件对评估结果');
       }
 
       // ── persisting ──
       this.setPhase(projectId, 'persisting');
+
+      // persist project risk assessment
+      const projectRow = this.projectRepo.getById(projectId);
+      if (projectRow) {
+        if (projectRisk) {
+          // Use Rust-computed project risk
+          this.projectRiskAssessmentRepo.create({
+            projectId, level: projectRisk.level, rawRuleScore: projectRisk.rawRuleScore,
+            topContributingFindingIds: projectRisk.topContributingFindingIds,
+            preset: request.preset ?? 'standard', ruleVersion: '0.3.0',
+            analysisStatus: 'complete',
+            highValueFindingCount: projectRisk.highValueFindingCount,
+            involvedSubmissionCount: projectRisk.involvedSubmissionCount,
+            strongEntityHitCount: projectRisk.strongEntityHitCount,
+            tenderDiscountApplied: projectRisk.tenderDiscountApplied,
+            incompleteReason: projectRisk.incompleteReason ?? undefined,
+          });
+        } else {
+          throw new Error('引擎未返回项目风险评估');
+        }
+      }
 
       // compute and store final elapsed
       const elapsedMs = Date.now() - started;
@@ -477,6 +628,36 @@ export class RiskReviewService {
   }
 
   // ── helpers ──
+
+  private cacheDocumentAst(ast: DocumentAst): void {
+    try {
+      const existing = this.documentVersionRepo.getByHash(ast.sha256);
+      if (existing) {
+        this.documentVersionRepo.incrementRef(existing.id);
+        return;
+      }
+      const astJson = JSON.stringify(ast);
+      const astEncrypted = encrypt(astJson, this.encryptionKey);
+      this.documentVersionRepo.create({
+        sha256: ast.sha256, fileName: ast.filename, fileFormat: 'docx',
+        fileSizeBytes: 0, pageCount: ast.pageCount ?? undefined,
+        parserVersion: ast.parserVersion, astEncrypted,
+      });
+    } catch {
+      // Non-fatal: caching is best-effort
+    }
+  }
+
+  private loadCachedAstByHash(sha256: string): DocumentAst | null {
+    try {
+      const row = this.documentVersionRepo.getByHash(sha256);
+      if (!row) return null;
+      const json = decrypt(row.ast_encrypted, this.encryptionKey);
+      return JSON.parse(json) as DocumentAst;
+    } catch {
+      return null;
+    }
+  }
 
   private setPhase(projectId: string, phase: AnalysisPhase) {
     const row = this.projectRepo.getById(projectId);
@@ -519,8 +700,13 @@ export class RiskReviewService {
       return this.rowToFinding(f, evidenceRows);
     });
 
-    // ponytail: no tender_baseline repo yet, return empty
-    const baseline: TenderBaseline | null = null;
+    const baselineRow = this.tenderBaselineRepo.getByProject(row.id);
+    const baseline: TenderBaseline | null = baselineRow ? {
+      id: baselineRow.id, projectId: baselineRow.project_id,
+      submissionId: baselineRow.submission_id,
+      status: baselineRow.status as TenderBaseline['status'],
+      parseWarnings: JSON.parse(baselineRow.parse_warnings_json),
+    } : null;
     const filePairRows = this.filePairAssessmentRepo.getByProject(row.id);
     const filePairAssessments: FilePairAssessment[] = filePairRows.map(r => ({
       id: r.id, projectId: r.project_id,
@@ -534,10 +720,31 @@ export class RiskReviewService {
       analysisStatus: r.analysis_status as 'complete' | 'partial',
     }));
 
-    const assessment = this.buildAssessment(row, findings);
+    const assessmentRow = this.projectRiskAssessmentRepo.getByProject(row.id);
+    const assessment = assessmentRow ? {
+      id: assessmentRow.id, projectId: assessmentRow.project_id,
+      level: assessmentRow.level as RiskLevel,
+      rawRuleScore: assessmentRow.raw_rule_score,
+      topContributingFindingIds: JSON.parse(assessmentRow.top_contributing_finding_ids_json),
+      preset: assessmentRow.preset as AnalysisProjectDetail['preset'],
+      ruleVersion: assessmentRow.rule_version,
+      analysisStatus: assessmentRow.analysis_status as 'complete' | 'partial',
+      highValueFindingCount: assessmentRow.high_value_finding_count,
+      involvedSubmissionCount: assessmentRow.involved_submission_count,
+      strongEntityHitCount: assessmentRow.strong_entity_hit_count,
+      tenderDiscountApplied: Boolean(assessmentRow.tender_discount_applied),
+      incompleteReason: assessmentRow.incomplete_reason,
+    } : this.buildAssessment(row, findings);
 
-    // detector runs from DB
-    const detectorRuns: DetectorRun[] = []; // ponytail: add DetectorRunRepo when detector pipeline is wired
+    const detectorRunRows = this.detectorRunRepo.getByProject(row.id);
+    const detectorRuns: DetectorRun[] = detectorRunRows.map(r => ({
+      id: r.id, projectId: r.project_id,
+      detectorType: r.detector_type as DetectorRun['detectorType'],
+      status: r.status as DetectorRun['status'],
+      candidateCount: r.candidate_count, hitCount: r.hit_count,
+      elapsedMs: r.elapsed_ms, errorMessage: r.error_message ?? null,
+      ruleVersion: r.rule_version,
+    }));
 
     // checkpoints
     const checkpointRow = this.checkpointRepo.getLatest(row.id);
@@ -638,7 +845,9 @@ export class RiskReviewService {
       ruleVersion: row.rule_version, analysisStatus: 'complete' as const,
       highValueFindingCount: findings.filter((f) => f.riskLevel === 'high').length,
       involvedSubmissionCount: new Set(findings.flatMap((f) => f.involvedSubmissionIds)).size,
-      strongEntityHitCount: 0, tenderDiscountApplied: false, incompleteReason: null,
+      strongEntityHitCount: findings.filter((f) => f.detectorType === 'entity').length,
+      tenderDiscountApplied: findings.some((f) => (f.scoreBreakdown?.tenderDiscount ?? 0) > 0),
+      incompleteReason: null,
     };
   }
 
@@ -660,41 +869,3 @@ function toSubmissions(rows: import('../db/repositories.js').SubmissionRow[], do
   }));
 }
 
-function blockText(block: BlockNode): string {
-  if (block.type === 'paragraph') return block.text;
-  if (block.type === 'section') return [block.title, ...block.children.map(blockText)].join(' ');
-  if (block.type === 'list') return block.items.map((item) => item.text).join(' ');
-  return block.rows.flat().join(' ');
-}
-
-function normalize(text: string) { return text.replace(/\s+/g, '').replace(/[，。；：、,.!?！？（）()]/g, '').toLowerCase(); }
-
-function buildFindings(submissions: RiskSubmission[], docs: DocumentAst[], baseline: DocumentAst | null): RiskFinding[] {
-  const findings: RiskFinding[] = [];
-  for (let i = 0; i < docs.length; i++) for (let j = i + 1; j < docs.length; j++) {
-    const left = docs[i].blocks.map(blockText).map(normalize).filter((text) => text.length >= 12);
-    const right = new Set(docs[j].blocks.map(blockText).map(normalize));
-    const matches = left.filter((text) => right.has(text) && (!baseline || !baseline.blocks.some((block) => normalize(blockText(block)) === text)));
-    if (!matches.length) continue;
-    const similarity = Math.min(1, matches.length / Math.max(1, Math.min(left.length, docs[j].blocks.length)));
-    const level: RiskLevel = similarity >= 0.6 ? 'high' : similarity >= 0.3 ? 'medium' : 'low';
-    findings.push({
-      id: randomUUID(), detectorType: 'text', riskLevel: level,
-      involvedSubmissionIds: [submissions[i].id, submissions[j].id],
-      evidence: matches.slice(0, 10).map((text, index) => ({
-        id: randomUUID(), detectorType: 'text' as const, matchBasis: 'lexical' as const, similarityScore: similarity,
-        sourceSubmissionId: submissions[i].id, sourceNodeId: `node-${index}`, sourceOriginalText: text, sourceNormalizedText: text,
-        sourceSectionPath: [], sourcePageRange: null, sourceTableLocation: null,
-        targetSubmissionId: submissions[j].id, targetNodeId: `node-${index}`, targetOriginalText: text, targetNormalizedText: text,
-        targetSectionPath: [], targetPageRange: null, targetTableLocation: null,
-        contextBefore: '', contextAfter: '', tenderFiltered: false, tenderFilterReason: null, ruleVersion: '1.0.0',
-      })),
-      symmetricSimilarity: similarity,
-      directionalCoverage: [{ fromId: submissions[i].id, toId: submissions[j].id, coverage: similarity }, { fromId: submissions[j].id, toId: submissions[i].id, coverage: similarity }],
-      confidenceScore: similarity,
-      scoreBreakdown: { exactMatchScore: similarity, lexicalScore: 0, structuralScore: 0, entityScore: 0, factScore: 0, tenderDiscount: 0, templateDiscount: 0, factConflictPenalty: 0, finalScore: similarity, ruleVersion: '1.0.0' },
-      ruleVersion: '1.0.0', reviewStatus: 'pending', important: false, reviewNote: '', reviewedAt: null,
-    });
-  }
-  return findings;
-}
