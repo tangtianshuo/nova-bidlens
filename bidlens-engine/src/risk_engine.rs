@@ -2,7 +2,7 @@
 
 use document_ast::DocumentAst;
 use review_core::{
-    AnalysisPhase, DetectorType, MatchBasis, ProjectStatus, ReviewNode, RiskPreset, Traverser,
+    AnalysisPhase, DetectorType, ProjectStatus, ReviewNode, RiskPreset, TableLocation, Traverser,
     aggregation, detectors, scoring, sparse_index, tender,
 };
 use serde::{Deserialize, Serialize};
@@ -409,52 +409,113 @@ fn extract_table_text(table: &document_ast::TableNode) -> String {
         .join(" ")
 }
 
+/// Extract plain text from a single cell's content blocks.
+fn extract_cell_text(blocks: &[document_ast::BlockNode]) -> String {
+    blocks
+        .iter()
+        .map(|block| match block {
+            document_ast::BlockNode::Paragraph(p) => p.plain_text(),
+            document_ast::BlockNode::Table(t) => extract_table_text(t),
+        })
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// Build ReviewNodes from a DocumentAst using the Traverser and extraction functions.
 fn build_review_nodes(ast: &DocumentAst, submission_id: &str, file_hash: &[u8]) -> Vec<ReviewNode> {
     let mut nodes = Vec::new();
+    let mut table_counter: usize = 0;
 
     for item in Traverser::new(&ast.blocks) {
-        let node_id = review_core::generate_node_id(file_hash, &[item.node_index]);
-        let (original_text, node_type, table_location) = match item.block {
+        match item.block {
             document_ast::BlockNode::Paragraph(p) => {
-                (p.plain_text(), review_core::ReviewNodeType::Paragraph, None)
+                let node_id = review_core::generate_node_id(file_hash, &[item.node_index]);
+                let original_text = p.plain_text();
+                let normalized_text = review_core::normalize_text(&original_text);
+                let content_hash = review_core::content_hash(&normalized_text);
+                let entities_strong =
+                    review_core::extract_strong_entities(&original_text, submission_id, &node_id);
+                let entities_weak =
+                    review_core::extract_weak_entities(&original_text, submission_id, &node_id);
+                let mut entities = entities_strong;
+                entities.extend(entities_weak);
+                let key_facts =
+                    review_core::extract_key_facts(&original_text, submission_id, &node_id);
+
+                nodes.push(ReviewNode {
+                    id: node_id,
+                    source_ast_node_id: p.id.clone(),
+                    submission_id: submission_id.to_string(),
+                    node_type: review_core::ReviewNodeType::Paragraph,
+                    section_path: item.section_path,
+                    order_index: item.node_index,
+                    page_range: item.page_range,
+                    original_text,
+                    normalized_text,
+                    content_hash,
+                    labels: Vec::new(),
+                    entities,
+                    key_facts,
+                    is_key_node: true,
+                    table_location: None,
+                });
             }
             document_ast::BlockNode::Table(t) => {
-                let text = extract_table_text(t);
-                (text, review_core::ReviewNodeType::TableRow, None)
+                for (r, row) in t.rows.iter().enumerate() {
+                    for (c, cell) in row.cells.iter().enumerate() {
+                        let node_id = review_core::generate_node_id(
+                            file_hash,
+                            &[item.node_index, r, c],
+                        );
+                        let original_text = extract_cell_text(&cell.content);
+                        let normalized_text = review_core::normalize_text(&original_text);
+                        let content_hash = review_core::content_hash(&normalized_text);
+                        let entities_strong = review_core::extract_strong_entities(
+                            &original_text,
+                            submission_id,
+                            &node_id,
+                        );
+                        let entities_weak = review_core::extract_weak_entities(
+                            &original_text,
+                            submission_id,
+                            &node_id,
+                        );
+                        let mut entities = entities_strong;
+                        entities.extend(entities_weak);
+                        let key_facts = review_core::extract_key_facts(
+                            &original_text,
+                            submission_id,
+                            &node_id,
+                        );
+
+                        nodes.push(ReviewNode {
+                            id: node_id,
+                            source_ast_node_id: t.id.clone(),
+                            submission_id: submission_id.to_string(),
+                            node_type: review_core::ReviewNodeType::TableCell,
+                            section_path: item.section_path.clone(),
+                            order_index: item.node_index,
+                            page_range: item.page_range,
+                            original_text,
+                            normalized_text,
+                            content_hash,
+                            labels: Vec::new(),
+                            entities,
+                            key_facts,
+                            is_key_node: true,
+                            table_location: Some(TableLocation {
+                                table_index: table_counter,
+                                row_index: r,
+                                cell_index: Some(c),
+                                header_context: Vec::new(),
+                            }),
+                        });
+                    }
+                }
+                table_counter += 1;
             }
-        };
-
-        let normalized_text = review_core::normalize_text(&original_text);
-        let content_hash = review_core::content_hash(&normalized_text);
-        let entities_strong =
-            review_core::extract_strong_entities(&original_text, submission_id, &node_id);
-        let entities_weak =
-            review_core::extract_weak_entities(&original_text, submission_id, &node_id);
-        let mut entities = entities_strong;
-        entities.extend(entities_weak);
-        let key_facts = review_core::extract_key_facts(&original_text, submission_id, &node_id);
-
-        nodes.push(ReviewNode {
-            id: node_id,
-            source_ast_node_id: match item.block {
-                document_ast::BlockNode::Paragraph(p) => p.id.clone(),
-                document_ast::BlockNode::Table(t) => t.id.clone(),
-            },
-            submission_id: submission_id.to_string(),
-            node_type,
-            section_path: item.section_path,
-            order_index: item.node_index,
-            page_range: item.page_range,
-            original_text,
-            normalized_text,
-            content_hash,
-            labels: Vec::new(),
-            entities,
-            key_facts,
-            is_key_node: true,
-            table_location,
-        });
+        }
     }
 
     nodes
