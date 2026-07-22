@@ -7,6 +7,7 @@
  */
 
 import type { BrowserWindow } from 'electron';
+import { log } from '../logger';
 import type {
   CompareResult,
   CompareProgress,
@@ -115,7 +116,7 @@ export class TaskOrchestrator {
 
     // Run the pipeline asynchronously
     this.runPipeline(task).catch((err) => {
-      console.error('[TaskOrchestrator] Pipeline error:', err);
+      log.error('[TaskOrchestrator] Pipeline error:', err);
     });
 
     return taskId;
@@ -308,7 +309,7 @@ export class TaskOrchestrator {
       try {
         await this.persistResult(result);
       } catch (error) {
-        console.error('[TaskOrchestrator] Failed to persist completed result:', error);
+        log.error('[TaskOrchestrator] Failed to persist completed result:', error);
         throw createError('PERSISTENCE_ERROR', '无法安全保存比对结果', {
           retryable: true,
           phase: 'finalizing',

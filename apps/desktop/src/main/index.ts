@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, ipcMain } from 'electron';
 import path from 'node:path';
+import { log } from './logger';
 import {
   registerCompareHandlers,
   setPersistenceDeps,
@@ -18,11 +19,11 @@ let persistence: PersistenceManager | null = null;
 let shutdownStarted = false;
 
 function createWindow() {
-  console.log('[Main] Creating window, isDev:', isDev);
-  console.log('[Main] __dirname:', __dirname);
+  log.info('[Main] Creating window, isDev:', isDev);
+  log.info('[Main] __dirname:', __dirname);
 
   const preloadPath = path.join(__dirname, '../preload/index.js');
-  console.log('[Main] Preload path:', preloadPath);
+  log.info('[Main] Preload path:', preloadPath);
 
   const win = new BrowserWindow({
     width: 1280,
@@ -55,7 +56,7 @@ function createWindow() {
   persistence = new PersistenceManager(testDataDir);
   const dbResult = persistence.initialize();
   if (!dbResult.healthy) {
-    console.error('[Main] Database health issue:', dbResult.corruptionError);
+    log.error('[DB] Database health issue:', dbResult.corruptionError);
   }
 
   // Wire persistence dependencies to compare handlers
@@ -88,17 +89,12 @@ function createWindow() {
   });
   registerRiskReviewHandlers(win, persistence.db.getDb(), persistence.keyManager.getKey());
 
-  // Listen for console messages from renderer
-  win.webContents.on('console-message', (event, level, message, line, sourceId) => {
-    console.log(`[Renderer ${level}] ${message} (${sourceId}:${line})`);
-  });
-
   if (isDev) {
-    console.log('[Main] Loading dev URL: http://localhost:5373');
+    log.info('[Main] Loading dev URL: http://localhost:5373');
     win.loadURL('http://localhost:5373');
   } else {
     const indexPath = path.join(__dirname, '../renderer/index.html');
-    console.log('[Main] Loading file:', indexPath);
+    log.info('[Main] Loading file:', indexPath);
     win.loadFile(indexPath);
   }
 }

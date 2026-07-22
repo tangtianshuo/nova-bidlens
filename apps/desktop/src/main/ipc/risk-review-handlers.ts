@@ -3,17 +3,25 @@ import type Database from 'better-sqlite3';
 import type { CreateRiskProjectRequest, ExportRiskReportRequest } from '@bidlens/shared';
 import { RiskReviewService } from '../services/risk-review-service.js';
 import { EngineManager } from '../services/engine-manager.js';
+import { log } from '../logger';
 
 let service: RiskReviewService | null = null;
 let engineManager: EngineManager | null = null;
 
 export function registerRiskReviewHandlers(window: BrowserWindow, db: Database.Database, encryptionKey: Buffer) {
+  log.info('[Risk] Registering risk review IPC handlers');
   engineManager = new EngineManager();
   service = new RiskReviewService(window, db, encryptionKey, engineManager);
   ipcMain.handle('risk:listProjects', () => service!.listProjects());
   ipcMain.handle('risk:getProject', (_event, projectId: string) => service!.getProject(projectId));
-  ipcMain.handle('risk:createProject', (_event, request: CreateRiskProjectRequest) => service!.createProject(request));
-  ipcMain.handle('risk:cancelProject', (_event, projectId: string) => service!.cancel(projectId));
+  ipcMain.handle('risk:createProject', (_event, request: CreateRiskProjectRequest) => {
+    log.info('[Risk] createProject — name:', request.name, 'files:', request.submissions.length);
+    return service!.createProject(request);
+  });
+  ipcMain.handle('risk:cancelProject', (_event, projectId: string) => {
+    log.info('[Risk] cancelProject —', projectId);
+    return service!.cancel(projectId);
+  });
   ipcMain.handle('risk:resumeProject', (_event, projectId: string) => service!.resumeRiskProject(projectId));
   ipcMain.handle('risk:retrySubmission', (_event, projectId: string, submissionId: string) => service!.retryRiskSubmission(projectId, submissionId));
   ipcMain.handle('risk:acceptPartial', (_event, projectId: string) => service!.acceptPartial(projectId));
@@ -21,6 +29,7 @@ export function registerRiskReviewHandlers(window: BrowserWindow, db: Database.D
   ipcMain.handle('risk:saveFindingReview', (_event, request) => service!.saveRiskFindingReview(request));
   ipcMain.handle('risk:getAuditEvents', (_event, projectId: string) => service!.getAuditEvents(projectId));
   ipcMain.handle('risk:exportReport', async (_event, request: ExportRiskReportRequest) => {
+    log.info('[Risk] exportReport — projectId:', request.projectId, 'format:', request.format);
     const ext = request.format === 'pdf' ? 'pdf' : request.format === 'html' ? 'html' : 'md';
     const filterName = request.format === 'pdf' ? 'PDF 文件' : request.format === 'html' ? 'HTML 文件' : 'Markdown 文件';
     const detail = service!.getProject(request.projectId);

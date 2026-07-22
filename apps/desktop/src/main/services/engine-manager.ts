@@ -10,6 +10,7 @@ import path from 'node:path';
 import { app } from 'electron';
 import type { BlockNode, Comment, DocumentAst, Revision } from '@bidlens/shared';
 import type { DiffAst } from '@bidlens/shared';
+import { log } from '../logger';
 
 // --- JSON-RPC types ---
 
@@ -581,7 +582,7 @@ export class EngineManager {
         this.handleMessage(msg);
       } catch {
         // Ignore malformed lines
-        console.warn('[EngineManager] Malformed stdout line:', line.slice(0, 200));
+        log.warn('[EngineManager] Malformed stdout line:', line.slice(0, 200));
       }
     }
   }
@@ -633,7 +634,7 @@ export class EngineManager {
   }
 
   private handleExit(code: number | null, signal: NodeJS.Signals | null): void {
-    console.warn(`[EngineManager] Engine exited: code=${code}, signal=${signal}`);
+    log.warn(`[EngineManager] Engine exited: code=${code}, signal=${signal}`);
     this.started = false;
     this.process = null;
 
@@ -651,7 +652,7 @@ export class EngineManager {
   }
 
   private handleProcessError(err: Error): void {
-    console.error('[EngineManager] Process error:', err.message);
+    log.error('[EngineManager] Process error:', err.message);
     this.started = false;
 
     for (const [id, pending] of this.pendingRequests) {
@@ -666,7 +667,7 @@ export class EngineManager {
    */
   private async attemptRestart(): Promise<void> {
     if (this.restartAttempts >= MAX_RESTART_ATTEMPTS) {
-      console.error('[EngineManager] Max restart attempts reached');
+      log.error('[EngineManager] Max restart attempts reached');
       return;
     }
 
@@ -674,16 +675,16 @@ export class EngineManager {
     this.restartAttempts++;
 
     const backoffMs = RESTART_BACKOFF_BASE_MS * Math.pow(2, this.restartAttempts - 1);
-    console.log(`[EngineManager] Restarting engine in ${backoffMs}ms (attempt ${this.restartAttempts})`);
+    log.info(`[EngineManager] Restarting engine in ${backoffMs}ms (attempt ${this.restartAttempts})`);
 
     await new Promise((resolve) => setTimeout(resolve, backoffMs));
 
     try {
       this.restarting = false;
       await this.start(false);
-      console.log('[EngineManager] Engine restarted successfully');
+      log.info('[EngineManager] Engine restarted successfully');
     } catch (err) {
-      console.error('[EngineManager] Failed to restart engine:', err);
+      log.error('[EngineManager] Failed to restart engine:', err);
       this.restarting = false;
     }
   }

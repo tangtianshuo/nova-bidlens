@@ -3,6 +3,7 @@
  * Handles task history list, open, recompare, retain, delete, clear.
  */
 import { ipcMain } from 'electron';
+import { log } from '../logger';
 import type {
   HistoryListRequest,
   HistoryListResponse,
@@ -28,6 +29,7 @@ export function registerHistoryHandlers(deps: {
 
   // List history with optional search and status filter
   ipcMain.handle('history:list', async (_event, request?: HistoryListRequest): Promise<HistoryListResponse> => {
+    log.info('[IPC] history:list — search:', request?.search ?? 'none', 'filter:', request?.statusFilter ?? 'all');
     const tasks = taskRepo.list({
       search: request?.search,
       statusFilter: request?.statusFilter,
@@ -38,6 +40,7 @@ export function registerHistoryHandlers(deps: {
   // Open a snapshot — loads full CompareResult and annotations
   ipcMain.handle('history:openSnapshot', async (_event, request: OpenSnapshotRequest): Promise<OpenSnapshotResponse> => {
     const { taskId } = request;
+    log.info('[IPC] history:openSnapshot — taskId:', taskId);
 
     // Touch the task to update last accessed
     taskRepo.touch(taskId);
@@ -81,6 +84,7 @@ export function registerHistoryHandlers(deps: {
   // Recompare — creates a new task based on an existing one
   ipcMain.handle('history:recompare', async (_event, request: RecompareRequest): Promise<{ taskId: string }> => {
     const { taskId, newFileAPath, newFileBPath, options } = request;
+    log.info('[IPC] history:recompare — from taskId:', taskId);
 
     // Load original task
     const originalTask = taskRepo.getById(taskId);

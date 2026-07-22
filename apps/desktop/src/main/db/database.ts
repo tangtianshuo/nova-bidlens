@@ -10,6 +10,7 @@ import { app } from 'electron';
 import { runMigrations, runQuickCheck, verifyMigrationChecksums } from './migrations.js';
 import { loadNativeDatabase } from './native-database.js';
 import { ENABLE_FOREIGN_KEYS_SQL } from './schema.js';
+import { log } from '../logger';
 
 export interface DatabaseConfig {
   /** Directory for database files. Defaults to app userData. */
@@ -58,18 +59,18 @@ export class DatabaseManager {
     // Run integrity check
     const corruptionError = runQuickCheck(this.db);
     if (corruptionError) {
-      console.error('[DB] Corruption detected:', corruptionError);
+      log.error('[DB] Corruption detected:', corruptionError);
       return { healthy: false, corruptionError };
     }
 
     // Run pending migrations
     const finalVersion = runMigrations(this.db);
-    console.log(`[DB] Schema version: ${finalVersion}`);
+    log.info(`[DB] Schema version: ${finalVersion}`);
 
     // Verify migration checksums
     const checksumErrors = verifyMigrationChecksums(this.db);
     if (checksumErrors.length > 0) {
-      console.error('[DB] Migration checksum errors:', checksumErrors);
+      log.error('[DB] Migration checksum errors:', checksumErrors);
     }
 
     return { healthy: true };
@@ -161,7 +162,7 @@ export class DatabaseManager {
       try {
         this.db.close();
       } catch (err) {
-        console.error('[DB] Error closing database:', err);
+        log.error('[DB] Error closing database:', err);
       }
       this.db = null;
     }

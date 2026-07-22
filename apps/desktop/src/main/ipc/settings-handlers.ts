@@ -3,6 +3,7 @@
  * Handles get, update, storage report, cleanup.
  */
 import { ipcMain } from 'electron';
+import { log } from '../logger';
 import type {
   AppSettings,
   UpdateSettingsRequest,
@@ -43,6 +44,7 @@ export function registerSettingsHandlers(deps: {
 
   // Update settings
   ipcMain.handle('settings:update', async (_event, request: UpdateSettingsRequest): Promise<AppSettings> => {
+    log.info('[IPC] settings:update —', JSON.stringify(request));
     // Get current settings
     const current = await (async () => {
       const row = db.prepare(
@@ -75,6 +77,7 @@ export function registerSettingsHandlers(deps: {
 
   // Run cleanup
   ipcMain.handle('settings:cleanup', async (_event, request: CleanupRequest): Promise<{ deletedCount: number }> => {
+    log.info('[IPC] settings:cleanup — type:', request.type, 'confirm:', request.confirm);
     if (!request.confirm) {
       throw new Error('Cleanup requires confirmation');
     }

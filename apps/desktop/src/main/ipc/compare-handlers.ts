@@ -7,6 +7,7 @@
 
 import type { BrowserWindow } from 'electron';
 import { dialog, ipcMain, shell } from 'electron';
+import { log } from '../logger';
 import path from 'node:path';
 import type {
   CompareResult,
@@ -104,6 +105,7 @@ export async function shutdownCompareServices(): Promise<void> {
 export function registerCompareHandlers(window: BrowserWindow): void {
   // --- File ---
   ipcMain.handle('file:select', async (): Promise<SelectFileResponse | null> => {
+    log.info('[IPC] file:select — opening file dialog');
     const result = await dialog.showOpenDialog(window, {
       properties: ['openFile'],
       filters: [
@@ -143,6 +145,7 @@ export function registerCompareHandlers(window: BrowserWindow): void {
 
   // --- Compare ---
   ipcMain.handle('compare:start', async (_event, request: { fileAPath: string; fileBPath: string; options: { sensitivity: string } }) => {
+    log.info('[IPC] compare:start — fileA:', request.fileAPath, 'fileB:', request.fileBPath);
     const orch = getOrchestrator(window);
 
     // The orchestrator is created lazily. Await engine startup before accepting
@@ -206,7 +209,7 @@ export function registerCompareHandlers(window: BrowserWindow): void {
             }
           }
         } catch (err) {
-          console.error('[Compare] Failed to load from persistence:', err);
+          log.error('[IPC] compare:getResult — persistence load failed:', err);
         }
       }
 
@@ -223,6 +226,7 @@ export function registerCompareHandlers(window: BrowserWindow): void {
   // --- Export ---
   ipcMain.handle('export:report', async (_event, request: ExportRequest) => {
     const { taskId, format, scope, includeIdentical, matchIds } = request;
+    log.info('[IPC] export:report — taskId:', taskId, 'format:', format, 'scope:', scope);
     if (!persistenceDeps) throw new Error('Persistence not initialized');
 
     const task = persistenceDeps.taskRepo.getById(taskId);
@@ -297,7 +301,7 @@ export function registerCompareHandlers(window: BrowserWindow): void {
       return await orch.handshake();
     } catch (err) {
       // Return a degraded handshake if engine is unavailable
-      console.error('[IPC] Engine handshake failed:', err);
+      log.error('[IPC] Engine handshake failed:', err);
       return {
         engineVersion: 'unavailable',
         protocolVersion: '1.0',

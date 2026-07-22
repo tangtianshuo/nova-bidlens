@@ -6,6 +6,7 @@
 import path from 'node:path';
 import type { ParseInput, ParseOptions, ParseResult } from '@bidlens/shared';
 import { globalRegistry } from '@bidlens/shared';
+import { log } from '../logger';
 
 const DEFAULT_TIMEOUT_MS = 60_000; // 60 seconds
 
@@ -28,6 +29,8 @@ export async function parseDocumentFile(
   const { stat } = await import('fs/promises');
   const fileStat = await stat(filePath);
 
+  log.info('[Parser] Parsing file:', fileName, 'size:', fileStat.size, 'bytes');
+
   const input: ParseInput = {
     filePath,
     fileName,
@@ -36,6 +39,7 @@ export async function parseDocumentFile(
 
   const parser = await globalRegistry.findForInput(input);
   if (!parser) {
+    log.warn('[Parser] No parser found for file:', fileName);
     return {
       success: false,
       warnings: [],

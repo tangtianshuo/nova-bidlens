@@ -29,6 +29,7 @@ import {
   createProjectRiskAssessmentRepository,
 } from '../db/repositories.js';
 import { decrypt, encrypt } from '../db/crypto.js';
+import { log } from '../logger';
 
 // ── phase order for checkpoint/resume ──
 
@@ -112,6 +113,7 @@ export class RiskReviewService {
   }
 
   async createProject(request: CreateRiskProjectRequest): Promise<{ projectId: string }> {
+    log.info('[Risk] createProject — name:', request.name, 'submissions:', request.submissions.length, 'hasBaseline:', Boolean(request.baseline));
     if (request.submissions.length < 2 || request.submissions.length > 8) throw new Error('投标文件数量必须为 2-8 个');
 
     const projectId = this.projectRepo.create({
@@ -145,11 +147,13 @@ export class RiskReviewService {
 
     const abort = new AbortController();
     this.activeRuns.set(projectId, { abort, startedAt: Date.now() });
+    log.info('[Risk] Starting analysis pipeline for project:', projectId);
     void this.run(projectId, request, abort);
     return { projectId };
   }
 
   cancel(projectId: string) {
+    log.info('[Risk] cancel — projectId:', projectId);
     const run = this.activeRuns.get(projectId);
     if (!run) {
       const row = this.projectRepo.getById(projectId);
@@ -164,6 +168,7 @@ export class RiskReviewService {
   }
 
   resumeRiskProject(projectId: string): { projectId: string } {
+    log.info('[Risk] resumeRiskProject — projectId:', projectId);
     const row = this.projectRepo.getById(projectId);
     if (!row) throw new Error(`风险审查项目不存在: ${projectId}`);
     if (!['interrupted', 'failed'].includes(row.status)) throw new Error(`项目状态不可恢复: ${row.status}`);
@@ -319,6 +324,7 @@ export class RiskReviewService {
   private async run(projectId: string, request: CreateRiskProjectRequest, abort: AbortController, startPhase?: AnalysisPhase) {
     const started = this.activeRuns.get(projectId)?.startedAt ?? Date.now();
     const startIdx = startPhase ? PHASE_ORDER.indexOf(startPhase) : 0;
+    log.info('[Risk] Pipeline started — projectId:', projectId, 'startPhase:', startPhase ?? 'validating');
 
     try {
       this.projectRepo.updateStatus(projectId, 'running', PHASE_ORDER[startIdx] ?? 'validating');
@@ -627,6 +633,7 @@ export class RiskReviewService {
       }
       const msg = error instanceof Error ? error.message : '分析失败';
       const isCancelled = row?.status === 'interrupted';
+      log.error('[Risk] Pipeline failed — projectId:', projectId, 'error:', msg, 'elapsed:', elapsedMs, 'ms');
       this.emitProgress(projectId, isCancelled ? 'interrupted' : 'failed', null, isCancelled ? '已取消' : '分析失败');
       this.auditEventRepo.append({ projectId, eventType: isCancelled ? 'analysis-cancelled' : 'analysis-failed', payload: { error: msg, elapsedMs } });
     } finally {

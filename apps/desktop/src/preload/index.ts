@@ -15,6 +15,12 @@ import type {
 } from '@bidlens/shared';
 import { contextBridge, ipcRenderer } from 'electron';
 
+// Log streaming: renderer → main
+ipcRenderer.on('log:entry', (_event, entry) => {
+  // Expose to renderer via custom event
+  window.dispatchEvent(new CustomEvent('bidlens:log', { detail: entry }));
+});
+
 const api: BidLensApi = {
   listProjects: () => ipcRenderer.invoke('risk:listProjects'),
   getProject: (projectId: string) => ipcRenderer.invoke('risk:getProject', projectId),
@@ -71,6 +77,15 @@ const api: BidLensApi = {
 
   // Engine
   engineHandshake: () => ipcRenderer.invoke('engine:handshake'),
+
+  // Log viewer
+  getLogBuffer: () => ipcRenderer.invoke('log:getBuffer'),
+  sendLog: (entry: { level: string; tag: string; text: string }) => ipcRenderer.send('log:fromRenderer', entry),
+  onLogEntry: (handler: (entry: any) => void) => {
+    const listener = (_event: any, entry: any) => handler(entry);
+    ipcRenderer.on('log:entry', listener);
+    return () => { ipcRenderer.removeListener('log:entry', listener); };
+  },
 
   // Window controls
   windowMinimize: () => ipcRenderer.invoke('window:minimize'),

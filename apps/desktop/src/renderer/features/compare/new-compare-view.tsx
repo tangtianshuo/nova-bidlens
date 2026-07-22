@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { SimpleTooltip } from '../../components/ui/tooltip';
 import { FieldError } from '../../components/feedback';
+import logger from '../../lib/logger';
 
 interface FileSlot {
   path: string | null;
@@ -94,6 +95,7 @@ export function NewCompareView() {
   const handleStart = useCallback(async () => {
     if (!canStart || !baseline.path || !review.path || isStarting) return;
 
+    logger.info('Compare', 'Starting comparison:', baseline.name, 'vs', review.name);
     setIsStarting(true);
     try {
       const validation = await window.bidlens.validateFiles({
@@ -102,6 +104,7 @@ export function NewCompareView() {
       });
 
       if (validation.fileA.error || !validation.fileA.supported) {
+        logger.warn('Compare', 'File A validation failed:', validation.fileA.error);
         setBaseline((current) => ({
           ...current,
           error: validation.fileA.error?.message ?? '不支持该文件格式',
@@ -109,6 +112,7 @@ export function NewCompareView() {
         return;
       }
       if (validation.fileB.error || !validation.fileB.supported) {
+        logger.warn('Compare', 'File B validation failed:', validation.fileB.error);
         setReview((current) => ({
           ...current,
           error: validation.fileB.error?.message ?? '不支持该文件格式',
@@ -121,9 +125,11 @@ export function NewCompareView() {
         fileBPath: review.path,
         options: { sensitivity },
       });
+      logger.info('Compare', 'Task created:', taskId);
       startTask(taskId);
     } catch (err) {
       const message = err instanceof Error ? err.message : '无法启动比对任务';
+      logger.error('Compare', 'Failed to start:', message);
       setReview((current) => ({ ...current, error: message }));
     } finally {
       setIsStarting(false);

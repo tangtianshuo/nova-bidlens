@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import logger from '../lib/logger';
 
 /**
  * Application product modes.
@@ -81,9 +82,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setView: (view: AppView) => {
     const current = get().view;
     if (VALID_TRANSITIONS[current]?.includes(view)) {
+      logger.info('Store', `view: ${current} → ${view}`);
       set({ view });
     } else {
-      console.warn(`Invalid transition: ${current} -> ${view}`);
+      logger.warn('Store', `Invalid transition: ${current} → ${view}`);
     }
   },
 

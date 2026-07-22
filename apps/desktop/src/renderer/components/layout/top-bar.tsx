@@ -1,4 +1,4 @@
-import { History, Minus, Monitor, Moon, Settings, ShieldCheck, Square, Sun, X } from 'lucide-react';
+import { History, Minus, Monitor, Moon, Settings, ShieldCheck, Square, Sun, Terminal, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from '../../stores/app-store';
 import { getThemePreference, setThemePreference, watchSystemTheme, type Theme } from '../../lib/theme';
@@ -7,11 +7,13 @@ import { Button } from '../ui/button';
 import { SimpleTooltip } from '../ui/tooltip';
 import { Separator } from '../ui/separator';
 import { SettingsDialog } from '../../features/settings/settings-dialog';
+import { LogViewer } from '../../features/logs/log-viewer';
 
 export function TopBar() {
   const { view, setView } = useAppStore();
   const [theme, setTheme] = useState<Theme>(getThemePreference);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
 
   // Sync maximize state from main process
@@ -83,6 +85,18 @@ export function TopBar() {
               {themeIcon}
             </Button>
           </SimpleTooltip>
+          {import.meta.env.DEV && (
+            <SimpleTooltip content="日志">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setLogOpen(true)}
+                aria-label="打开日志"
+              >
+                <Terminal className="h-4 w-4" />
+              </Button>
+            </SimpleTooltip>
+          )}
           <SimpleTooltip content="设置">
             <Button
               variant="ghost"
@@ -130,6 +144,7 @@ export function TopBar() {
       </header>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <LogViewer open={logOpen} onClose={() => setLogOpen(false)} />
     </>
   );
 }

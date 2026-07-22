@@ -13,6 +13,7 @@ import { TaskRepository } from '../repositories/task-repository.js';
 import { SnapshotRepository } from '../repositories/snapshot-repository.js';
 import { AnnotationRepository } from '../repositories/annotation-repository.js';
 import { DatabaseWorkerClient } from '../db/database-worker-client.js';
+import { log } from '../logger';
 
 export class PersistenceManager {
   readonly db: DatabaseManager;
@@ -71,13 +72,13 @@ export class PersistenceManager {
 
     if (!result.healthy && result.corruptionError) {
       // Attempt recovery
-      console.log('[Persistence] Attempting corruption recovery...');
+      log.warn('[Persistence] Attempting corruption recovery...');
       const dbPath = this.db.getPath();
       this.db.close();
       const recoveryResult = this.recoveryService.recoverCorruption(dbPath, result.corruptionError);
 
       if (recoveryResult.recovered) {
-        console.log('[Persistence] Recovery successful:', recoveryResult.action);
+        log.info('[Persistence] Recovery successful:', recoveryResult.action);
         // Re-open the fresh database
         const reopened = this.db.open();
         this.initialized = reopened.healthy;
@@ -95,7 +96,7 @@ export class PersistenceManager {
         maxStorageBytes: settings.storageLimitBytes,
       });
     } catch (err) {
-      console.error('[Persistence] Auto-cleanup failed:', err);
+      log.error('[Persistence] Auto-cleanup failed:', err);
     }
 
     this.startDatabaseWorker();
@@ -134,7 +135,7 @@ export class PersistenceManager {
     try {
       this.backupService.createBackup(this.db.getDb(), 'shutdown');
     } catch (err) {
-      console.error('[Persistence] Shutdown backup failed:', err);
+      log.error('[Persistence] Shutdown backup failed:', err);
     }
 
     // Close database

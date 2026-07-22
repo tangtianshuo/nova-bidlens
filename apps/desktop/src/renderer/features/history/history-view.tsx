@@ -16,6 +16,7 @@ import {
 import { PersistentBanner } from '../../components/feedback/persistent-banner';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '../../components/ui/empty';
 import { cn } from '../../lib/utils';
+import logger from '../../lib/logger';
 import { useAppStore } from '../../stores/app-store';
 import { useResultStore } from '../../stores/result-store';
 import { Button } from '../../components/ui/button';
@@ -216,7 +217,7 @@ export function HistoryView() {
       loadFromSnapshot({ result: resultWithAnnotations });
       setView('result');
     } catch (err) {
-      console.error('[History] Failed to open snapshot:', err);
+      logger.error('History', 'Failed to open snapshot:', err);
       setError(err instanceof Error ? err.message : '打开快照失败');
     }
   }, [loadFromSnapshot, setView]);
@@ -231,7 +232,7 @@ export function HistoryView() {
         )
       );
     } catch (err) {
-      console.error('[History] Failed to toggle retain:', err);
+      logger.error('History', 'Failed to toggle retain:', err);
     }
   }, []);
 
@@ -243,7 +244,7 @@ export function HistoryView() {
       setDeleteDialogOpen(false);
       setDeleteTargetId(null);
     } catch (err) {
-      console.error('[History] Failed to delete task:', err);
+      logger.error('History', 'Failed to delete task:', err);
     }
   }, []);
 
@@ -254,7 +255,7 @@ export function HistoryView() {
       setItems((prev) => prev.filter((item) => item.retained));
       setClearDialogOpen(false);
     } catch (err) {
-      console.error('[History] Failed to clear history:', err);
+      logger.error('History', 'Failed to clear history:', err);
     }
   }, []);
 
@@ -274,7 +275,7 @@ export function HistoryView() {
         setRelocateError(err.message || '源文件未找到');
         setRelocateDialogOpen(true);
       } else {
-        console.error('[History] Failed to recompare:', err);
+        logger.error('History', 'Failed to recompare:', err);
         setError(err instanceof Error ? err.message : '重新比对失败');
       }
     }
@@ -296,7 +297,7 @@ export function HistoryView() {
       setRelocateTargetId(null);
       setRelocateError(null);
     } catch (err) {
-      console.error('[History] Failed to recompare with relocated files:', err);
+      logger.error('History', 'Failed to recompare with relocated files:', err);
       setRelocateError(err instanceof Error ? err.message : '重新比对失败');
     }
   }, [relocateTargetId, setView]);

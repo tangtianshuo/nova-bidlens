@@ -185,6 +185,11 @@ export interface BidLensApi {
   // Engine
   engineHandshake(): Promise<EngineHandshake>;
 
+  // Log viewer
+  getLogBuffer(): Promise<Array<{ ts: string; level: string; tag: string; text: string; source: string }>>;
+  sendLog(entry: { level: string; tag: string; text: string }): void;
+  onLogEntry(handler: (entry: { ts: string; level: string; tag: string; text: string; source: string }) => void): () => void;
+
   // Window controls
   windowMinimize(): Promise<void>;
   windowMaximize(): Promise<void>;
