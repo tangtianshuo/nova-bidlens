@@ -18,10 +18,10 @@ V0.3.0 core pipeline (Waves 0-5) is substantially implemented. Requirements belo
 
 ### Integration Hardening
 
-- [ ] **HARDEN-01**: Unify renderer project identity to single source of truth — consolidate `useProjectStore.selectedProjectId`, `useRiskReviewStore.projectId`, `useAppStore.taskId` (V3-121/V3-122)
+- [x] **HARDEN-01**: Unify renderer project identity to single source of truth — consolidate `useProjectStore.selectedProjectId`, `useRiskReviewStore.projectId`, `useAppStore.taskId` (V3-121/V3-122)
 - [ ] **HARDEN-02**: Checkpoint resume should skip completed detectors instead of re-running all 4 (V3-412 improvement)
 - [ ] **HARDEN-03**: Implement `risk:detectorProgress` channel or remove dead wiring in preload (V3-404 cleanup)
-- [ ] **HARDEN-04**: Wire hook ordering fix and remove production `console.log` command stubs in renderer (V3-123)
+- [x] **HARDEN-04**: Wire hook ordering fix and remove production `console.log` command stubs in renderer (V3-123)
 
 ### Quality Gates
 
@@ -36,6 +36,12 @@ V0.3.0 core pipeline (Waves 0-5) is substantially implemented. Requirements belo
 ### Business Labels (Deferred)
 
 - [ ] **LABEL-01**: Implement BusinessLabel extraction logic for ReviewNode — currently `labels` is always empty Vec (V3-102, deferable)
+
+### nZBTF File Support
+
+- [ ] **NZBTF-01**: Add nZBTF file format detection and ZIP extraction — detect .nZBTF extension, extract ZIP archive to temp directory
+- [ ] **NZBTF-02**: Parse all XML metadata from nZBTF — TB.xml (bidder info, qualifications, personnel), Echo.xml (pricing, bill of quantities), hyChoose.xml (evaluation data)
+- [ ] **NZBTF-03**: Map nZBTF XML data to existing Submission/DocumentAst model — store parsed metadata in submission record for risk detection
 
 ---
 

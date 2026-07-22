@@ -48,7 +48,7 @@ Plans:
 **Plans**: 2 plans in 1 wave
 
 Plans:
-- [ ] 02-01-PLAN.md — Renderer identity unification + hook ordering fix (HARDEN-01, HARDEN-04)
+- [x] 02-01-PLAN.md — Renderer identity unification + hook ordering fix (HARDEN-01, HARDEN-04)
 - [ ] 02-02-PLAN.md — Checkpoint resume detector skipping + remove dead detectorProgress wiring (HARDEN-02, HARDEN-03)
 
 ### Phase 3: E2E Foundation
