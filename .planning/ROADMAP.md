@@ -79,7 +79,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Security tests + production bundle fixture scanning (QA-03, QA-07)
 - [x] 04-02-PLAN.md — Performance tests + Diff regression tests (QA-04, QA-05)
-- [ ] 04-03-PLAN.md — Viewport/accessibility screenshots at 3 widths (QA-06)
+- [x] 04-03-PLAN.md — Viewport/accessibility screenshots at 3 widths (QA-06)
 
 ### Phase 5: Business Labels
 **Goal**: ReviewNode carries meaningful business labels for downstream filtering and reporting
@@ -116,6 +116,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Cleanup & Bug Fixes | 2/2 | Complete | - |
 | 2. Integration Hardening | 2/2 | Complete | - |
 | 3. E2E Foundation | 2/2 | Complete | - |
-| 4. Quality Gates | 2/3 | Executing | - |
+| 4. Quality Gates | 3/3 | Complete | - |
 | 5. Business Labels | 0/1 | Not started | - |
 | 6. nZBTF File Support | 0/2 | Planning complete | - |
