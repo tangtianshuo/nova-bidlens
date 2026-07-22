@@ -1,53 +1,53 @@
-# Testing Patterns
+# 测试模式
 
-**Analysis Date:** 2026-07-22
+**分析日期：** 2026-07-22
 
-## Test Framework
+## 测试框架
 
-**Runner:**
-- Vitest 2.1.8 for TypeScript tests
-- Playwright for E2E tests (desktop only)
-- Cargo test for Rust engine
+**运行器：**
+- Vitest 2.1.8 用于 TypeScript 测试
+- Playwright 用于 E2E 测试（仅桌面应用）
+- Cargo test 用于 Rust 引擎
 
-**Assertion Library:**
-- Vitest built-in: `expect` from `vitest`
-- `@testing-library/jest-dom/vitest` for DOM matchers (setup in `apps/desktop/src/test-setup.ts`)
-- `@testing-library/react` for React component testing
+**断言库：**
+- Vitest 内置：`expect` 来自 `vitest`
+- `@testing-library/jest-dom/vitest` 用于 DOM 匹配器（在 `apps/desktop/src/test-setup.ts` 中设置）
+- `@testing-library/react` 用于 React 组件测试
 
-**Run Commands:**
+**运行命令：**
 ```bash
-pnpm test              # Run all tests (TS + Rust + integration + E2E)
-pnpm test:ts           # shared + desktop unit tests
-pnpm test:rust         # cargo test for Rust engine
+pnpm test              # 运行所有测试（TS + Rust + integration + E2E）
+pnpm test:ts           # shared + desktop 单元测试
+pnpm test:rust         # cargo test Rust 引擎
 pnpm test:integration  # vitest run tests/integration
 pnpm test:e2e          # vitest run tests/e2e
 
-# Individual packages
-pnpm --filter @bidlens/shared test    # shared package tests
-pnpm --filter @bidlens/desktop test   # desktop tests (vitest run)
+# 单个包
+pnpm --filter @bidlens/shared test    # 共享包测试
+pnpm --filter @bidlens/desktop test   # 桌面测试（vitest run）
 
 # Rust
 cargo test --manifest-path bidlens-engine/Cargo.toml
 
-# V0.3 specific
-pnpm test:v03:metrics  # Gold standard evaluation tests
-pnpm test:v03:phase0   # Phase 0 gate tests
+# V0.3 专用
+pnpm test:v03:metrics  # 金标评估测试
+pnpm test:v03:phase0   # Phase 0 门控测试
 ```
 
-## Test File Organization
+## 测试文件组织
 
-**Location:**
-- Unit tests: co-located with source files (same directory)
-- Integration tests: `tests/integration/`
-- E2E tests: `tests/e2e/`
-- Benchmark tests: `tests/benchmark/`
-- V0.3 evaluation: `tests/v03/`
+**位置：**
+- 单元测试：与源文件共置（同一目录）
+- 集成测试：`tests/integration/`
+- E2E 测试：`tests/e2e/`
+- 基准测试：`tests/benchmark/`
+- V0.3 评估：`tests/v03/`
 
-**Naming:**
-- Pattern: `{module-name}.test.ts` or `{module-name}.test.tsx`
-- Examples: `result-store.test.ts`, `keyboard-handler.test.tsx`, `docx-parser.test.ts`
+**命名：**
+- 模式：`{module-name}.test.ts` 或 `{module-name}.test.tsx`
+- 示例：`result-store.test.ts`、`keyboard-handler.test.tsx`、`docx-parser.test.ts`
 
-**Structure:**
+**结构：**
 ```
 apps/desktop/src/
 ├── main/
@@ -88,33 +88,33 @@ tests/
     └── performance.test.ts
 ```
 
-## Test Configuration
+## 测试配置
 
-**Desktop Vitest Config:**
-- File: `apps/desktop/vitest.config.ts`
-- Environment: `jsdom`
-- Setup file: `apps/desktop/src/test-setup.ts`
-- Includes: `src/**/*.test.ts`, `src/**/*.test.tsx`, `scripts/**/*.test.ts`
-- Path alias: `@` -> `src/renderer`
+**桌面 Vitest 配置：**
+- 文件：`apps/desktop/vitest.config.ts`
+- 环境：`jsdom`
+- 设置文件：`apps/desktop/src/test-setup.ts`
+- 包含：`src/**/*.test.ts`、`src/**/*.test.tsx`、`scripts/**/*.test.ts`
+- 路径别名：`@` -> `src/renderer`
 
-**Shared Vitest Config:**
-- No explicit config (uses vitest defaults)
-- Tests run via `vitest run` in package directory
+**共享包 Vitest 配置：**
+- 无显式配置（使用 vitest 默认值）
+- 通过在包目录中运行 `vitest run` 执行测试
 
-**Playwright Config:**
-- File: `apps/desktop/playwright.config.ts`
-- Test dir: `./tests/e2e`
-- Timeout: 60s per test, 10s for expects
-- Serial execution (Electron requirement): `fullyParallel: false`, `workers: 1`
-- Retries: 0
+**Playwright 配置：**
+- 文件：`apps/desktop/playwright.config.ts`
+- 测试目录：`./tests/e2e`
+- 超时：每测试 60 秒，expect 10 秒
+- 串行执行（Electron 要求）：`fullyParallel: false`、`workers: 1`
+- 重试：0
 
-**Rust Test Config:**
-- Standard `cargo test` with workspace resolver 2
-- Tests in `#[cfg(test)] mod tests { ... }` blocks
+**Rust 测试配置：**
+- 标准 `cargo test`，workspace resolver 2
+- 测试在 `#[cfg(test)] mod tests { ... }` 块中
 
-## Test Structure
+## 测试结构
 
-**Suite Organization:**
+**套件组织：**
 ```typescript
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
@@ -129,13 +129,13 @@ describe('Component/Module Name', () => {
 });
 ```
 
-**Patterns:**
-- `describe` blocks for grouping related tests
-- `it` blocks for individual test cases (not `test`)
-- `beforeEach` for setup, `afterEach` for cleanup
-- Helper functions at top of file for test data creation
+**模式：**
+- `describe` 块用于分组相关测试
+- `it` 块用于单个测试用例（不用 `test`）
+- `beforeEach` 用于设置，`afterEach` 用于清理
+- 测试文件顶部的辅助函数用于创建测试数据
 
-**React Component Tests:**
+**React 组件测试：**
 ```typescript
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -156,13 +156,13 @@ describe('ComponentName', () => {
 });
 ```
 
-## Mocking
+## Mock
 
-**Framework:** Vitest built-in `vi` object
+**框架：** Vitest 内置 `vi` 对象
 
-**Patterns:**
+**模式：**
 ```typescript
-// Mock entire module
+// Mock 整个模块
 vi.mock('fs/promises', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -173,35 +173,35 @@ vi.mock('fs/promises', async (importOriginal) => {
   };
 });
 
-// Mock specific functions
+// Mock 特定函数
 vi.mocked(fs.access).mockRejectedValueOnce(new Error('ENOENT'));
 vi.mocked(fs.stat).mockResolvedValueOnce({ size: 1024 } as never);
 
-// Spy on methods
+// 监视方法
 const spy = vi.spyOn(event, 'preventDefault');
 
-// Clear mocks between tests
+// 测试间清除 mock
 beforeEach(() => {
   vi.clearAllMocks();
 });
 ```
 
-**What to Mock:**
-- File system operations (`fs/promises`)
-- Electron APIs (`app`, `BrowserWindow`)
-- External services and network calls
-- Module-level dependencies for isolated unit tests
+**需要 Mock 的：**
+- 文件系统操作（`fs/promises`）
+- Electron API（`app`、`BrowserWindow`）
+- 外部服务和网络调用
+- 用于隔离单元测试的模块级依赖
 
-**What NOT to Mock:**
-- Pure utility functions
-- Type definitions
-- Test helper functions
+**不需要 Mock 的：**
+- 纯工具函数
+- 类型定义
+- 测试辅助函数
 
-## Fixtures and Factories
+## Fixture 和工厂
 
-**Test Data:**
+**测试数据：**
 ```typescript
-// Factory functions for test data
+// 测试数据工厂函数
 function makeDiffItem(overrides: Partial<DiffItem> & { matchId: string; matchType: MatchType }): DiffItem {
   return {
     confidence: 1.0,
@@ -216,70 +216,70 @@ function makeDiffItem(overrides: Partial<DiffItem> & { matchId: string; matchTyp
   };
 }
 
-// Fixture arrays
+// Fixture 数组
 const ITEMS: DiffItem[] = [
   makeDiffItem({ matchId: 'item-1', matchType: 'identical', summary: '第一章 总则' }),
   makeDiffItem({ matchId: 'item-2', matchType: 'modified', summary: '第二章', similarity: 0.8 }),
 ];
 ```
 
-**Location:**
-- Inline in test files (no separate fixture files)
-- Helper functions at top of test file
-- Shared fixtures in `tests/` directories use inline construction
+**位置：**
+- 内联在测试文件中（无独立 fixture 文件）
+- 测试文件顶部的辅助函数
+- `tests/` 目录中的共享 fixture 使用内联构造
 
-## Coverage
+## 覆盖率
 
-**Requirements:** None enforced (no coverage thresholds configured)
+**要求：** 未强制（未配置覆盖率阈值）
 
-**View Coverage:**
+**查看覆盖率：**
 ```bash
-# Not configured - would need vitest --coverage flag
-# No coverage scripts in package.json
+# 未配置 - 需要 vitest --coverage 标志
+# package.json 中无覆盖率脚本
 ```
 
-## Test Types
+## 测试类型
 
-**Unit Tests:**
-- Scope: Individual functions, components, stores
-- Location: Co-located with source
-- Framework: Vitest + Testing Library (React)
-- Examples: `result-store.test.ts`, `keyboard-handler.test.tsx`, `file-validator.test.ts`
+**单元测试：**
+- 范围：单个函数、组件、store
+- 位置：与源文件共置
+- 框架：Vitest + Testing Library（React）
+- 示例：`result-store.test.ts`、`keyboard-handler.test.tsx`、`file-validator.test.ts`
 
-**Integration Tests:**
-- Scope: Cross-module workflows (parser -> diff -> report)
-- Location: `tests/integration/`
-- Framework: Vitest
-- Examples: `comparison-flow.test.ts`, `resilience-stress.test.ts`
+**集成测试：**
+- 范围：跨模块工作流（parser -> diff -> report）
+- 位置：`tests/integration/`
+- 框架：Vitest
+- 示例：`comparison-flow.test.ts`、`resilience-stress.test.ts`
 
-**E2E Tests:**
-- Scope: Full application workflows
-- Location: `tests/e2e/`
-- Framework: Playwright (Electron)
-- Examples: `v022-workflow.test.ts`, `document-comparison-workflow.test.ts`
-- Note: E2E tests use vitest-style imports but run through Playwright
+**E2E 测试：**
+- 范围：完整应用工作流
+- 位置：`tests/e2e/`
+- 框架：Playwright（Electron）
+- 示例：`v022-workflow.test.ts`、`document-comparison-workflow.test.ts`
+- 注意：E2E 测试使用 vitest 风格导入但通过 Playwright 运行
 
-**Benchmark Tests:**
-- Scope: Performance regression detection
-- Location: `tests/benchmark/`
-- Framework: Vitest with custom `benchmark-harness`
-- Examples: `performance.test.ts`
+**基准测试：**
+- 范围：性能回归检测
+- 位置：`tests/benchmark/`
+- 框架：Vitest 配合自定义 `benchmark-harness`
+- 示例：`performance.test.ts`
 
-**V0.3 Evaluation Tests:**
-- Scope: Gold standard evaluation for similarity detection
-- Location: `tests/v03/`
-- Framework: Vitest
-- Examples: `evaluate-gold.test.ts`, `jaccard-baseline.test.ts`
+**V0.3 评估测试：**
+- 范围：相似性检测的金标评估
+- 位置：`tests/v03/`
+- 框架：Vitest
+- 示例：`evaluate-gold.test.ts`、`jaccard-baseline.test.ts`
 
-**Rust Tests:**
-- Scope: Document AST serialization, diff algorithms
-- Location: Inline `#[cfg(test)]` modules
-- Framework: `cargo test` with `assert_eq!`, `assert!`
-- Examples: `bidlens-engine/crates/document-ast/src/lib.rs`
+**Rust 测试：**
+- 范围：Document AST 序列化、差异算法
+- 位置：内联 `#[cfg(test)]` 模块
+- 框架：`cargo test` 配合 `assert_eq!`、`assert!`
+- 示例：`bidlens-engine/crates/document-ast/src/lib.rs`
 
-## Common Patterns
+## 常见模式
 
-**Async Testing:**
+**异步测试：**
 ```typescript
 it('returns FILE_NOT_FOUND when file does not exist', async () => {
   vi.mocked(fs.access).mockRejectedValueOnce(new Error('ENOENT'));
@@ -289,7 +289,7 @@ it('returns FILE_NOT_FOUND when file does not exist', async () => {
 });
 ```
 
-**Error Testing:**
+**错误测试：**
 ```typescript
 it('returns FILE_TOO_LARGE when file exceeds 100MB', async () => {
   vi.mocked(fs.access).mockResolvedValueOnce(undefined as never);
@@ -300,7 +300,7 @@ it('returns FILE_TOO_LARGE when file exceeds 100MB', async () => {
 });
 ```
 
-**Store Testing:**
+**Store 测试：**
 ```typescript
 beforeEach(() => {
   useResultStore.setState({ result: null, items: [], filteredItems: [] });
@@ -313,7 +313,7 @@ it('loads result correctly', () => {
 });
 ```
 
-**Component Event Testing:**
+**组件事件测试：**
 ```typescript
 it('calls onCellClick when clicked', () => {
   const onClick = vi.fn();
@@ -323,7 +323,7 @@ it('calls onCellClick when clicked', () => {
 });
 ```
 
-**Keyboard Event Testing:**
+**键盘事件测试：**
 ```typescript
 function pressKey(key: string, options: KeyboardEventInit = {}) {
   fireEvent.keyDown(document, { key, ...options });
@@ -336,8 +336,8 @@ it('calls onSelectNext on ArrowDown', () => {
 });
 ```
 
-**Rust Serialization Roundtrip:**
-```typescript
+**Rust 序列化往返测试：**
+```rust
 #[test]
 fn test_serialization_roundtrip() {
   let format = TextFormat { bold: Some(true), ... };
@@ -347,40 +347,40 @@ fn test_serialization_roundtrip() {
 }
 ```
 
-## Test Utilities
+## 测试工具
 
-**Setup File:**
-- `apps/desktop/src/test-setup.ts`: Imports `@testing-library/jest-dom/vitest` for DOM matchers
+**设置文件：**
+- `apps/desktop/src/test-setup.ts`：导入 `@testing-library/jest-dom/vitest` 用于 DOM 匹配器
 
-**Helper Functions:**
-- `cn()` from `@/lib/utils` for class name merging in tests
-- Custom `renderHandler()` pattern for component tests with mock callbacks
-- Factory functions (`makeDiffItem`, `makeCompareResult`) for test data
+**辅助函数：**
+- `cn()` 来自 `@/lib/utils`，用于测试中的类名合并
+- 自定义 `renderHandler()` 模式用于带 mock 回调的组件测试
+- 工厂函数（`makeDiffItem`、`makeCompareResult`）用于测试数据
 
-## Gaps and Notes
+## 差距和说明
 
-**What's Well Tested:**
-- Zustand stores (result-store, app-store) with comprehensive edge cases
-- UI components (TableCellView, KeyboardHandler, FilterBar)
-- File validation service
-- Document parsing (docx-parser)
-- Report generation
-- Integration flows
+**测试良好的部分：**
+- Zustand store（result-store、app-store）覆盖了全面的边界用例
+- UI 组件（TableCellView、KeyboardHandler、FilterBar）
+- 文件校验服务
+- 文档解析（docx-parser）
+- 报告生成
+- 集成流程
 
-**Test Coverage Gaps:**
-- No enforced coverage thresholds
-- No coverage reporting configured
-- Some IPC handler tests may be missing
-- E2E tests are minimal (Playwright config exists but limited tests)
-- No visual regression testing
+**测试覆盖差距：**
+- 未强制覆盖率阈值
+- 未配置覆盖率报告
+- 部分 IPC 处理器测试可能缺失
+- E2E 测试较少（Playwright 配置存在但测试有限）
+- 无视觉回归测试
 
-**Testing Conventions:**
-- Use `it()` not `test()` for test blocks
-- Use `describe()` for grouping
-- Chinese text in test fixtures (domain-appropriate)
-- `vi.fn()` for mock functions, `vi.mock()` for module mocks
-- `cleanup()` from Testing Library in `afterEach` for React tests
+**测试约定：**
+- 使用 `it()` 而非 `test()` 作为测试块
+- 使用 `describe()` 进行分组
+- 测试 fixture 中使用中文文本（领域适配）
+- `vi.fn()` 用于 mock 函数，`vi.mock()` 用于模块 mock
+- React 测试中 `afterEach` 使用 `cleanup()` from Testing Library
 
 ---
 
-*Testing analysis: 2026-07-22*
+*测试分析：2026-07-22*

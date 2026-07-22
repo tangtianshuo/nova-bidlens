@@ -1,218 +1,218 @@
-# Codebase Concerns
+# 代码库关注点
 
-**Analysis Date:** 2026-07-22
+**分析日期：** 2026-07-22
 
-## Tech Debt
+## 技术债务
 
-**God class: RiskReviewService (951 lines):**
-- Issue: Single class handles project lifecycle, analysis pipeline, AST caching, finding persistence, report export, PDF generation, and risk assessment computation
-- Files: `apps/desktop/src/main/services/risk-review-service.ts`
-- Impact: Difficult to test, modify, or reason about. Any change risks side effects across unrelated features
-- Fix approach: Extract into focused services — `AnalysisPipeline`, `ReportExporter`, `RiskAssessmentCalculator`, `DocumentCacheService`
+**上帝类：RiskReviewService（951 行）：**
+- 问题：单个类处理项目生命周期、分析流水线、AST 缓存、发现项持久化、报告导出、PDF 生成和风险评估计算
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts`
+- 影响：难以测试、修改或理解。任何变更都可能在不相关的功能中产生副作用
+- 修复方案：拆分为专注的服务 — `AnalysisPipeline`、`ReportExporter`、`RiskAssessmentCalculator`、`DocumentCacheService`
 
-**Monolithic repositories file (782 lines, 13 factories):**
-- Issue: All 13 repository factory functions live in a single file with all row types
-- Files: `apps/desktop/src/main/db/repositories.ts`
-- Impact: Merge conflicts when multiple features modify different repositories. Hard to navigate
-- Fix approach: Split into `repositories/project.ts`, `repositories/finding.ts`, `repositories/evidence.ts`, etc.
+**单体仓库文件（782 行，13 个工厂函数）：**
+- 问题：所有 13 个仓库工厂函数都在单个文件中，包含所有行类型
+- 文件：`apps/desktop/src/main/db/repositories.ts`
+- 影响：多个功能修改不同仓库时产生合并冲突。难以导航
+- 修复方案：拆分为 `repositories/project.ts`、`repositories/finding.ts`、`repositories/evidence.ts` 等
 
-**Module-level mutable singletons in IPC handlers:**
-- Issue: `orchestrator`, `persistenceDeps`, `service`, `engineManager` are module-level `let` variables with null checks scattered everywhere
-- Files: `apps/desktop/src/main/ipc/compare-handlers.ts:30-37`, `apps/desktop/src/main/ipc/risk-review-handlers.ts:7-8`
-- Impact: Fragile initialization order, non-obvious lifecycle, potential null dereference if IPC called before init
-- Fix approach: Use dependency injection or a service container; require initialization before handler registration
+**IPC 处理器中的模块级可变单例：**
+- 问题：`orchestrator`、`persistenceDeps`、`service`、`engineManager` 是模块级 `let` 变量，到处散布 null 检查
+- 文件：`apps/desktop/src/main/ipc/compare-handlers.ts:30-37`、`apps/desktop/src/main/ipc/risk-review-handlers.ts:7-8`
+- 影响：脆弱的初始化顺序、不明显的生命周期、IPC 在初始化前调用可能导致空引用
+- 修复方案：使用依赖注入或服务容器；要求在处理器注册前完成初始化
 
-**Fire-and-forget async in project creation:**
-- Issue: `void this.run(projectId, request, abort)` discards the Promise, so unhandled rejection in the pipeline is only caught internally
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:148`, `:193`, `:211`
-- Impact: If the internal catch block itself throws, the error is lost. No way for callers to await completion
-- Fix approach: Store the Promise in `activeRuns` and expose a `waitForCompletion(projectId)` method
+**项目创建中的 fire-and-forget 异步：**
+- 问题：`void this.run(projectId, request, abort)` 丢弃 Promise，因此流水线中的未处理拒绝只在内部被捕获
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:148`、`:193`、`:211`
+- 影响：如果内部 catch 块本身抛出，错误会丢失。调用者无法等待完成
+- 修复方案：将 Promise 存储在 `activeRuns` 中，暴露 `waitForCompletion(projectId)` 方法
 
-**Naive fallback detection (O(n^2) exact match):**
-- Issue: `buildFindings()` compares every block of every document pair with exact string matching after normalization. No semantic or fuzzy matching
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:923-951`
-- Impact: When Rust engine unavailable, detection quality is very low. Performance degrades quadratically with document size
-- Fix approach: Replace with Jaccard similarity or shingled n-gram matching as interim improvement
+**朴素回退检测（O(n^2) 精确匹配）：**
+- 问题：`buildFindings()` 在归一化后对每对文档的每个块进行精确字符串比较。无语义或模糊匹配
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:923-951`
+- 影响：当 Rust 引擎不可用时，检测质量很低。性能随文档大小二次退化
+- 修复方案：用 Jaccard 相似度或 shingled n-gram 匹配作为临时改进
 
-**Hardcoded version strings everywhere:**
-- Issue: `'lexical-fallback'`, `'1.0.0'`, `'0.2.2'`, `'0.3.0'`, `'lexical-1.0.0'` scattered as magic strings
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:120-123`, `:524`, `:606`, `:709`, `:946`
-- Impact: Version bumps require hunting through code. Inconsistent version strings across code paths
-- Fix approach: Define version constants in a single `versions.ts` config file
+**到处硬编码版本字符串：**
+- 问题：`'lexical-fallback'`、`'1.0.0'`、`'0.2.2'`、`'0.3.0'`、`'lexical-1.0.0'` 作为魔法字符串散布
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:120-123`、`:524`、`:606`、`:709`、`:946`
+- 影响：版本升级需要到处搜索。不同代码路径版本字符串不一致
+- 修复方案：在单个 `versions.ts` 配置文件中定义版本常量
 
-**Empty sha256 on project creation:**
-- Issue: `sha256: ''` is set when creating submission rows, only computed later during parsing
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:132`
-- Impact: If parsing fails or is interrupted, submissions have empty hashes. Resume logic at line 357 uses this empty hash to look up cached ASTs
-- Fix approach: Compute file hash during validation phase (before parsing) and store it immediately
+**项目创建时 sha256 为空：**
+- 问题：创建 submission 行时设置 `sha256: ''`，仅在解析期间计算
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:132`
+- 影响：如果解析失败或中断，submission 有空哈希。第 357 行的恢复逻辑使用此空哈希查找缓存的 AST
+- 修复方案：在校验阶段（解析之前）计算文件哈希并立即存储
 
-## Known Bugs
+## 已知 Bug
 
-**TODO: History recompare not wired to engine:**
-- Symptoms: Clicking "recompare" in history creates a new task but does not trigger actual comparison
-- Files: `apps/desktop/src/main/ipc/history-handlers.ts:108-110`
-- Trigger: History view -> recompare action
-- Workaround: None — feature is incomplete
+**TODO：历史重新比对未接入引擎：**
+- 症状：在历史记录中点击"重新比对"会创建新任务但不触发实际比对
+- 文件：`apps/desktop/src/main/ipc/history-handlers.ts:108-110`
+- 触发条件：历史视图 → 重新比对操作
+- 解决方法：无 — 功能未完成
 
-**TODO: Review workbench cell click and jump-to-position not wired:**
-- Symptoms: Clicking a cell in the table viewport or jumping to a position does nothing
-- Files: `apps/desktop/src/renderer/features/compare/ReviewWorkbench.tsx:28`, `:32`
-- Trigger: Table diff review -> click cell or jump-to-position
-- Workaround: None — stubs only
+**TODO：审查工作台单元格点击和跳转位置未接入：**
+- 症状：在表格视口中点击单元格或跳转到位置无效果
+- 文件：`apps/desktop/src/renderer/features/compare/ReviewWorkbench.tsx:28`、`:32`
+- 触发条件：表格差异审查 → 点击单元格或跳转位置
+- 解决方法：无 — 仅存根
 
-**`as any` in production CommentHighlight:**
-- Symptoms: Type safety bypassed for children prop extraction
-- Files: `apps/desktop/src/renderer/components/CommentHighlight.tsx:401`
-- Trigger: Comment rendering with unexpected children structure
-- Workaround: Runtime works but loses type checking
+**生产代码中的 `as any`：**
+- 症状：CommentHighlight 中绕过了类型安全
+- 文件：`apps/desktop/src/renderer/components/CommentHighlight.tsx:401`
+- 触发条件：使用意外 children 结构渲染批注
+- 解决方法：运行时正常但丢失类型检查
 
-## Security Considerations
+## 安全考虑
 
-**Path traversal via shell.openPath / shell.showItemInFolder:**
-- Risk: `risk:openFile` and `risk:openFolder` IPC handlers pass user-influenced file paths directly to `shell.openPath()` without validation. An attacker who can influence the stored file path (e.g., via a crafted project import) could open arbitrary files
-- Files: `apps/desktop/src/main/ipc/risk-review-handlers.ts:48-54`, `apps/desktop/src/main/ipc/compare-handlers.ts:283-288`
-- Current mitigation: Paths originate from user file selection dialog, but resume/recovery reconstructs paths from audit events
-- Recommendations: Validate that paths are within expected directories before calling `shell.openPath()`
+**通过 shell.openPath / shell.showItemInFolder 的路径遍历：**
+- 风险：`risk:openFile` 和 `risk:openFolder` IPC 处理器将用户影响的文件路径直接传递给 `shell.openPath()` 而不校验。攻击者如果能影响存储的文件路径（例如通过构造的项目导入），可以打开任意文件
+- 文件：`apps/desktop/src/main/ipc/risk-review-handlers.ts:48-54`、`apps/desktop/src/main/ipc/compare-handlers.ts:283-288`
+- 当前缓解：路径来自用户文件选择对话框，但恢复/重放从审计事件重建路径
+- 建议：在调用 `shell.openPath()` 前校验路径在预期目录内
 
-**IPC request parameter not type-checked:**
-- Risk: `saveRiskFindingReview` handler receives `request` as untyped `unknown` from renderer. No validation of projectId, findingId, status, or note fields
-- Files: `apps/desktop/src/main/ipc/risk-review-handlers.ts:25`
-- Current mitigation: TypeScript types on the service layer provide some protection
-- Recommendations: Add runtime validation (zod or manual guards) at the IPC boundary
+**IPC 请求参数无类型检查：**
+- 风险：`saveRiskFindingReview` 处理器从渲染器接收未类型化的 `request` 为 `unknown`。不校验 projectId、findingId、status 或 note 字段
+- 文件：`apps/desktop/src/main/ipc/risk-review-handlers.ts:25`
+- 当前缓解：服务层的 TypeScript 类型提供了一定保护
+- 建议：在 IPC 边界添加运行时校验（zod 或手动守卫）
 
-**Encryption key held in memory:**
-- Risk: AES-256 master key stored as `Buffer` in `KeyManager.masterKey` and passed to `RiskReviewService` constructor. Only zeroed on explicit `destroy()` call
-- Files: `apps/desktop/src/main/services/key-manager.ts:27`, `apps/desktop/src/main/services/risk-review-service.ts:69`
-- Current mitigation: Key is wrapped with Electron safeStorage (DPAPI) at rest. Memory zeroing on shutdown
-- Recommendations: Consider scoped key derivation per operation to minimize exposure window
+**加密密钥保存在内存中：**
+- 风险：AES-256 主密钥以 `Buffer` 形式存储在 `KeyManager.masterKey` 中并传递给 `RiskReviewService` 构造函数。仅在显式 `destroy()` 调用时清零
+- 文件：`apps/desktop/src/main/services/key-manager.ts:27`、`apps/desktop/src/main/services/risk-review-service.ts:69`
+- 当前缓解：密钥在静态时用 Electron safeStorage（DPAPI）包装。关闭时内存清零
+- 建议：考虑按操作进行作用域密钥派生以最小化暴露窗口
 
-**Backup service SQL string interpolation:**
-- Risk: `VACUUM INTO '${backupPath.replace(/'/g, "''")}'` uses string interpolation for SQL. While the path is internally generated, this pattern is fragile
-- Files: `apps/desktop/src/main/services/backup.ts:35`
-- Current mitigation: Path is constructed from timestamp, not user input. Single-quote escaping applied
-- Recommendations: Use parameterized query or validate path contains only safe characters
+**备份服务 SQL 字符串插值：**
+- 风险：`VACUUM INTO '${backupPath.replace(/'/g, "''")}'` 使用字符串插值构造 SQL。虽然路径是内部生成的，但此模式很脆弱
+- 文件：`apps/desktop/src/main/services/backup.ts:35`
+- 当前缓解：路径从时间戳构造，非用户输入。已应用单引号转义
+- 建议：使用参数化查询或校验路径仅包含安全字符
 
-## Performance Bottlenecks
+## 性能瓶颈
 
-**Synchronous file parsing in analysis pipeline:**
-- Problem: Documents are parsed sequentially in a `for` loop, not in parallel
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:343-351`
-- Cause: Each parse awaits completion before starting the next. For 8 documents, this serializes all parsing
-- Improvement path: Parse documents in parallel with `Promise.all` (respecting memory limits)
+**分析流水线中的同步文件解析：**
+- 问题：文档在 `for` 循环中顺序解析，非并行
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:343-351`
+- 原因：每个解析等待完成后才开始下一个。对于 8 个文档，这会串行化所有解析
+- 改进路径：使用 `Promise.all` 并行解析文档（注意内存限制）
 
-**N+1 query pattern in listProjects:**
-- Problem: `listProjects()` calls `submissionRepo.getByProject()` and `findingRepo.getByProject()` for each project in the list
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:92-94`
-- Cause: Each project triggers 2 additional DB queries
-- Improvement path: Batch query with JOIN or use a single query with aggregation
+**listProjects 中的 N+1 查询模式：**
+- 问题：`listProjects()` 对列表中的每个项目调用 `submissionRepo.getByProject()` 和 `findingRepo.getByProject()`
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:92-94`
+- 原因：每个项目触发 2 次额外的数据库查询
+- 改进路径：使用 JOIN 批量查询或使用带聚合的单次查询
 
-**Reconstructing full detail for risk level derivation:**
-- Problem: `getProject()` loads all submissions, all findings, all evidence, all file pairs, all detector runs, all checkpoints, and the assessment for every detail view
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:730-820`
-- Cause: No lazy loading or pagination of evidence/findings
-- Improvement path: Load findings/evidence on demand when user expands a finding
+**为风险等级派生重建完整详情：**
+- 问题：`getProject()` 为每个详情视图加载所有 submissions、所有 findings、所有 evidence、所有文件对、所有检测器运行、所有检查点和评估
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:730-820`
+- 原因：无延迟加载或 evidence/findings 分页
+- 改进路径：按需加载 findings/evidence（用户展开发现项时）
 
-**PDF generation creates hidden BrowserWindow per export:**
-- Problem: Each PDF export creates a new `BrowserWindow({ show: false })`, loads HTML, renders, then closes
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:295-315`
-- Cause: Uses Electron's `printToPDF` API which requires a window
-- Improvement path: Pool a single hidden window for PDF generation, or use a headless PDF library
+**PDF 生成每次导出创建隐藏 BrowserWindow：**
+- 问题：每次 PDF 导出创建新的 `BrowserWindow({ show: false })`，加载 HTML，渲染，然后关闭
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:295-315`
+- 原因：使用 Electron 的 `printToPDF` API，需要窗口
+- 改进路径：池化单个隐藏窗口用于 PDF 生成，或使用无头 PDF 库
 
-## Fragile Areas
+## 脆弱区域
 
-**Engine manager restart logic:**
-- Files: `apps/desktop/src/main/services/engine-manager.ts:647-688`
-- Why fragile: Restart depends on `stopping` and `restarting` flags that must be set correctly. Race condition possible if `stop()` called during restart backoff
-- Safe modification: Always test engine lifecycle with concurrent stop/start/crash scenarios
-- Test coverage: `apps/desktop/tests/integration/resilience-stress.test.ts` covers basic restart but not race conditions
+**引擎管理器重启逻辑：**
+- 文件：`apps/desktop/src/main/services/engine-manager.ts:647-688`
+- 为何脆弱：重启依赖 `stopping` 和 `restarting` 标志，必须正确设置。如果在重启退避期间调用 `stop()` 可能产生竞态条件
+- 安全修改：始终用并发 stop/start/crash 场景测试引擎生命周期
+- 测试覆盖：`apps/desktop/tests/integration/resilience-stress.test.ts` 覆盖基本重启但不覆盖竞态条件
 
-**Risk progress IPC channel:**
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:721-728`
-- Why fragile: `this.window.webContents.send()` called from async pipeline. If window is closed during analysis, this throws
-- Safe modification: Guard with `!this.window.isDestroyed()` before sending
-- Test coverage: No test for window-close-during-analysis scenario
+**风险进度 IPC 通道：**
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:721-728`
+- 为何脆弱：从异步流水线调用 `this.window.webContents.send()`。如果分析期间窗口关闭，会抛出异常
+- 安全修改：发送前用 `!this.window.isDestroyed()` 守卫
+- 测试覆盖：无窗口关闭期间分析的测试
 
-**State machine transitions in app-store:**
-- Files: `apps/desktop/src/renderer/stores/app-store.ts:47-58`
-- Why fragile: Adding a new view requires updating `VALID_TRANSITIONS` and `MODE_DEFAULT_VIEW`. Missing entries silently fail (only `console.warn`)
-- Safe modification: Always update both maps when adding views. Consider deriving transitions from mode config
-- Test coverage: Basic transition tests exist
+**app-store 中的状态机转换：**
+- 文件：`apps/desktop/src/renderer/stores/app-store.ts:47-58`
+- 为何脆弱：添加新视图需要更新 `VALID_TRANSITIONS` 和 `MODE_DEFAULT_VIEW`。缺失条目静默失败（仅 `console.warn`）
+- 安全修改：添加视图时始终更新两个映射。考虑从 mode 配置派生转换
+- 测试覆盖：存在基本转换测试
 
-**Document AST cache with silent failure:**
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:674-701`
-- Why fragile: Both `cacheDocumentAst` and `loadCachedAstByHash` catch all errors and return null/skip. Cache corruption is invisible
-- Safe modification: Log cache failures with structured context for debugging
-- Test coverage: No tests for cache corruption scenarios
+**Document AST 缓存静默失败：**
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:674-701`
+- 为何脆弱：`cacheDocumentAst` 和 `loadCachedAstByHash` 都捕获所有错误并返回 null/跳过。缓存损坏不可见
+- 安全修改：记录缓存失败的结构化上下文用于调试
+- 测试覆盖：无缓存损坏场景的测试
 
-## Scaling Limits
+## 扩展限制
 
-**SQLite single-writer:**
-- Current capacity: WAL mode with 5s busy timeout handles current load
-- Limit: Concurrent writes from multiple analysis pipelines would serialize. Not an issue today (single-window Electron) but blocks multi-window or multi-project parallel analysis
-- Scaling path: Connection pooling or write queue if multi-project parallel analysis is added
+**SQLite 单写入者：**
+- 当前容量：WAL 模式加 5 秒 busy timeout 处理当前负载
+- 限制：来自多个分析流水线的并发写入会串行化。当前不是问题（单窗口 Electron）但阻塞多窗口或多项目并行分析
+- 扩展路径：如果添加多项目并行分析，使用连接池或写入队列
 
-**In-memory active runs map:**
-- Current capacity: All active runs stored in `Map<string, ActiveRun>` in `RiskReviewService`
-- Limit: If app crashes mid-analysis, active runs are lost. No persistence of in-flight state
-- Scaling path: Persist run state to DB with heartbeat, detect stale runs on startup
+**内存中活跃运行映射：**
+- 当前容量：所有活跃运行存储在 `RiskReviewService` 中的 `Map<string, ActiveRun>`
+- 限制：如果应用在分析期间崩溃，活跃运行丢失。无进行中状态的持久化
+- 扩展路径：将运行状态持久化到 DB 并带心跳，启动时检测过期运行
 
-**Engine communication over stdio:**
-- Current capacity: Single request-response channel, 300s timeout per request
-- Limit: Large AST payloads (8 documents) serialized to JSON over pipe. Memory spike on both sides
-- Scaling path: Use shared memory or file-based transfer for large payloads
+**通过 stdio 的引擎通信：**
+- 当前容量：单请求-响应通道，每请求 300 秒超时
+- 限制：大 AST 负载（8 个文档）序列化为 JSON 通过管道传输。两侧内存峰值
+- 扩展路径：对大负载使用共享内存或基于文件的传输
 
-## Dependencies at Risk
+## 风险依赖
 
-**better-sqlite3 (native module):**
-- Risk: Native addon requires platform-specific compilation. Electron version upgrades can break ABI compatibility
-- Impact: App fails to start if native module incompatible
-- Migration plan: Rebuild native module for each Electron version. Consider `better-sqlite3` prebuilds or `sql.js` as fallback
+**better-sqlite3（原生模块）：**
+- 风险：原生插件需要平台特定编译。Electron 版本升级可能破坏 ABI 兼容性
+- 影响：原生模块不兼容时应用无法启动
+- 迁移计划：每个 Electron 版本重编译原生模块。考虑 `better-sqlite3` prebuilds 或 `sql.js` 作为回退
 
-**Rust engine binary distribution:**
-- Risk: Engine binary must match platform (win/mac/linux) and architecture (x64/arm64). Packaging and distribution complexity
-- Impact: App non-functional without engine. Fallback detection is low quality
-- Migration plan: Current fallback (naive exact match) provides degraded functionality. Consider WASM compilation for single-binary distribution
+**Rust 引擎二进制分发：**
+- 风险：引擎二进制必须匹配平台（win/mac/linux）和架构（x64/arm64）。打包和分发复杂性
+- 影响：没有引擎应用无法运行。回退检测质量低
+- 迁移计划：当前回退（朴素精确匹配）提供降级功能。考虑 WASM 编译用于单二进制分发
 
-## Missing Critical Features
+## 缺失的关键功能
 
-**No test coverage for RiskReviewService:**
-- Problem: The largest source file (951 lines) has zero dedicated unit tests
-- Blocks: Confident refactoring, regression detection for the core analysis pipeline
+**RiskReviewService 无测试覆盖：**
+- 问题：最大的源文件（951 行）没有专门的单元测试
+- 阻塞：自信重构、核心分析流水线的回归检测
 
-**No IPC integration tests:**
-- Problem: IPC handlers tested only via E2E smoke tests, no isolated integration tests
-- Blocks: Fast feedback on handler logic, edge case coverage
+**无 IPC 集成测试：**
+- 问题：IPC 处理器仅通过 E2E 冒烟测试测试，无隔离的集成测试
+- 阻塞：处理器逻辑的快速反馈、边界用例覆盖
 
-**Recompare from history is broken:**
-- Problem: `history:recompare` creates a new task stub but never triggers the engine
-- Blocks: Users cannot re-run historical comparisons with updated engine
+**历史重新比对已损坏：**
+- 问题：`history:recompare` 创建新任务存根但从不触发引擎
+- 阻塞：用户无法使用更新的引擎重新运行历史比对
 
-## Test Coverage Gaps
+## 测试覆盖差距
 
-**risk-review-service.ts — no unit tests:**
-- What's not tested: Project creation, analysis pipeline, resume/retry, finding persistence, report export, risk assessment computation
-- Files: `apps/desktop/src/main/services/risk-review-service.ts`
-- Risk: Any change to the core pipeline can silently break without detection
-- Priority: High
+**risk-review-service.ts — 无单元测试：**
+- 未测试内容：项目创建、分析流水线、恢复/重试、发现项持久化、报告导出、风险评估计算
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts`
+- 风险：核心流水线的任何变更都可能无声破坏而无法检测
+- 优先级：高
 
-**engine-manager.ts — limited test coverage:**
-- What's not tested: Engine binary resolution, restart race conditions, large payload handling, timeout edge cases
-- Files: `apps/desktop/src/main/services/engine-manager.ts`
-- Risk: Engine lifecycle bugs manifest as silent analysis failures
-- Priority: High
+**engine-manager.ts — 测试覆盖有限：**
+- 未测试内容：引擎二进制解析、重启竞态条件、大负载处理、超时边界用例
+- 文件：`apps/desktop/src/main/services/engine-manager.ts`
+- 风险：引擎生命周期 bug 表现为静默分析失败
+- 优先级：高
 
-**repositories.ts — no direct unit tests:**
-- What's not tested: Individual repository CRUD operations, encryption/decryption round-trips, SQL correctness
-- Files: `apps/desktop/src/main/db/repositories.ts`
-- Risk: Schema changes or SQL bugs only caught at integration level
-- Priority: Medium
+**repositories.ts — 无直接单元测试：**
+- 未测试内容：单个仓库 CRUD 操作、加密/解密往返、SQL 正确性
+- 文件：`apps/desktop/src/main/db/repositories.ts`
+- 风险：Schema 变更或 SQL bug 仅在集成级别被捕获
+- 优先级：中
 
-**buildFindings fallback — no tests:**
-- What's not tested: Naive exact-match fallback detection logic
-- Files: `apps/desktop/src/main/services/risk-review-service.ts:923-951`
-- Risk: Fallback path may produce incorrect findings without detection
-- Priority: Medium
+**buildFindings 回退 — 无测试：**
+- 未测试内容：朴素精确匹配回退检测逻辑
+- 文件：`apps/desktop/src/main/services/risk-review-service.ts:923-951`
+- 风险：回退路径可能产生不正确的 findings 而无法检测
+- 优先级：中
 
 ---
 
-*Concerns audit: 2026-07-22*
+*关注点审计：2026-07-22*
