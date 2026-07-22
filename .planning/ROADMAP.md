@@ -29,11 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Table detector output contains correct `source_submission_id` and `target_submission_id` (not empty strings)
   3. `table_location` is populated in review nodes when the source document contains table position data
   4. Engine fallback path either does not exist or cannot produce untraceable evidence with fake node IDs
-**Plans**: TBD
+**Plans**: 2 plans in 1 wave
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Rust engine cleanup: remove dead code, wire table_location, fix submission_id (CLEAN-01, CLEAN-02, CLEAN-03)
+- [ ] 01-02-PLAN.md — Remove TypeScript engine fallback path (CLEAN-04)
 
 ### Phase 2: Integration Hardening
 **Goal**: Renderer and main process communicate cleanly — single project identity, working checkpoint resume, no dead wiring
@@ -97,7 +97,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Cleanup & Bug Fixes | 0/2 | Not started | - |
+| 1. Cleanup & Bug Fixes | 0/2 | Planning complete | - |
 | 2. Integration Hardening | 0/2 | Not started | - |
 | 3. E2E Foundation | 0/2 | Not started | - |
 | 4. Quality Gates | 0/2 | Not started | - |
