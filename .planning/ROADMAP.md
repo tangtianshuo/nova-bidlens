@@ -58,11 +58,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Playwright E2E harness can launch Electron (dev and packaged), exercise IPC through real app flows
   2. Full risk pipeline E2E creates a project with real DOCX files, processes them, and verifies findings/evidence/assessments exist in DB
-**Plans**: TBD
+**Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — E2E harness hardening: wire test isolation, add build script, harden smoke tests (QA-01)
+- [ ] 03-02-PLAN.md — Full risk pipeline E2E: DOCX fixtures, create-process-verify pipeline test (QA-02)
 
 ### Phase 4: Quality Gates
 **Goal**: Automated tests cover security, performance, compatibility, and production readiness
@@ -113,8 +113,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Cleanup & Bug Fixes | 2/2 | Complete | - |
-| 2. Integration Hardening | 0/2 | Planning complete | - |
-| 3. E2E Foundation | 0/2 | Not started | - |
+| 2. Integration Hardening | 2/2 | Complete | - |
+| 3. E2E Foundation | 0/2 | Planning complete | - |
 | 4. Quality Gates | 0/2 | Not started | - |
 | 5. Business Labels | 0/1 | Not started | - |
 | 6. nZBTF File Support | 0/2 | Planning complete | - |
