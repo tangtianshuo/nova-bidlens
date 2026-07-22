@@ -42,7 +42,10 @@ BidLens is a local Electron desktop app for bid document similarity risk review.
   2. 中文扫描版和数字版 PDF 的 OCR/文本提取质量已有对比报告
   3. MinerU 的实际下载/安装大小已量化（`pip install` 数据）
   4. 无 GPU 环境下的解析速度已测量，有明确的可接受/不可接受判断
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 07-01-PLAN.md — MinerU 环境搭建 + 测试验证 + 评估报告
 
 ### Phase 8: 集成方案设计
 **Goal**: 确定 MinerU 输出到现有 BidLens DocumentAst 的完整集成路径
@@ -82,7 +85,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 7. MinerU 可行性验证 | v0.3.3 | 0/TBD | Not started | - |
+| 7. MinerU 可行性验证 | v0.3.3 | 0/1 | Planning complete | - |
 | 8. 集成方案设计 | v0.3.3 | 0/TBD | Not started | - |
 | 9. 分发方案评估 | v0.3.3 | 0/TBD | Not started | - |
 | 10. node-pdf-to-markdown 评估 | v0.3.3 | 0/TBD | Not started | - |

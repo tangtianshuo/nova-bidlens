@@ -16,6 +16,7 @@ export { ParserRegistry, globalRegistry } from './registry.js';
 // 导出解析器
 export { Docx4jsParser, docx4jsParser } from './docx/index.js';
 export { PdfParser, pdfParser } from './pdf/index.js';
+export { NzbtfParser, nzbtfParser } from './nzbtf/index.js';
 
 // 导出便捷解析函数
 import { globalRegistry } from './registry.js';
@@ -55,5 +56,7 @@ export async function parseDocument(
 // 注册默认解析器
 import { docx4jsParser } from './docx/index.js';
 import { pdfParser } from './pdf/index.js';
+import { nzbtfParser } from './nzbtf/index.js';
 globalRegistry.register(docx4jsParser);
 globalRegistry.register(pdfParser);
+globalRegistry.register(nzbtfParser);

@@ -26,6 +26,8 @@
   },
   "dependencies": {
     "docx4js": "^3.3.0",
+    "fast-xml-parser": "^4.5.1",
+    "jszip": "^3.10.1",
     "pdf-parse": "^2.4.5"
   }
 }

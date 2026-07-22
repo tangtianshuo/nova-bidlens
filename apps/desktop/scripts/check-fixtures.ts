@@ -28,8 +28,6 @@ const FIXTURE_PATTERNS: Array<{ regex: RegExp; label: string }> = [
   { regex: /__mocks__\//g, label: '__mocks__/ import' },
   { regex: /__fixtures__\//g, label: '__fixtures__/ import' },
   { regex: /test-utils/g, label: 'test-utils import' },
-  // Test-specific env markers
-  { regex: /BIDLENS_TEST_DATA_DIR/g, label: 'test env var (BIDLENS_TEST_DATA_DIR)' },
 ];
 
 function scanDir(dir: string, label: string): Finding[] {

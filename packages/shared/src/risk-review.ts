@@ -39,7 +39,7 @@ export type MatchBasis = 'lexical' | 'semantic' | 'structural' | 'entity' | 'fac
 
 export type AuditEventType =
   | 'project-created' | 'file-added' | 'file-removed' | 'file-replaced'
-  | 'no-baseline-confirmed' | 'analysis-started' | 'analysis-cancelled' | 'analysis-recovered'
+  | 'no-baseline-confirmed' | 'analysis-started' | 'analysis-completed' | 'analysis-cancelled' | 'analysis-failed' | 'analysis-recovered'
   | 'partial-accepted' | 'review-changed' | 'note-changed'
   | 'report-exported' | 'project-deleted' | 'cache-cleaned';
 

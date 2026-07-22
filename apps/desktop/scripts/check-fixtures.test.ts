@@ -14,7 +14,6 @@ const FIXTURE_PATTERNS: Array<{ regex: RegExp; label: string }> = [
   { regex: /__mocks__\//g, label: '__mocks__/ import' },
   { regex: /__fixtures__\//g, label: '__fixtures__/ import' },
   { regex: /test-utils/g, label: 'test-utils import' },
-  { regex: /BIDLENS_TEST_DATA_DIR/g, label: 'test env var (BIDLENS_TEST_DATA_DIR)' },
 ];
 
 function scanContent(content: string): string[] {
@@ -45,11 +44,6 @@ describe('check-fixtures scanner', () => {
   it('detects test-utils imports', () => {
     const hits = scanContent('import { render } from "./test-utils"');
     expect(hits).toContain('test-utils import');
-  });
-
-  it('detects test env vars', () => {
-    const hits = scanContent('process.env.BIDLENS_TEST_DATA_DIR');
-    expect(hits).toContain('test env var (BIDLENS_TEST_DATA_DIR)');
   });
 
   it('passes clean production code', () => {

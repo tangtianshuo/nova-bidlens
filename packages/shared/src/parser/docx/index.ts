@@ -11,6 +11,14 @@ import type { DocumentAst, BlockNode, ParagraphNode, TableNode, SectionNode, Com
 import { parseComments } from '../docx-comments.js';
 import { parseRevisions } from '../docx-revisions.js';
 
+// docx4js v3 API: Document.load(path) → docx with .render()
+// CJS interop: default import IS the Document class; ESM: default.Document
+interface DocxDoc { render: (cb: (type: string, props: any, children: any[]) => unknown) => void }
+const loadDocx: (path: string) => Promise<DocxDoc> =
+  typeof (docx4js as any).load === 'function'
+    ? (docx4js as any).load.bind(docx4js)
+    : (docx4js as any).Document.load.bind((docx4js as any).Document);
+
 export class Docx4jsParser implements DocumentParser {
   readonly id = 'docx4js';
   readonly name = 'docx4js Parser';
@@ -32,7 +40,7 @@ export class Docx4jsParser implements DocumentParser {
       const sha256 = createHash('sha256').update(fileBuffer).digest('hex');
 
       // 使用docx4js加载文档
-      const docx = await docx4js.load(input.filePath);
+      const docx = await loadDocx(input.filePath);
       
       const blocks: BlockNode[] = [];
       let wordCount = 0;

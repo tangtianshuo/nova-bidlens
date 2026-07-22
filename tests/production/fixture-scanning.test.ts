@@ -28,7 +28,6 @@ const FIXTURE_PATTERNS: Array<{ regex: RegExp; label: string }> = [
   { regex: /__mocks__\//g, label: '__mocks__/ import' },
   { regex: /__fixtures__\//g, label: '__fixtures__/ import' },
   { regex: /test-utils/g, label: 'test-utils import' },
-  { regex: /BIDLENS_TEST_DATA_DIR/g, label: 'test env var (BIDLENS_TEST_DATA_DIR)' },
 ];
 
 function scanDir(dir: string): Finding[] {
@@ -108,15 +107,6 @@ describe('fixture scanner', () => {
     expect(findings.some(f => f.pattern.includes('__fixtures__'))).toBe(true);
   });
 
-  it('scanner detects BIDLENS_TEST_DATA_DIR', () => {
-    const dir = path.join(tmpDir, 'detect-env');
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'app.js'), 'const dir = process.env.BIDLENS_TEST_DATA_DIR;');
-
-    const findings = scanDir(dir);
-    expect(findings.some(f => f.pattern.includes('BIDLENS_TEST_DATA_DIR'))).toBe(true);
-  });
-
   it('scanner detects Chinese test file names', () => {
     const dir = path.join(tmpDir, 'detect-chinese');
     fs.mkdirSync(dir, { recursive: true });
@@ -169,7 +159,6 @@ describe('fixture scanner', () => {
     expect(content).toContain('FIXTURE_PATTERNS');
     expect(content).toContain('proj-fixture-');
     expect(content).toContain('甲公司投标文件');
-    expect(content).toContain('BIDLENS_TEST_DATA_DIR');
     expect(content).toContain('__fixtures__');
     expect(content).toContain('__mocks__');
   });

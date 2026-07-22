@@ -1,5 +1,4 @@
 import { useMemo, useCallback } from 'react';
-import { Badge } from '@/components/ui/badge';
 import type { SubmissionSummary, RiskFinding } from '@bidlens/shared/types-only';
 
 interface RelationshipMatrixProps {

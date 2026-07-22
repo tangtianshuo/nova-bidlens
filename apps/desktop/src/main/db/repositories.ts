@@ -650,3 +650,127 @@ export function createFilePairAssessmentRepository(db: Database.Database) {
     },
   };
 }
+
+// ── 11. TenderBaselineRepository ──
+
+export interface TenderBaselineRow {
+  id: string;
+  project_id: string;
+  submission_id: string;
+  status: string;
+  parse_warnings_json: string;
+  created_at: string;
+}
+
+export function createTenderBaselineRepository(db: Database.Database) {
+  return {
+    create(params: {
+      projectId: string;
+      submissionId: string;
+      status: string;
+      parseWarnings: string[];
+    }): string {
+      const id = randomUUID();
+      db.prepare(`INSERT INTO tender_baselines (id, project_id, submission_id, status, parse_warnings_json, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+        .run(id, params.projectId, params.submissionId, params.status, JSON.stringify(params.parseWarnings), now());
+      return id;
+    },
+
+    getByProject(projectId: string): TenderBaselineRow | undefined {
+      return db.prepare(`SELECT * FROM tender_baselines WHERE project_id = ?`).get(projectId) as TenderBaselineRow | undefined;
+    },
+  };
+}
+
+// ── 12. DetectorRunRepository ──
+
+export interface DetectorRunRow {
+  id: string;
+  project_id: string;
+  detector_type: string;
+  status: string;
+  candidate_count: number;
+  hit_count: number;
+  elapsed_ms: number;
+  error_message: string | null;
+  rule_version: string;
+  created_at: string;
+}
+
+export function createDetectorRunRepository(db: Database.Database) {
+  return {
+    create(params: {
+      projectId: string;
+      detectorType: string;
+      status: string;
+      candidateCount: number;
+      hitCount: number;
+      elapsedMs: number;
+      errorMessage?: string;
+      ruleVersion: string;
+    }): string {
+      const id = randomUUID();
+      db.prepare(`INSERT INTO detector_runs (id, project_id, detector_type, status, candidate_count, hit_count, elapsed_ms, error_message, rule_version, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(id, params.projectId, params.detectorType, params.status, params.candidateCount, params.hitCount, params.elapsedMs, params.errorMessage ?? null, params.ruleVersion, now());
+      return id;
+    },
+
+    getByProject(projectId: string): DetectorRunRow[] {
+      return db.prepare(`SELECT * FROM detector_runs WHERE project_id = ? ORDER BY created_at`).all(projectId) as DetectorRunRow[];
+    },
+  };
+}
+
+// ── 13. ProjectRiskAssessmentRepository ──
+
+export interface ProjectRiskAssessmentRow {
+  id: string;
+  project_id: string;
+  level: string;
+  raw_rule_score: number;
+  top_contributing_finding_ids_json: string;
+  preset: string;
+  rule_version: string;
+  analysis_status: string;
+  high_value_finding_count: number;
+  involved_submission_count: number;
+  strong_entity_hit_count: number;
+  tender_discount_applied: number;
+  incomplete_reason: string | null;
+  created_at: string;
+}
+
+export function createProjectRiskAssessmentRepository(db: Database.Database) {
+  return {
+    create(params: {
+      projectId: string;
+      level: string;
+      rawRuleScore: number;
+      topContributingFindingIds: string[];
+      preset: string;
+      ruleVersion: string;
+      analysisStatus: string;
+      highValueFindingCount: number;
+      involvedSubmissionCount: number;
+      strongEntityHitCount: number;
+      tenderDiscountApplied: boolean;
+      incompleteReason?: string;
+    }): string {
+      const id = randomUUID();
+      db.prepare(`INSERT INTO project_risk_assessments (id, project_id, level, raw_rule_score, top_contributing_finding_ids_json, preset, rule_version, analysis_status, high_value_finding_count, involved_submission_count, strong_entity_hit_count, tender_discount_applied, incomplete_reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(
+          id, params.projectId, params.level, params.rawRuleScore,
+          JSON.stringify(params.topContributingFindingIds),
+          params.preset, params.ruleVersion, params.analysisStatus,
+          params.highValueFindingCount, params.involvedSubmissionCount,
+          params.strongEntityHitCount, params.tenderDiscountApplied ? 1 : 0,
+          params.incompleteReason ?? null, now(),
+        );
+      return id;
+    },
+
+    getByProject(projectId: string): ProjectRiskAssessmentRow | undefined {
+      return db.prepare(`SELECT * FROM project_risk_assessments WHERE project_id = ?`).get(projectId) as ProjectRiskAssessmentRow | undefined;
+    },
+  };
+}

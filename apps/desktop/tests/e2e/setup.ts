@@ -24,7 +24,7 @@ function makeTmpDir(prefix: string): string {
 
 /**
  * Launch the Electron app with test-isolated paths.
- * The main process must respect BIDLENS_TEST_DATA_DIR env var
+ * The main process must respect BIDLENS_DATA_DIR env var
  * to override userData (see main/index.ts for the override hook).
  */
 export async function launchTestApp(): Promise<TestContext> {
@@ -36,7 +36,7 @@ export async function launchTestApp(): Promise<TestContext> {
     args: ['.'],
     env: {
       ...process.env,
-      BIDLENS_TEST_DATA_DIR: userDataDir,
+      BIDLENS_DATA_DIR: userDataDir,
       BIDLENS_TEST_EXPORT_DIR: exportDir,
       NODE_ENV: 'test',
     },

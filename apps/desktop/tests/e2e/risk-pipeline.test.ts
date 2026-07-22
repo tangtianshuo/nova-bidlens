@@ -24,10 +24,28 @@ test.beforeAll(async () => {
   const fixturePaths = await createSimilarDocs(ctx.exportDir);
   projectId = await createTestProject(ctx.page, fixturePaths);
   // Wait for engine to finish — 'ready' or 'partial' both mean analysis completed
-  await waitForStatus(ctx.page, projectId, 'ready', 120_000).catch(async () => {
-    // If not 'ready', try 'partial' (some detectors may have degraded)
-    await waitForStatus(ctx.page, projectId, 'partial', 5_000);
-  });
+  try {
+    await waitForStatus(ctx.page, projectId, 'ready', 120_000);
+  } catch {
+    try {
+      await waitForStatus(ctx.page, projectId, 'partial', 5_000);
+    } catch {
+      const events = await ctx.page.evaluate(
+        (pid) => (window as any).bidlens.getAuditEvents(pid),
+        projectId,
+      );
+      const failEvent = events.find((e: any) => e.eventType === 'analysis-failed');
+      if (failEvent) {
+        console.error('[E2E] Failure reason:', failEvent.payload.error);
+        if (failEvent.payload.stack) console.error('[E2E] Stack:', failEvent.payload.stack);
+      } else {
+        const d = await getProjectDetail(ctx.page, projectId);
+        console.error('[E2E] Project stuck. Status:', d.status, 'Phase:', d.phase);
+        console.error('[E2E] Audit events:', JSON.stringify(events.slice(0, 5)));
+      }
+      throw new Error(`Project did not complete. Status: ${(await getProjectDetail(ctx.page, projectId)).status}`);
+    }
+  }
   detail = await getProjectDetail(ctx.page, projectId);
 });
 

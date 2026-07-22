@@ -2,11 +2,14 @@ import { dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import type Database from 'better-sqlite3';
 import type { CreateRiskProjectRequest, ExportRiskReportRequest } from '@bidlens/shared';
 import { RiskReviewService } from '../services/risk-review-service.js';
+import { EngineManager } from '../services/engine-manager.js';
 
 let service: RiskReviewService | null = null;
+let engineManager: EngineManager | null = null;
 
 export function registerRiskReviewHandlers(window: BrowserWindow, db: Database.Database, encryptionKey: Buffer) {
-  service = new RiskReviewService(window, db, encryptionKey);
+  engineManager = new EngineManager();
+  service = new RiskReviewService(window, db, encryptionKey, engineManager);
   ipcMain.handle('risk:listProjects', () => service!.listProjects());
   ipcMain.handle('risk:getProject', (_event, projectId: string) => service!.getProject(projectId));
   ipcMain.handle('risk:createProject', (_event, request: CreateRiskProjectRequest) => service!.createProject(request));
@@ -45,4 +48,12 @@ export function registerRiskReviewHandlers(window: BrowserWindow, db: Database.D
   ipcMain.handle('risk:openFolder', async (_event, folderPath: string) => {
     shell.showItemInFolder(folderPath);
   });
+}
+
+export async function shutdownRiskEngine(): Promise<void> {
+  if (engineManager) {
+    await engineManager.stop();
+    engineManager = null;
+  }
+  service = null;
 }

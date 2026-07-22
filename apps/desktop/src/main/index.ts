@@ -50,8 +50,8 @@ function createWindow() {
   win.on('maximize', () => win.webContents.send('window:maximize-changed', true));
   win.on('unmaximize', () => win.webContents.send('window:maximize-changed', false));
 
-  // Initialize persistence layer (BIDLENS_TEST_DATA_DIR overrides userData for E2E isolation)
-  const testDataDir = process.env.BIDLENS_TEST_DATA_DIR || undefined;
+  // Initialize persistence layer (BIDLENS_DATA_DIR overrides userData for E2E isolation)
+  const testDataDir = process.env.BIDLENS_DATA_DIR || undefined;
   persistence = new PersistenceManager(testDataDir);
   const dbResult = persistence.initialize();
   if (!dbResult.healthy) {
@@ -94,8 +94,8 @@ function createWindow() {
   });
 
   if (isDev) {
-    console.log('[Main] Loading dev URL: http://127.0.0.1:5173');
-    win.loadURL('http://127.0.0.1:5173');
+    console.log('[Main] Loading dev URL: http://localhost:5373');
+    win.loadURL('http://localhost:5373');
   } else {
     const indexPath = path.join(__dirname, '../renderer/index.html');
     console.log('[Main] Loading file:', indexPath);

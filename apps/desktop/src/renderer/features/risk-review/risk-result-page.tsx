@@ -234,7 +234,6 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
               <RelationshipMatrix
                 submissions={project.submissions}
                 findings={project.findings}
-                filePairAssessments={project.filePairAssessments}
                 onCellClick={handleMatrixCellClick}
               />
             </div>
