@@ -26,7 +26,7 @@ V0.3.0 core pipeline (Waves 0-5) is substantially implemented. Requirements belo
 ### Quality Gates
 
 - [x] **QA-01**: Add Electron E2E test harness with Playwright — real IPC through packaged/dev Electron (V3-131)
-- [ ] **QA-02**: Add full risk pipeline E2E — create project with real DOCX files, process, verify findings/evidence/assessments in DB (V3-601/V3-602)
+- [x] **QA-02**: Add full risk pipeline E2E — create project with real DOCX files, process, verify findings/evidence/assessments in DB (V3-601/V3-602)
 - [ ] **QA-03**: Add security tests — offline operation, log redaction, encrypted DB/WAL, deletion closure (V3-603)
 - [ ] **QA-04**: Add performance tests — sparse recall, 4000-page project, 1000+ findings rendering (V3-604)
 - [ ] **QA-05**: Add Diff regression tests for evidence compatibility (V3-605)

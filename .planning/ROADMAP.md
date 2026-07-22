@@ -62,7 +62,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — E2E harness hardening: wire test isolation, add build script, harden smoke tests (QA-01)
-- [ ] 03-02-PLAN.md — Full risk pipeline E2E: DOCX fixtures, create-process-verify pipeline test (QA-02)
+- [x] 03-02-PLAN.md — Full risk pipeline E2E: DOCX fixtures, create-process-verify pipeline test (QA-02)
 
 ### Phase 4: Quality Gates
 **Goal**: Automated tests cover security, performance, compatibility, and production readiness
