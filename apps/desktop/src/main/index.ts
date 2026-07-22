@@ -8,7 +8,7 @@ import {
 import { registerHistoryHandlers } from './ipc/history-handlers';
 import { registerSettingsHandlers } from './ipc/settings-handlers';
 import { registerAnnotationHandlers } from './ipc/annotation-handlers';
-import { registerRiskReviewHandlers } from './ipc/risk-review-handlers';
+import { registerRiskReviewHandlers, shutdownRiskEngine } from './ipc/risk-review-handlers';
 import { PersistenceManager } from './services/persistence';
 
 const isDev = !app.isPackaged;
@@ -50,8 +50,9 @@ function createWindow() {
   win.on('maximize', () => win.webContents.send('window:maximize-changed', true));
   win.on('unmaximize', () => win.webContents.send('window:maximize-changed', false));
 
-  // Initialize persistence layer
-  persistence = new PersistenceManager();
+  // Initialize persistence layer (BIDLENS_TEST_DATA_DIR overrides userData for E2E isolation)
+  const testDataDir = process.env.BIDLENS_TEST_DATA_DIR || undefined;
+  persistence = new PersistenceManager(testDataDir);
   const dbResult = persistence.initialize();
   if (!dbResult.healthy) {
     console.error('[Main] Database health issue:', dbResult.corruptionError);
@@ -116,7 +117,7 @@ app.on('before-quit', (event) => {
   shutdownStarted = true;
   event.preventDefault();
 
-  void shutdownCompareServices().finally(async () => {
+  void Promise.all([shutdownCompareServices(), shutdownRiskEngine()]).finally(async () => {
     if (persistence) {
       await persistence.shutdown();
       persistence = null;

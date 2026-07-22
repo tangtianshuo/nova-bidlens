@@ -16,7 +16,7 @@
     "build:linux": "cargo build --release --manifest-path ../../bidlens-engine/Cargo.toml && pnpm build && electron-builder --linux",
     "build:all": "tsc -p tsconfig.json && tsc -p tsconfig.main.json && vite build && electron-builder --win --mac --linux",
     "test": "pnpm native:node && vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "tsc -p tsconfig.main.json && playwright test",
     "check:fixtures": "tsx scripts/check-fixtures.ts",
     "lint": "tsc -p tsconfig.json --noEmit"
   },
