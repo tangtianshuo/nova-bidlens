@@ -57,7 +57,7 @@ async function startRiskProject(data: NewProjectFormData) {
   if (paths.length !== data.submissions.length) return;
   const { projectId } = await window.bidlens.createRiskProject({ name: data.name, preset: data.preset, submissions: data.submissions.map((file) => ({ path: file.path!, name: file.name })), baseline: data.baseline?.path ? { path: data.baseline.path, name: data.baseline.name } : null });
   useRiskReviewStore.getState().setProjectId(projectId);
-  useAppStore.getState().startTask(projectId);
+  useAppStore.getState().setView('project-processing');
 }
 
 function ResultView() {

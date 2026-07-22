@@ -3,7 +3,7 @@ import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/re
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ProjectProcessingPage } from './project-processing-page';
-import { useProjectStore } from './project-store';
+import { useRiskReviewStore } from '../risk-review/risk-review-store';
 import { deriveStages } from './analysis-stage-list';
 import type { ProjectStatus } from '@bidlens/shared/types-only';
 import {
@@ -27,7 +27,7 @@ function createWrapper() {
 }
 
 function selectProject(id: string) {
-  useProjectStore.setState({ selectedProjectId: id });
+  useRiskReviewStore.setState({ projectId: id });
 }
 
 const details = [
@@ -40,15 +40,12 @@ const details = [
 ].map((b) => b());
 
 beforeEach(() => {
-  useProjectStore.setState({
-    selectedProjectId: null,
-    searchText: '',
-    statusFilter: null,
-    riskFilter: null,
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
-    page: 1,
-    pageSize: 10,
+  useRiskReviewStore.setState({
+    projectId: null,
+    activeTab: 'overview',
+    selectedFindingId: null,
+    filters: { riskLevels: new Set(), detectorTypes: new Set(), reviewStatuses: new Set(), filePair: null, searchText: '', showImportantOnly: false },
+    selectedFindingIds: new Set(),
   });
   (window as any).bidlens = {
     onRiskProgress: vi.fn(() => () => {}),
@@ -200,7 +197,7 @@ describe('ProjectProcessingPage', () => {
     });
 
     fireEvent.click(screen.getByText('返回项目列表'));
-    expect(useProjectStore.getState().selectedProjectId).toBeNull();
+    expect(useRiskReviewStore.getState().projectId).toBeNull();
   });
 
   it('shows warnings as banners when present', async () => {

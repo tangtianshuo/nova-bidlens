@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/feedback/status-badge';
 import { ConfirmDialog } from '@/components/feedback/confirm-dialog';
 import { useProjectDetail } from './project-queries';
 import { useProgressSubscription } from '../../lib/progress-subscription';
-import { useProjectStore } from './project-store';
+import { useRiskReviewStore } from '../risk-review/risk-review-store';
 import { AnalysisStageList, deriveStages } from './analysis-stage-list';
 import { SubmissionProgressTable } from './submission-progress-table';
 import { AnalysisRecoveryActions, type RecoveryAction } from './analysis-recovery-actions';
@@ -26,10 +26,10 @@ const PRESET_LABELS: Record<string, string> = {
 // ── Component ─────────────────────────────────────────────────────────
 
 export function ProjectProcessingPage() {
-  const { selectedProjectId, clearSelection } = useProjectStore();
+  const { projectId, setProjectId } = useRiskReviewStore();
   const setView = useAppStore((state) => state.setView);
-  useProgressSubscription(selectedProjectId);
-  const { data: project, isLoading, error } = useProjectDetail(selectedProjectId);
+  useProgressSubscription(projectId);
+  const { data: project, isLoading, error } = useProjectDetail(projectId);
 
   // Real-time progress state from progress events (between query refreshes)
   const [liveProgress, setLiveProgress] = useState<RiskProgress | null>(null);
@@ -43,26 +43,26 @@ export function ProjectProcessingPage() {
   }, []);
 
   const handleConfirmCancel = useCallback(async () => {
-    if (!selectedProjectId) return;
+    if (!projectId) return;
     setLoadingAction('cancel');
     setActionError(null);
     try {
-      await window.bidlens.cancelRiskProject(selectedProjectId);
+      await window.bidlens.cancelRiskProject(projectId);
     } catch (err) {
       setActionError(`取消分析失败: ${err instanceof Error ? err.message : '未知错误'}`);
     } finally {
       setLoadingAction(null);
     }
-  }, [selectedProjectId]);
+  }, [projectId]);
 
   useEffect(() => {
-    if (!selectedProjectId) return;
+    if (!projectId) return;
     return window.bidlens.onRiskProgress((progress) => {
-      if (progress.projectId !== selectedProjectId) return;
+      if (progress.projectId !== projectId) return;
       setLiveProgress(progress);
       if (progress.status === 'ready') setView('project-result');
     });
-  }, [selectedProjectId, setView]);
+  }, [projectId, setView]);
 
   // Clear live progress when project data refreshes
   useEffect(() => {
@@ -71,7 +71,7 @@ export function ProjectProcessingPage() {
 
   const handleRecoveryAction = useCallback(
     async (action: RecoveryAction) => {
-      if (!selectedProjectId) return;
+      if (!projectId) return;
 
       if (action === 'delete') {
         setDeleteDialogOpen(true);
@@ -83,7 +83,7 @@ export function ProjectProcessingPage() {
       try {
         switch (action) {
           case 'resume':
-            await window.bidlens.resumeRiskProject(selectedProjectId);
+            await window.bidlens.resumeRiskProject(projectId);
             break;
           case 'retry': {
             const failedSubmissions = (project?.submissions ?? []).filter(
@@ -91,18 +91,18 @@ export function ProjectProcessingPage() {
             );
             if (failedSubmissions.length === 0) {
               // No specific failed submissions, retry the whole project
-              await window.bidlens.resumeRiskProject(selectedProjectId);
+              await window.bidlens.resumeRiskProject(projectId);
             } else {
               await Promise.all(
                 failedSubmissions.map((s) =>
-                  window.bidlens.retryRiskSubmission(selectedProjectId, s.id),
+                  window.bidlens.retryRiskSubmission(projectId, s.id),
                 ),
               );
             }
             break;
           }
           case 'accept-partial':
-            await window.bidlens.acceptPartial(selectedProjectId);
+            await window.bidlens.acceptPartial(projectId);
             break;
           case 'cancel':
             setCancelDialogOpen(true);
@@ -118,26 +118,26 @@ export function ProjectProcessingPage() {
         setLoadingAction(null);
       }
     },
-    [selectedProjectId, project],
+    [projectId, project],
   );
 
   const handleConfirmDelete = useCallback(async () => {
-    if (!selectedProjectId) return;
+    if (!projectId) return;
     setLoadingAction('delete');
     setActionError(null);
     try {
-      await window.bidlens.deleteProject(selectedProjectId);
-      clearSelection();
+      await window.bidlens.deleteProject(projectId);
+      setProjectId(null);
     } catch (err) {
       setActionError(`删除项目失败: ${err instanceof Error ? err.message : '未知错误'}`);
     } finally {
       setLoadingAction(null);
     }
-  }, [selectedProjectId, clearSelection]);
+  }, [projectId, setProjectId]);
 
   const handleBack = useCallback(() => {
-    clearSelection();
-  }, [clearSelection]);
+    setProjectId(null);
+  }, [setProjectId]);
 
   // Derive stages from real project phase + live progress
   const currentPhase: AnalysisPhase | null = liveProgress?.phase ?? project?.phase ?? null;
@@ -154,7 +154,7 @@ export function ProjectProcessingPage() {
 
   // ── Loading / No project selected ─────────────────────────────
 
-  if (!selectedProjectId || isLoading) {
+  if (!projectId || isLoading) {
     return (
       <div className="app-page" data-width="compact">
         <div className="space-y-3">
@@ -210,7 +210,12 @@ export function ProjectProcessingPage() {
           <span>预设：{PRESET_LABELS[project.preset] ?? project.preset}</span>
           <span>耗时：{formatElapsedMs(currentElapsedMs)}</span>
           {liveProgress?.stageLabel && (
-            <span className="text-[var(--color-accent)]">{liveProgress.stageLabel}</span>
+            <span className="text-[var(--color-accent)]">
+              {liveProgress.stageLabel}
+              {liveProgress.current != null && liveProgress.total != null && liveProgress.total > 0 && (
+                <span className="ml-1 text-[var(--color-text-muted)]">({liveProgress.current}/{liveProgress.total})</span>
+              )}
+            </span>
           )}
         </div>
       </div>
