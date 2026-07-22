@@ -48,21 +48,21 @@ V0.3.0 core pipeline (Waves 0-5) is substantially implemented. Requirements belo
 
 ## Traceability
 
-| Requirement | Task Breakdown ID(s) | Wave |
-|-------------|----------------------|------|
-| CLEAN-01 | V3-103 | W1 |
-| CLEAN-02 | V3-302 | W3 |
-| CLEAN-03 | V3-101 | W1 |
-| CLEAN-04 | V3-411 | W4 |
-| HARDEN-01 | V3-121, V3-122 | W1 |
-| HARDEN-02 | V3-412 | W4 |
-| HARDEN-03 | V3-404 | W4 |
-| HARDEN-04 | V3-123 | W1 |
-| QA-01 | V3-131 | W1 |
-| QA-02 | V3-601, V3-602 | W6 |
-| QA-03 | V3-603 | W6 |
-| QA-04 | V3-604 | W6 |
-| QA-05 | V3-605 | W6 |
-| QA-06 | V3-606 | W6 |
-| QA-07 | V3-132 | W1 |
-| LABEL-01 | V3-102 | W1 |
+| Requirement | Task Breakdown ID(s) | Wave | Phase | Status |
+|-------------|----------------------|------|-------|--------|
+| CLEAN-01 | V3-103 | W1 | Phase 1 | Pending |
+| CLEAN-02 | V3-302 | W3 | Phase 1 | Pending |
+| CLEAN-03 | V3-101 | W1 | Phase 1 | Pending |
+| CLEAN-04 | V3-411 | W4 | Phase 1 | Pending |
+| HARDEN-01 | V3-121, V3-122 | W1 | Phase 2 | Pending |
+| HARDEN-02 | V3-412 | W4 | Phase 2 | Pending |
+| HARDEN-03 | V3-404 | W4 | Phase 2 | Pending |
+| HARDEN-04 | V3-123 | W1 | Phase 2 | Pending |
+| QA-01 | V3-131 | W1 | Phase 3 | Pending |
+| QA-02 | V3-601, V3-602 | W6 | Phase 3 | Pending |
+| QA-03 | V3-603 | W6 | Phase 4 | Pending |
+| QA-04 | V3-604 | W6 | Phase 4 | Pending |
+| QA-05 | V3-605 | W6 | Phase 4 | Pending |
+| QA-06 | V3-606 | W6 | Phase 4 | Pending |
+| QA-07 | V3-132 | W1 | Phase 4 | Pending |
+| LABEL-01 | V3-102 | W1 | Phase 5 | Pending |
