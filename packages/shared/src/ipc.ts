@@ -14,7 +14,7 @@ import type {
 } from './compare-task.js';
 import type {
   AnalysisProjectDetail, AnalysisProjectSummary, RiskPreset,
-  ProjectStatus, AnalysisPhase, DetectorType, RiskFinding,
+  ProjectStatus, AnalysisPhase, RiskFinding,
   FindingReviewStatus, AuditEvent,
 } from './risk-review.js';
 
@@ -61,10 +61,6 @@ export interface CreateRiskProjectResponse { projectId: string; }
 export interface RiskProgress {
   projectId: string; status: ProjectStatus; phase: AnalysisPhase | null;
   stageLabel: string; current?: number; total?: number; elapsedMs: number; warnings: string[];
-}
-export interface DetectorProgress {
-  projectId: string; detectorType: DetectorType; status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
-  candidateCount: number; hitCount: number; elapsedMs: number;
 }
 export interface StructuredRiskError {
   code: string; message: string; details?: Record<string, unknown>; retryable: boolean;
@@ -150,7 +146,6 @@ export interface BidLensApi {
   acceptPartial(projectId: string): Promise<{ projectId: string }>;
   deleteProject(projectId: string): Promise<{ deleted: boolean }>;
   onRiskProgress(handler: (progress: RiskProgress) => void): () => void;
-  onDetectorProgress(handler: (progress: DetectorProgress) => void): () => void;
   saveRiskFindingReview(request: { projectId: string; findingId: string; status?: FindingReviewStatus; important?: boolean; note?: string }): Promise<RiskFinding>;
   getAuditEvents(projectId: string): Promise<AuditEvent[]>;
   exportRiskReport(request: ExportRiskReportRequest): Promise<ExportRiskReportResponse>;

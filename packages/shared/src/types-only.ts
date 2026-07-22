@@ -75,7 +75,6 @@ export type {
   CreateRiskProjectRequest,
   CreateRiskProjectResponse,
   RiskProgress,
-  DetectorProgress,
   StructuredRiskError,
   ExportRiskReportRequest,
   ExportRiskReportResponse,

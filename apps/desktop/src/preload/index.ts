@@ -29,11 +29,6 @@ const api: BidLensApi = {
     ipcRenderer.on('risk:progress', listener);
     return () => { ipcRenderer.removeListener('risk:progress', listener); };
   },
-  onDetectorProgress: (handler: (progress: import('@bidlens/shared').DetectorProgress) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, progress: unknown) => handler(progress as import('@bidlens/shared').DetectorProgress);
-    ipcRenderer.on('risk:detectorProgress', listener);
-    return () => { ipcRenderer.removeListener('risk:detectorProgress', listener); };
-  },
   saveRiskFindingReview: (request) => ipcRenderer.invoke('risk:saveFindingReview', request),
   getAuditEvents: (projectId: string) => ipcRenderer.invoke('risk:getAuditEvents', projectId),
   exportRiskReport: (request: unknown) => ipcRenderer.invoke('risk:exportReport', request),
