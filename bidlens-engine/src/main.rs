@@ -2,7 +2,7 @@ mod risk_engine;
 mod task_service;
 
 use anyhow::Result;
-use risk_engine::{RiskEngine, RiskProjectRequest};
+use risk_engine::{RiskAnalysisInput, RiskAnalysisResult, RiskEngine};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -29,9 +29,9 @@ enum TaskEvent {
     RiskProgress {
         progress: risk_engine::RiskProgress,
     },
-    RiskCompleted {
+    RiskAnalyzeCompleted {
         request_id: String,
-        result: Result<risk_engine::RiskProjectResult, String>,
+        result: Result<RiskAnalysisResult, String>,
     },
 }
 
@@ -131,8 +131,8 @@ async fn main() -> Result<()> {
                         };
                         write_result(&mut stdout, &request.id, json!({ "cancelled": cancelled })).await?;
                     }
-                    "risk.createProject" => {
-                        let params: RiskProjectRequest = match request.params.map(serde_json::from_value).transpose() {
+                    "risk.analyzeWithAst" => {
+                        let params: RiskAnalysisInput = match request.params.map(serde_json::from_value).transpose() {
                             Ok(Some(params)) => params,
                             Ok(None) => {
                                 write_error(&mut stdout, &request.id, -32602, "缺少参数").await?;
@@ -146,58 +146,17 @@ async fn main() -> Result<()> {
                         let engine = risk_engine.clone();
                         let request_id = request.id.clone();
                         let worker_tx = event_tx.clone();
-                        let project_id = match engine.create_project(params).await {
-                            Ok(resp) => resp.project_id.clone(),
-                            Err(err) => {
-                                write_error(&mut stdout, &request.id, -32010, &err.message).await?;
-                                continue;
-                            }
-                        };
-                        // Run analysis in background
-                        let engine_clone = engine.clone();
-                        let pid = project_id.clone();
                         let completion_tx = event_tx.clone();
                         tokio::spawn(async move {
-                            let progress_tx = worker_tx.clone();
-                            let result = engine_clone.run_analysis(&pid, move |progress| {
-                                let _ = progress_tx.send(TaskEvent::RiskProgress {
-                                    progress,
-                                });
+                            let result = engine.run_analysis_with_ast(params, move |progress| {
+                                let _ = worker_tx.send(TaskEvent::RiskProgress { progress });
                             }).await;
-                            let _ = completion_tx.send(TaskEvent::RiskCompleted {
+                            let _ = completion_tx.send(TaskEvent::RiskAnalyzeCompleted {
                                 request_id: request_id.clone(),
                                 result: result.map_err(|e| e.message),
                             });
                         });
-                        write_result(&mut stdout, &request.id, json!({ "projectId": project_id })).await?;
-                    }
-                    "risk.cancelProject" => {
-                        let project_id: String = match request.params.and_then(|p| p.get("projectId").cloned()).map(serde_json::from_value).transpose() {
-                            Ok(Some(id)) => id,
-                            _ => {
-                                write_error(&mut stdout, &request.id, -32602, "缺少 projectId").await?;
-                                continue;
-                            }
-                        };
-                        let engine = risk_engine.clone();
-                        match engine.cancel_project(&project_id).await {
-                            Ok(resp) => write_result(&mut stdout, &request.id, serde_json::to_value(&resp).unwrap()).await?,
-                            Err(err) => write_error(&mut stdout, &request.id, -32010, &err.message).await?,
-                        }
-                    }
-                    "risk.getProject" => {
-                        let project_id: String = match request.params.and_then(|p| p.get("projectId").cloned()).map(serde_json::from_value).transpose() {
-                            Ok(Some(id)) => id,
-                            _ => {
-                                write_error(&mut stdout, &request.id, -32602, "缺少 projectId").await?;
-                                continue;
-                            }
-                        };
-                        let engine = risk_engine.clone();
-                        match engine.get_project(&project_id).await {
-                            Ok(resp) => write_result(&mut stdout, &request.id, serde_json::to_value(&resp).unwrap()).await?,
-                            Err(err) => write_error(&mut stdout, &request.id, -32010, &err.message).await?,
-                        }
+                        write_result(&mut stdout, &request.id, json!({ "status": "started" })).await?;
                     }
                     "shutdown" => {
                         if let Some(task) = &active_task {
@@ -251,10 +210,10 @@ async fn main() -> Result<()> {
                             "params": progress
                         })).await?;
                     }
-                    TaskEvent::RiskCompleted { request_id, result } => {
+                    TaskEvent::RiskAnalyzeCompleted { request_id, result } => {
                         match result {
-                            Ok(project_result) => {
-                                write_result(&mut stdout, &request_id, serde_json::to_value(&project_result).unwrap()).await?;
+                            Ok(analysis_result) => {
+                                write_result(&mut stdout, &request_id, serde_json::to_value(&analysis_result).unwrap()).await?;
                             }
                             Err(message) if message.contains("取消") => {
                                 write_error(&mut stdout, &request_id, -32002, &message).await?;
