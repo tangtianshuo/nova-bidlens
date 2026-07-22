@@ -17,6 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: E2E Foundation** - Playwright harness + first full risk pipeline E2E test with real DOCX files
 - [ ] **Phase 4: Quality Gates** - Security, performance, Diff regression, viewport, and bundle scanning tests
 - [ ] **Phase 5: Business Labels** - Extract BusinessLabel data for ReviewNode (deferrable to post-V0.3.0)
+- [ ] **Phase 6: nZBTF File Support** - Parse nZBTF bid documents (ZIP/XML) alongside DOCX/PDF
 
 ## Phase Details
 
@@ -90,10 +91,24 @@ Plans:
 Plans:
 - [ ] 05-01: TBD
 
+### Phase 6: nZBTF File Support
+**Goal**: Support parsing nZBTF bid documents (ZIP archive with XML metadata) alongside existing DOCX/PDF formats
+**Depends on**: Phase 1 (cleanup must be complete)
+**Requirements**: NZBTF-01, NZBTF-02, NZBTF-03
+**Success Criteria** (what must be TRUE):
+  1. User can select .nZBTF files in the project creation dialog
+  2. nZBTF files are extracted and all XML metadata (TB.xml, Echo.xml, hyChoose.xml) is parsed
+  3. Parsed nZBTF data is stored in Submission and available for risk detection
+**Plans**: 2 plans in 2 waves
+
+Plans:
+- [ ] 06-01-PLAN.md — Type system and UI: add 'nzbtf' to RiskFileFormat, update file selection dialogs and validators (NZBTF-01, NZBTF-03)
+- [ ] 06-02-PLAN.md — NzbtfParser implementation: ZIP extraction, XML parsing, DocumentAst mapping (NZBTF-01, NZBTF-02, NZBTF-03)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -102,3 +117,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. E2E Foundation | 0/2 | Not started | - |
 | 4. Quality Gates | 0/2 | Not started | - |
 | 5. Business Labels | 0/1 | Not started | - |
+| 6. nZBTF File Support | 0/2 | Planning complete | - |
