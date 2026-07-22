@@ -21,12 +21,16 @@ Deliver explainable, traceable risk evidence for bid document similarity — eve
 
 ### Active
 
-- [ ] **V0.3.0 domain contracts** — ReviewNode, Entity, KeyFact, Evidence, RiskFinding, state machines, IPC typed commands
-- [ ] **SQLite v2 schema** — forward-only migration, encrypted AST/ReviewNode/checkpoints, retention
-- [ ] **Rust analysis core** — ReviewNode extraction, sparse recall (hash/n-gram/entity/table-signature), four detectors, aggregation, risk assessment
-- [ ] **Main orchestration** — repository-backed project lifecycle, checkpoints, recovery, cancel/interrupt/resume
-- [ ] **Renderer real flow** — file import, processing progress, evidence workbench, report export
-- [ ] **Quality gates** — real-file E2E, security tests, performance benchmarks, Diff regression
+- [ ] **MinerU integration research** — assess Python dependency, alternative integration paths, Electron feasibility
+
+### Deferred (from v0.3.0)
+
+- [ ] V0.3.0 domain contracts (deferred)
+- [ ] V0.3.0 SQLite v2 schema (deferred)
+- [ ] V0.3.0 Rust analysis core (deferred)
+- [ ] V0.3.0 Main orchestration (deferred)
+- [ ] V0.3.0 Renderer real flow (deferred)
+- [ ] V0.3.0 Quality gates (deferred)
 
 ### Out of Scope
 
@@ -51,14 +55,25 @@ Deliver explainable, traceable risk evidence for bid document similarity — eve
 - **File ownership:** Hotspot files have single owners until gate merge
 - **Rust edition 2024:** Must align CI and toolchain to compatible compiler
 
+## Current Milestone: v0.3.3 MinerU PDF 解析集成调研
+
+**Goal:** 调研 MinerU 在 Electron 桌面应用中的集成可行性，确定接入方式和 Python 依赖情况
+
+**Target features:**
+- MinerU 集成可行性评估
+- Python 依赖分析与替代方案调研
+- Electron 桌面应用集成路径设计
+
+**封存说明:** v0.3.1 (BGE-M3 semantic enhancement) 和 v0.3.2 (gold-set calibration) 计划封存，v0.3.4 将讨论 langextract 雷同性分析增强
+
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Contract-first gate for V0.3.0 | Prevents parallel workers from diverging on undefined interfaces | — Pending |
-| Four detectors (text/table/entity/key-fact) as separate modules | Independent test/disable/fail without affecting others | — Pending |
-| SQLite v2 forward-only migration | Preserve V0.2.2 compare database history | — Pending |
-| Evidence must include complete source location | Current Evidence lacks AST/page/table location, limits traceability | — Pending |
+| Contract-first gate for V0.3.0 | Prevents parallel workers from diverging on undefined interfaces | — Deferred |
+| Four detectors (text/table/entity/key-fact) as separate modules | Independent test/disable/fail without affecting others | — Deferred |
+| SQLite v2 forward-only migration | Preserve V0.2.2 compare database history | — Deferred |
+| Evidence must include complete source location | Current Evidence lacks AST/page/table location, limits traceability | — Deferred |
 
 ## Evolution
 
@@ -78,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-22 after milestone v0.3.0 initialization*
+*Last updated: 2026-07-22 after milestone v0.3.3 initialization*

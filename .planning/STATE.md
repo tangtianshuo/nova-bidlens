@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: completed
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-07-22T09:54:32.313Z"
+milestone: v0.3.3
+milestone_name: MinerU PDF 解析集成调研
+status: in_progress
+stopped_at: null
+last_updated: "2026-07-22T10:00:00.000Z"
 last_activity: 2026-07-22
 progress:
-  total_phases: 6
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 9
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-22)
 
 **Core value:** Deliver explainable, traceable risk evidence for bid document similarity
-**Current focus:** Phase 04 — quality-gates
+**Current focus:** v0.3.3 MinerU PDF 解析集成调研
 
 ## Current Position
 
-Phase: 06
-Plan: Not started
-Status: 04-03 complete, phase 04 done
-Last activity: 2026-07-22
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-22 — Milestone v0.3.3 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -52,36 +52,12 @@ Progress: [██████████] 100%
 - Trend: —
 
 *Updated after each plan completion*
-| Phase 01-cleanup-bug-fixes P02 | 8min | 1 tasks | 1 files |
-| Phase 01 P01 | 8min | 3 tasks | 3 files |
-| Phase 02 P01 | 5min | 2 tasks | 4 files |
-| Phase 02 P02 | 6min | 2 tasks | 6 files |
-| Phase 03 P01 | 1min | 2 tasks | 4 files |
-| Phase 03 P02 | 2min | 2 tasks | 3 files |
-| Phase 04 P01 | 5min | 2 tasks | 3 files |
-| Phase 04 P02 | 3min | 2 tasks | 3 files |
-| Phase 04 P03 | 2min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- [Roadmap]: 5 phases derived from 16 remaining requirements — cleanup first, then hardening, then testing
-- [Roadmap]: LABEL-01 (business labels) deferred to Phase 5, independent of V0.3.0 core pipeline
-- [Phase 01-cleanup-bug-fixes]: Keep if-check with else-throw for engineManager — handles runtime null edge case
-- [Phase 01]: Keep RiskEngine as empty unit struct (public API surface)
-- [Phase 01]: Generate per-cell node_id via (file_hash, [node_index, row, col])
-- [Phase 02]: useRiskReviewStore.projectId is single source of truth for project identity (D-01)
-- [Phase 02]: App.tsx uses setView directly instead of startTask to avoid setting taskId
-- [Phase 02]: Used serde(default) on skip_detectors for backward compat with old requests
-- [Phase 03]: Rely on test:e2e npm script for build step instead of playwright webServer config
-- [Phase 03]: Reused jszip for DOCX generation — no new dependency
-- [Phase 04 P01]: Replicated fixture scanning logic in tests instead of refactoring check-fixtures.ts — avoids modifying production code
-- [Phase 04 P02]: Inline matchesFilter replica in perf tests — renderer module path not resolvable in vitest
-- [Phase 04 P03]: Reused existing E2E harness pattern from risk-pipeline.test.ts for viewport screenshots
 
 ### Pending Todos
 
@@ -89,11 +65,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- CLEAN-04 (engine fallback removal) depends on confirming engine is always available — may need guard instead of full removal
-- QA-02 (full E2E) needs real DOCX test fixtures — may need to create or source sample bid documents
+None.
 
 ## Session Continuity
 
-Last session: 2026-07-22T09:49:51.000Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-07-22T10:00:00.000Z
+Stopped at: null
 Resume file: None
