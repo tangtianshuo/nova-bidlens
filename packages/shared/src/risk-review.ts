@@ -19,7 +19,7 @@ export type RiskLevel = 'high' | 'medium' | 'low';
 export type DetectorType = 'text' | 'table' | 'entity' | 'key-fact';
 export type RiskPreset = 'strict' | 'standard' | 'loose';
 export type RiskAnalysisStatus = 'complete' | 'degraded' | 'partial';
-export type RiskFileFormat = 'docx' | 'pdf';
+export type RiskFileFormat = 'docx' | 'pdf' | 'nzbtf';
 
 /** Review status — `important` is an independent boolean. (PRD §11) */
 export type FindingReviewStatus = 'pending' | 'confirmed' | 'ignored';

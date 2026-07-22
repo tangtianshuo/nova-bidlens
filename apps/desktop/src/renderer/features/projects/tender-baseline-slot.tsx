@@ -23,7 +23,7 @@ interface TenderBaselineSlotProps {
   accept?: string;
 }
 
-const ACCEPT_DEFAULT = '.docx,.pdf';
+const ACCEPT_DEFAULT = '.docx,.pdf,.nzbtf';
 
 export function TenderBaselineSlot({
   value,
@@ -154,7 +154,7 @@ export function TenderBaselineSlot({
                 点击选择或拖放招标文件
               </span>
               <span className="text-xs text-[var(--color-text-muted)]">
-                支持 .docx, .pdf
+                支持 .docx, .pdf, .nzbtf
               </span>
             </div>
           </button>

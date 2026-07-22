@@ -108,6 +108,7 @@ export function registerCompareHandlers(window: BrowserWindow): void {
       properties: ['openFile'],
       filters: [
         { name: 'Word 文档', extensions: ['docx'] },
+        { name: 'nZBTF 投标文件', extensions: ['nzbtf'] },
         { name: '所有文件', extensions: ['*'] },
       ],
     });

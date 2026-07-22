@@ -128,7 +128,7 @@ export class RiskReviewService {
     for (const file of request.submissions) {
       const id = this.submissionRepo.create({
         projectId, fileName: path.basename(file.path),
-        fileFormat: path.extname(file.path).slice(1).toLowerCase() as 'docx' | 'pdf',
+        fileFormat: path.extname(file.path).slice(1).toLowerCase() as 'docx' | 'pdf' | 'nzbtf',
         fileSizeBytes: 0, sha256: '', filePath: file.path, encryptionKey: this.encryptionKey,
       });
       submissionIds.push(id);
@@ -697,7 +697,7 @@ export class RiskReviewService {
     const findingRows = this.findingRepo.getByProject(row.id);
 
     const submissions: RiskSubmission[] = submissionRows.map((s) => ({
-      id: s.id, fileName: s.file_name, fileFormat: s.file_format as 'docx' | 'pdf',
+      id: s.id, fileName: s.file_name, fileFormat: s.file_format as 'docx' | 'pdf' | 'nzbtf',
       fileSizeBytes: s.file_size_bytes, pageCount: s.page_count, sha256: s.sha256,
       status: s.status as SubmissionState, warnings: JSON.parse(s.warnings_json),
     }));
@@ -870,7 +870,7 @@ export class RiskReviewService {
 
 function toSubmissions(rows: import('../db/repositories.js').SubmissionRow[], docs: DocumentAst[], inputs: { path: string }[]): RiskSubmission[] {
   return rows.map((row, i) => ({
-    id: row.id, fileName: row.file_name, fileFormat: row.file_format as 'docx' | 'pdf',
+    id: row.id, fileName: row.file_name, fileFormat: row.file_format as 'docx' | 'pdf' | 'nzbtf',
     fileSizeBytes: row.file_size_bytes, pageCount: row.page_count ?? docs[i]?.pageCount ?? null,
     sha256: row.sha256 || docs[i]?.sha256 || '', status: row.status as SubmissionState, warnings: [],
   }));

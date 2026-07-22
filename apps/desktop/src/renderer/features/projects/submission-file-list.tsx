@@ -10,7 +10,7 @@ export interface SubmissionFile {
   path?: string;
   id: string;
   name: string;
-  format: 'docx' | 'pdf';
+  format: 'docx' | 'pdf' | 'nzbtf';
   sizeBytes: number;
   pageCount: number | null;
   sha256: string;
@@ -39,7 +39,7 @@ const DEFAULT_MAX_TOTAL_SIZE = 500 * 1024 * 1024; // 500MB
 const DEFAULT_MAX_SINGLE_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_PAGE_COUNT = 1000;
 const MAX_PROJECT_PAGES = 4000;
-const ALLOWED_FORMATS: Array<'docx' | 'pdf'> = ['docx', 'pdf'];
+const ALLOWED_FORMATS: Array<'docx' | 'pdf' | 'nzbtf'> = ['docx', 'pdf', 'nzbtf'];
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -96,7 +96,7 @@ export function validateFiles(
     if (!ALLOWED_FORMATS.includes(f.format)) {
       errors.push({
         type: 'format',
-        message: `${f.name}：不支持的格式（仅支持 .docx 和文字版 .pdf）`,
+        message: `${f.name}：不支持的格式（仅支持 .docx、.pdf 和 .nzbtf）`,
         fileId: f.id,
       });
     }
@@ -199,7 +199,7 @@ export function SubmissionFileList({
         if (ext !== 'docx' && ext !== 'pdf') continue;
         // Electron extends File with a `path` property containing the full filesystem path
         const path = (file as File & { path?: string }).path ?? file.name;
-        const format = ext as 'docx' | 'pdf';
+        const format = ext as 'docx' | 'pdf' | 'nzbtf';
         incoming.push({
           id: crypto.randomUUID(),
           path,
@@ -273,7 +273,7 @@ export function SubmissionFileList({
           >
             <Upload className="h-5 w-5" />
             <span>拖放投标文件到此处，或点击选择文件</span>
-            <span>支持 .docx 和文字版 .pdf，{minFiles}-{maxFiles} 个文件</span>
+            <span>支持 .docx、.pdf 和 .nzbtf，{minFiles}-{maxFiles} 个文件</span>
           </button>
         ) : (
           <div className="flex flex-col gap-1">
@@ -307,7 +307,7 @@ export function SubmissionFileList({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".docx,.pdf"
+        accept=".docx,.pdf,.nzbtf"
         multiple
         className="hidden"
         onChange={handleFileInputChange}
