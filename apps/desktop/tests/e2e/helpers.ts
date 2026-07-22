@@ -67,3 +67,24 @@ export async function deleteTestProject(page: Page, projectId: string): Promise<
     projectId,
   );
 }
+
+/** Wait for project to have at least one finding (polls getProject). */
+export async function waitForFindings(
+  page: Page,
+  projectId: string,
+  timeout = DEFAULT_TIMEOUT,
+): Promise<AnalysisProjectDetail> {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const detail: AnalysisProjectDetail = await page.evaluate(
+      (pid) => (window as any).bidlens.getProject(pid),
+      projectId,
+    );
+    if (detail.findings.length > 0) return detail;
+    if (detail.status === 'failed' || detail.status === 'interrupted') {
+      throw new Error(`Project reached terminal status "${detail.status}" before findings appeared`);
+    }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  throw new Error(`Timed out waiting for findings after ${timeout}ms`);
+}
