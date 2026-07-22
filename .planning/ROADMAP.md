@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans in 1 wave
 
 Plans:
-- [ ] 01-01-PLAN.md — Rust engine cleanup: remove dead code, wire table_location, fix submission_id (CLEAN-01, CLEAN-02, CLEAN-03)
+- [x] 01-01-PLAN.md — Rust engine cleanup: remove dead code, wire table_location, fix submission_id (CLEAN-01, CLEAN-02, CLEAN-03)
 - [x] 01-02-PLAN.md — Remove TypeScript engine fallback path (CLEAN-04)
 
 ### Phase 2: Integration Hardening

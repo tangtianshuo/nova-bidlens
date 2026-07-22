@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-07-22T08:02:10.274Z"
+status: verifying
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-07-22T08:07:05.968Z"
 last_activity: 2026-07-22
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-22)
 
 Phase: 1 (Cleanup & Bug Fixes) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-22
 
 Progress: [░░░░░░░░░░] 0%
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01-cleanup-bug-fixes P02 | 8min | 1 tasks | 1 files |
+| Phase 01 P01 | 8min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - [Roadmap]: 5 phases derived from 16 remaining requirements — cleanup first, then hardening, then testing
 - [Roadmap]: LABEL-01 (business labels) deferred to Phase 5, independent of V0.3.0 core pipeline
 - [Phase 01-cleanup-bug-fixes]: Keep if-check with else-throw for engineManager — handles runtime null edge case
+- [Phase 01]: Keep RiskEngine as empty unit struct (public API surface)
+- [Phase 01]: Generate per-cell node_id via (file_hash, [node_index, row, col])
 
 ### Pending Todos
 
@@ -76,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-22T08:02:10.269Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-07-22T08:07:05.963Z
+Stopped at: Completed 01-01-PLAN.md
 Resume file: None

@@ -11,9 +11,9 @@ V0.3.0 core pipeline (Waves 0-5) is substantially implemented. Requirements belo
 
 ### Bug Fixes and Cleanup
 
-- [ ] **CLEAN-01**: Remove legacy `run_analysis` stub, `ProjectState`, and unused `risk.createProject`/`risk.cancelProject`/`risk.getProject` JSON-RPC methods from Rust engine (V3-103 cleanup)
-- [ ] **CLEAN-02**: Wire `source_submission_id`/`target_submission_id` in table detector output instead of empty strings (V3-302 fix)
-- [ ] **CLEAN-03**: Wire `table_location` in Rust `build_review_nodes` — currently always `None` despite type contract supporting it (V3-101 fix)
+- [x] **CLEAN-01**: Remove legacy `run_analysis` stub, `ProjectState`, and unused `risk.createProject`/`risk.cancelProject`/`risk.getProject` JSON-RPC methods from Rust engine (V3-103 cleanup)
+- [x] **CLEAN-02**: Wire `source_submission_id`/`target_submission_id` in table detector output instead of empty strings (V3-302 fix)
+- [x] **CLEAN-03**: Wire `table_location` in Rust `build_review_nodes` — currently always `None` despite type contract supporting it (V3-101 fix)
 - [x] **CLEAN-04**: Remove or guard the engine fallback path (`buildFindings`) that produces untraceable evidence with fake node IDs (V3-411 fix)
 
 ### Integration Hardening
