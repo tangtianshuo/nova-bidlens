@@ -140,6 +140,7 @@ async function pollTask(taskId: string): Promise<TaskResult> {
 }
 
 async function downloadAndExtractZip(zipUrl: string, outputDir: string): Promise<string> {
+  await mkdir(outputDir, { recursive: true });
   const res = await fetch(zipUrl);
   if (!res.ok) throw new Error(`Download failed: ${res.status}`);
 
@@ -147,10 +148,10 @@ async function downloadAndExtractZip(zipUrl: string, outputDir: string): Promise
   const zipPath = join(outputDir, 'result.zip');
   await writeFile(zipPath, buffer);
 
-  // Extract using Windows tar (supports ZIP on Windows 10+)
+  // Extract using PowerShell Expand-Archive (Windows compatible)
   const extractDir = join(outputDir, 'extracted');
   await mkdir(extractDir, { recursive: true });
-  execSync(`tar -xf "${zipPath}" -C "${extractDir}"`, { stdio: 'pipe' });
+  execSync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${extractDir}' -Force"`, { stdio: 'pipe' });
 
   return extractDir;
 }
