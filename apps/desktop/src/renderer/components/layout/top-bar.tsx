@@ -10,7 +10,7 @@ import { SettingsDialog } from '../../features/settings/settings-dialog';
 import { LogViewer } from '../../features/logs/log-viewer';
 
 export function TopBar() {
-  const { view, setView } = useAppStore();
+  const { view, setView, mode } = useAppStore();
   const [theme, setTheme] = useState<Theme>(getThemePreference);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -59,15 +59,17 @@ export function TopBar() {
           <span className="grid h-7 w-7 place-items-center rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-sm font-bold text-white">B</span>
           <span className="font-bold text-[var(--color-text)]" style={{ fontSize: 17 }}>BidLens</span>
           <Separator orientation="vertical" className="h-4" />
-          <Button
-            variant={view === 'history' ? 'active' : 'ghost'}
-            size="sm"
-            onClick={() => setView('history')}
-            aria-label="最近比对"
-          >
-            <History className="h-3.5 w-3.5" />
-            最近比对
-          </Button>
+          {mode === 'version-diff' && (
+            <Button
+              variant={view === 'history' ? 'active' : 'ghost'}
+              size="sm"
+              onClick={() => setView('history')}
+              aria-label="最近比对"
+            >
+              <History className="h-3.5 w-3.5" />
+              最近比对
+            </Button>
+          )}
           <span className="hidden items-center gap-1.5 text-xs text-[var(--color-text-muted)] lg:flex">
             <ShieldCheck className="h-3.5 w-3.5" />
             本地保护

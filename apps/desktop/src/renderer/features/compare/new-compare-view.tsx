@@ -126,7 +126,7 @@ export function NewCompareView() {
         options: { sensitivity },
       });
       logger.info('Compare', 'Task created:', taskId);
-      startTask(taskId);
+      startTask(taskId, { fileAPath: baseline.path, fileBPath: review.path, options: { sensitivity } });
     } catch (err) {
       const message = err instanceof Error ? err.message : '无法启动比对任务';
       logger.error('Compare', 'Failed to start:', message);

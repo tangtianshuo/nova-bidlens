@@ -1,4 +1,5 @@
 import { useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Search, X, Plus, RefreshCw, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty';
@@ -25,6 +26,7 @@ import { useProgressSubscription } from '../../lib/progress-subscription';
 import { useProjectStore } from './project-store';
 import { useRiskReviewStore } from '../risk-review/risk-review-store';
 import { useAppStore } from '../../stores/app-store';
+import { queryKeys } from '../../lib/query-keys';
 import { ProjectTable } from './project-table';
 import type { AnalysisProjectStatus, RiskLevel } from '@bidlens/shared/types-only';
 
@@ -140,12 +142,19 @@ export function ProjectListPage({ onNewProject, onOpenProject }: { onNewProject?
     onOpenProject?.(id);
   }, [onOpenProject]);
 
+  const queryClient = useQueryClient();
   const handleDelete = useCallback((id: string) => {
-    void window.bidlens.deleteProject(id);
-  }, []);
+    if (!window.confirm('确定要删除该项目吗？此操作不可撤销。')) return;
+    void window.bidlens.deleteProject(id).then(() => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+    });
+  }, [queryClient]);
 
   const handleResume = useCallback((id: string) => {
-    void window.bidlens.resumeRiskProject(id);
+    void window.bidlens.resumeRiskProject(id).then(() => {
+      useRiskReviewStore.getState().setProjectId(id);
+      useAppStore.getState().setView('project-processing');
+    });
   }, []);
 
   const handleReanalyze = useCallback((id: string) => {
@@ -156,6 +165,8 @@ export function ProjectListPage({ onNewProject, onOpenProject }: { onNewProject?
     void window.bidlens.reanalyzeProject(id).then(() => {
       useRiskReviewStore.getState().setProjectId(id);
       useAppStore.getState().setView('project-processing');
+    }).catch((err) => {
+      console.error('Reanalyze failed:', err);
     });
   }, []);
 

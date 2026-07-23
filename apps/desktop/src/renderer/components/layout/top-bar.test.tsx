@@ -51,10 +51,9 @@ describe('TopBar', () => {
     expect(screen.getByText('BidLens')).toBeDefined();
   });
 
-  it('renders history button', () => {
+  it('hides history button in risk-review mode', () => {
     render(<TopBar />);
-    const buttons = screen.getAllByLabelText('最近比对');
-    expect(buttons.length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryAllByLabelText('最近比对').length).toBe(0);
   });
 
   it('renders theme toggle button', () => {

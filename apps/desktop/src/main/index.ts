@@ -21,7 +21,7 @@ const isDev = !app.isPackaged;
 let persistence: PersistenceManager | null = null;
 let shutdownStarted = false;
 
-function createWindow() {
+async function createWindow() {
   log.info('[Main] Creating window, isDev:', isDev);
   log.info('[Main] __dirname:', __dirname);
 
@@ -90,7 +90,7 @@ function createWindow() {
     annotationRepo: persistence.annotationRepo,
     taskRepo: persistence.taskRepo,
   });
-  registerRiskReviewHandlers(win, persistence.db.getDb(), persistence.keyManager.getKey());
+  await registerRiskReviewHandlers(win, persistence.db.getDb(), persistence.keyManager.getKey());
 
   // MinerU token management
   const mineruDataDir = process.env.BIDLENS_DATA_DIR || app.getPath('userData');

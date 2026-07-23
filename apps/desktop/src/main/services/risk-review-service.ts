@@ -502,7 +502,7 @@ export class RiskReviewService {
           skipDetectors: completedDetectorTypes,
         };
 
-        const result = await this.engineManager.riskAnalyzeWithAst(
+        const rawResult = await this.engineManager.riskAnalyzeWithAst(
           analyzeRequest,
           abort.signal,
           (progress: RiskProgressNotification) => {
@@ -511,7 +511,28 @@ export class RiskReviewService {
             }
             this.emitProgress(projectId, 'running', progress.phase as AnalysisPhase, progress.stageLabel, progress.current, progress.total);
           },
-        ) as {
+        );
+
+        // Defensive: validate engine response structure before accessing fields
+        if (!rawResult || typeof rawResult !== 'object') {
+          log.error('[Risk] Engine returned non-object result:', rawResult);
+          throw new Error(`引擎返回无效结果: ${JSON.stringify(rawResult)}`);
+        }
+        const result = rawResult as Record<string, unknown>;
+        if (!Array.isArray(result.findings)) {
+          log.error('[Risk] Engine result missing findings array. Keys:', Object.keys(result));
+          throw new Error(`引擎结果缺少 findings 字段。实际字段: ${Object.keys(result).join(', ')}`);
+        }
+        if (!Array.isArray(result.filePairAssessments)) {
+          log.error('[Risk] Engine result missing filePairAssessments array. Keys:', Object.keys(result));
+          throw new Error(`引擎结果缺少 filePairAssessments 字段。实际字段: ${Object.keys(result).join(', ')}`);
+        }
+        if (!result.projectRisk || typeof result.projectRisk !== 'object') {
+          log.error('[Risk] Engine result missing projectRisk object. Keys:', Object.keys(result));
+          throw new Error(`引擎结果缺少 projectRisk 字段。实际字段: ${Object.keys(result).join(', ')}`);
+        }
+
+        const typedResult = result as unknown as {
           findings: Array<{
             id: string; detectorType: string; riskLevel: string;
             involvedSubmissionIds: string[]; symmetricSimilarity: number;
@@ -550,11 +571,11 @@ export class RiskReviewService {
         };
 
         // Map Rust findings to shared RiskFinding type
-        findings = result.findings.map(f => ({
+        findings = typedResult.findings.map(f => ({
           id: f.id, detectorType: f.detectorType as RiskFinding['detectorType'],
           riskLevel: f.riskLevel as RiskLevel,
           involvedSubmissionIds: f.involvedSubmissionIds,
-          evidence: f.evidence.map(ev => ({
+          evidence: (f.evidence ?? []).map(ev => ({
             id: ev.id, detectorType: ev.detectorType as Evidence['detectorType'],
             matchBasis: ev.matchBasis as Evidence['matchBasis'],
             similarityScore: ev.similarityScore,
@@ -578,26 +599,27 @@ export class RiskReviewService {
           reviewStatus: 'pending', important: false, reviewNote: '', reviewedAt: null,
         }));
 
-        filePairResults = result.filePairAssessments.map(fp => ({
+        filePairResults = typedResult.filePairAssessments.map(fp => ({
           submissionAId: fp.submissionAId, submissionBId: fp.submissionBId,
-          directionalCoverageAB: fp.directionalCoverageAB, directionalCoverageBA: fp.directionalCoverageBA,
+          directionalCoverageAB: fp.directionalCoverageAB ?? 0, directionalCoverageBA: fp.directionalCoverageBA ?? 0,
           symmetricSimilarity: fp.symmetricSimilarity, riskLevel: fp.riskLevel as RiskLevel,
           topFindingIds: fp.topFindingIds, findingCount: fp.findingCount,
           ruleVersion: fp.ruleVersion, analysisStatus: fp.analysisStatus,
         }));
 
+        const pr = typedResult.projectRisk;
         projectRisk = {
-          level: result.projectRisk.level as RiskLevel,
-          rawRuleScore: result.projectRisk.rawRuleScore,
-          topContributingFindingIds: result.projectRisk.topContributingFindingIds,
-          highValueFindingCount: result.projectRisk.highValueFindingCount,
-          involvedSubmissionCount: result.projectRisk.involvedSubmissionCount,
-          strongEntityHitCount: result.projectRisk.strongEntityHitCount,
-          tenderDiscountApplied: result.projectRisk.tenderDiscountApplied,
-          incompleteReason: result.projectRisk.incompleteReason,
+          level: pr.level as RiskLevel,
+          rawRuleScore: pr.rawRuleScore,
+          topContributingFindingIds: pr.topContributingFindingIds ?? [],
+          highValueFindingCount: pr.highValueFindingCount ?? 0,
+          involvedSubmissionCount: pr.involvedSubmissionCount ?? 0,
+          strongEntityHitCount: pr.strongEntityHitCount ?? 0,
+          tenderDiscountApplied: pr.tenderDiscountApplied ?? false,
+          incompleteReason: pr.incompleteReason ?? null,
         };
 
-        detectorRunResults = result.detectorRuns;
+        detectorRunResults = Array.isArray(typedResult.detectorRuns) ? typedResult.detectorRuns : [];
 
         // Persist detector runs
         for (const dr of detectorRunResults) {
@@ -654,7 +676,7 @@ export class RiskReviewService {
         for (const fp of filePairResults) {
           this.filePairAssessmentRepo.create({
             projectId, submissionAId: fp.submissionAId, submissionBId: fp.submissionBId,
-            directionalCoverageAB: fp.directionalCoverageAB, directionalCoverageBA: fp.directionalCoverageBA,
+            directionalCoverageAB: fp.directionalCoverageAB ?? 0, directionalCoverageBA: fp.directionalCoverageBA ?? 0,
             symmetricSimilarity: fp.symmetricSimilarity, riskLevel: fp.riskLevel,
             topFindingIds: fp.topFindingIds, findingCount: fp.findingCount,
             ruleVersion: fp.ruleVersion, analysisStatus: fp.analysisStatus as 'complete' | 'partial',

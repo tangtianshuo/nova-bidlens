@@ -62,9 +62,11 @@ interface AppState {
   mode: AppMode;
   view: AppView;
   taskId: string | null;
+  /** Last compare request params, stored for retry capability. */
+  lastCompareRequest: { fileAPath: string; fileBPath: string; options: { sensitivity: 'strict' | 'standard' | 'loose' } } | null;
   setMode: (mode: AppMode) => void;
   setView: (view: AppView) => void;
-  startTask: (taskId: string) => void;
+  startTask: (taskId: string, compareRequest?: AppState['lastCompareRequest']) => void;
   completeTask: (taskId: string) => void;
   cancelTask: () => void;
   resetToNew: () => void;
@@ -74,6 +76,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   mode: 'risk-review',
   view: 'project-list',
   taskId: null,
+  lastCompareRequest: null,
 
   setMode: (mode: AppMode) => {
     set({ mode, view: MODE_DEFAULT_VIEW[mode], taskId: null });
@@ -89,11 +92,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  startTask: (taskId: string) => {
+  startTask: (taskId: string, compareRequest?: AppState['lastCompareRequest']) => {
     const current = get().view;
     if (current === 'new' || current === 'history' || current === 'project-list' || current === 'new-project') {
       const nextView: AppView = current === 'new' || current === 'history' ? 'processing' : 'project-processing';
-      set({ view: nextView, taskId });
+      set({ view: nextView, taskId, lastCompareRequest: compareRequest ?? get().lastCompareRequest });
     }
   },
 

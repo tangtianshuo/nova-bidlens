@@ -17,7 +17,7 @@ interface Stage {
 }
 
 export function ProcessingView() {
-  const { taskId, completeTask, cancelTask } = useAppStore();
+  const { taskId, completeTask, cancelTask, lastCompareRequest, startTask } = useAppStore();
   const loadResult = useResultStore((state) => state.loadResult);
   const completingRef = useRef(false);
   const [elapsed, setElapsed] = useState(0);
@@ -82,7 +82,8 @@ export function ProcessingView() {
     });
   }, [completeTask, loadResult, taskId]);
 
-  const handleRetry = useCallback(() => {
+  const handleRetry = useCallback(async () => {
+    if (!lastCompareRequest) return;
     setError(null);
     setElapsed(0);
     setStages((prev) =>
@@ -91,7 +92,13 @@ export function ProcessingView() {
         status: i === 0 ? 'current' : 'pending',
       }))
     );
-  }, []);
+    try {
+      const { taskId: newTaskId } = await window.bidlens.startCompare(lastCompareRequest);
+      startTask(newTaskId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '重试失败');
+    }
+  }, [lastCompareRequest, startTask]);
 
   const handleCancel = useCallback(async () => {
     if (!taskId) return;

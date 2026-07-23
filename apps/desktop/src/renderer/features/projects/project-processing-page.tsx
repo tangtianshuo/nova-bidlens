@@ -128,16 +128,18 @@ export function ProjectProcessingPage() {
     try {
       await window.bidlens.deleteProject(projectId);
       setProjectId(null);
+      setView('project-list');
     } catch (err) {
       setActionError(`删除项目失败: ${err instanceof Error ? err.message : '未知错误'}`);
     } finally {
       setLoadingAction(null);
     }
-  }, [projectId, setProjectId]);
+  }, [projectId, setProjectId, setView]);
 
   const handleBack = useCallback(() => {
     setProjectId(null);
-  }, [setProjectId]);
+    setView('project-list');
+  }, [setProjectId, setView]);
 
   // Derive stages from real project phase + live progress
   const currentPhase: AnalysisPhase | null = liveProgress?.phase ?? project?.phase ?? null;

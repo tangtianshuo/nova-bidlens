@@ -55,9 +55,13 @@ export function App() {
 async function startRiskProject(data: NewProjectFormData) {
   const paths = data.submissions.map((file) => file.path).filter((value): value is string => Boolean(value));
   if (paths.length !== data.submissions.length) return;
-  const { projectId } = await window.bidlens.createRiskProject({ name: data.name, preset: data.preset, submissions: data.submissions.map((file) => ({ path: file.path!, name: file.name })), baseline: data.baseline?.path ? { path: data.baseline.path, name: data.baseline.name } : null });
-  useRiskReviewStore.getState().setProjectId(projectId);
-  useAppStore.getState().setView('project-processing');
+  try {
+    const { projectId } = await window.bidlens.createRiskProject({ name: data.name, preset: data.preset, submissions: data.submissions.map((file) => ({ path: file.path!, name: file.name })), baseline: data.baseline?.path ? { path: data.baseline.path, name: data.baseline.name } : null });
+    useRiskReviewStore.getState().setProjectId(projectId);
+    useAppStore.getState().setView('project-processing');
+  } catch (err) {
+    console.error('Failed to create risk project:', err);
+  }
 }
 
 function ResultView() {

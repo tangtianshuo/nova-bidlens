@@ -28,6 +28,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; error?: string } | null>(null);
+  const [cleaningTasks, setCleaningTasks] = useState(false);
+  const [cleaningAll, setCleaningAll] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -75,6 +77,31 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setMaskedToken(null);
     setHasStoredToken(false);
     setValidationResult(null);
+  }, []);
+
+  const handleCleanCompleted = useCallback(async () => {
+    setCleaningTasks(true);
+    try {
+      const result = await window.bidlens.clearHistory({ type: 'cleanable', confirm: true });
+      alert(`已清除 ${result.deletedCount} 条记录`);
+    } catch (err) {
+      alert(`清除失败: ${err instanceof Error ? err.message : '未知错误'}`);
+    } finally {
+      setCleaningTasks(false);
+    }
+  }, []);
+
+  const handleCleanAll = useCallback(async () => {
+    if (!window.confirm('确定要清除所有数据吗？此操作不可撤销。')) return;
+    setCleaningAll(true);
+    try {
+      const result = await window.bidlens.cleanup({ type: 'all', confirm: true });
+      alert(`已清除 ${result.deletedCount} 条记录`);
+    } catch (err) {
+      alert(`清除失败: ${err instanceof Error ? err.message : '未知错误'}`);
+    } finally {
+      setCleaningAll(false);
+    }
   }, []);
 
   return (
@@ -153,11 +180,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 管理比对历史和缓存数据
               </p>
               <div className="mt-3 flex gap-2">
-                <Button variant="secondary" size="sm">
-                  清除已完成任务
+                <Button variant="secondary" size="sm" onClick={handleCleanCompleted} disabled={cleaningTasks}>
+                  {cleaningTasks ? '清除中...' : '清除已完成任务'}
                 </Button>
-                <Button variant="destructive" size="sm">
-                  清除所有数据
+                <Button variant="destructive" size="sm" onClick={handleCleanAll} disabled={cleaningAll}>
+                  {cleaningAll ? '清除中...' : '清除所有数据'}
                 </Button>
               </div>
             </div>
