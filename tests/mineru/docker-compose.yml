@@ -1,8 +1,0 @@
-services:
-  mineru:
-    build: .
-    volumes:
-      - ./fixtures:/input:ro
-      - ./output:/output
-    shm_size: '4g'
-    entrypoint: ["sleep", "infinity"]
