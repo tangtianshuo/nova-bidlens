@@ -151,6 +151,8 @@ export interface BidLensApi {
   exportRiskReport(request: ExportRiskReportRequest): Promise<ExportRiskReportResponse>;
   // File
   selectFile(): Promise<SelectFileResponse | null>;
+  /** Get absolute filesystem path from a File object (Electron 28+ replacement for deprecated File.path) */
+  getFilePath(file: File): string;
   validateFiles(request: ValidateFilesRequest): Promise<ValidateFilesResponse>;
 
   // Compare

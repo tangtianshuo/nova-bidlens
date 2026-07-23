@@ -77,8 +77,8 @@ export function NewCompareView() {
   const canStart = baseline.path && review.path && !baseline.error && !review.error;
 
   const handleDropFile = useCallback((slot: 'baseline' | 'review') => (file: File) => {
-    // Electron adds path property to File objects
-    const filePath = (file as File & { path?: string }).path;
+    // Electron 28+ deprecated File.path; use webUtils.getPathForFile() via preload
+    const filePath = window.bidlens.getFilePath(file);
     if (!filePath) return;
     const ext = file.name.split('.').pop()?.toUpperCase() ?? '';
     const fileSlot: FileSlot = {

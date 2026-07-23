@@ -65,7 +65,8 @@ export function TenderBaselineSlot({
   const extractFile = useCallback(
     (file: File) => {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-      const path = (file as File & { path?: string }).path ?? file.name;
+      // Electron 28+ deprecated File.path; use webUtils.getPathForFile() via preload
+      const path = window.bidlens.getFilePath(file);
       confirmAndApply({ path, name: file.name, format: ext, sizeBytes: file.size });
     },
     [confirmAndApply],

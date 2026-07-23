@@ -13,7 +13,7 @@ import type {
   CreateRiskProjectRequest,
   RiskProgress,
 } from '@bidlens/shared';
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 // Log streaming: renderer → main
 ipcRenderer.on('log:entry', (_event, entry) => {
@@ -40,6 +40,7 @@ const api: BidLensApi = {
   exportRiskReport: (request: unknown) => ipcRenderer.invoke('risk:exportReport', request),
   // File
   selectFile: () => ipcRenderer.invoke('file:select'),
+  getFilePath: (file: File) => webUtils.getPathForFile(file),
   validateFiles: (request: ValidateFilesRequest) => ipcRenderer.invoke('file:validate', request),
 
   // Compare

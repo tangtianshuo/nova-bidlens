@@ -197,17 +197,17 @@ export function SubmissionFileList({
       for (const file of Array.from(fileList)) {
         const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
         if (ext !== 'docx' && ext !== 'pdf' && ext !== 'nzbtf') continue;
-        // Electron extends File with a `path` property containing the full filesystem path
-        const path = (file as File & { path?: string }).path ?? file.name;
+        // Electron 28+ deprecated File.path; use webUtils.getPathForFile() via preload
+        const filePath = window.bidlens.getFilePath(file);
         const format = ext as 'docx' | 'pdf' | 'nzbtf';
         incoming.push({
           id: crypto.randomUUID(),
-          path,
+          path: filePath,
           name: file.name,
           format,
           sizeBytes: file.size,
           pageCount: null,
-          sha256: path, // ponytail: path as proxy, real sha256 computed server-side during validation
+          sha256: filePath, // ponytail: path as proxy, real sha256 computed server-side during validation
         });
       }
       if (incoming.length > 0) {
