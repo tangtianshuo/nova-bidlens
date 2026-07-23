@@ -21,7 +21,7 @@ Deliver explainable, traceable risk evidence for bid document similarity — eve
 
 ### Active
 
-- [ ] **MinerU risk pipeline integration** — wire MinerU parser into document import and risk detection flow
+- [x] **MinerU risk pipeline integration** — wire MinerU parser into document import and risk detection flow (v0.3.4 shipped 2026-07-23)
 
 ### Deferred (from v0.3.0)
 
@@ -55,16 +55,20 @@ Deliver explainable, traceable risk evidence for bid document similarity — eve
 - **File ownership:** Hotspot files have single owners until gate merge
 - **Rust edition 2024:** Must align CI and toolchain to compatible compiler
 
-## Current Milestone: v0.3.4 MinerU 接入风险检测流程
+## Current State
 
-**Goal:** 把 MinerU 接入实际的风险检测流程，让用户真正用起来
-
-**Target features:**
-- MinerU parser 注册到 ParserRegistry，PDF 自动走 MinerU 解析
-- 解析后的 DocumentAst 流入风险检测 pipeline
-- 端到端可验证：导入 PDF → MinerU 解析 → 风险检测 → 结果展示
+**Shipped:** v0.3.4 MinerU 接入风险检测流程 (2026-07-23)
+- MinerU 云端 API 解析扫描版 PDF，mapper 产出 DocumentAst
+- DocumentAst 流入 Rust 引擎风险检测 pipeline，产出 RiskFinding + filePairAssessment
+- parserVersion/fileFormat 动态获取，AbortSignal 全链路传播，pollBatch 5 分钟硬超时
+- 401 自动清除缓存、离线检测、友好中文错误、并发控制（max 2）、实时进度反馈
+- 13/13 requirements complete, 137/137 integration tests pass
 
 **封存说明:** v0.3.1 (BGE-M3 semantic enhancement) 和 v0.3.2 (gold-set calibration) 计划封存
+
+## Next Milestone Goals
+
+TBD — 运行 `/gsd:new-milestone` 开始下一个里程碑
 
 ## Key Decisions
 
@@ -93,4 +97,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-23 after milestone v0.3.4 initialization*
+*Last updated: 2026-07-23 after milestone v0.3.4 completion*
