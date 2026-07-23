@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-23)
 Phase: Not started (defining requirements)
 Plan: —
 Status: Defining requirements
-Last activity: 2026-07-23 - Completed quick task 260723-tfs: 项目列表增加重新对比功能
+Last activity: 2026-07-23 - Completed quick task 260723-uxu: renderer global error capture
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -77,8 +77,9 @@ None
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260723-tfs | 项目列表增加重新对比功能 | 2026-07-23 | 1e2d231 | [260723-tfs-recompare](./quick/260723-tfs-recompare/) |
+| 260723-uxu | renderer全局错误捕获转发到日志查看器 | 2026-07-23 | 1186a4d | [260723-uxu-renderer](./quick/260723-uxu-renderer/) |
 
 ## Session Continuity
 
-Last session: 2026-07-23T18:00:00Z
-Stopped at: v0.3.6 milestone initialized
+Last session: 2026-07-23T14:20:00Z
+Stopped at: Completed quick task 260723-uxu
