@@ -19,9 +19,9 @@
 
 ### Category 2: 集成 Bug 修复
 
-- [ ] **FIX-01**: 修复 parserVersion 硬编码为 '0.2.2' — 应从 DocumentAst 实际使用的 parser 动态获取
-- [ ] **FIX-02**: 修复 fileFormat 硬编码为 'docx' — AST 缓存路径应根据实际文件格式动态设置
-- [ ] **FIX-03**: 使 file-validator 识别 MinerU 能力 — 当 MinerU token 已配置时，PDF 文件的 parserId 和 capabilities 应反映 MinerU
+- [x] **FIX-01**: 修复 parserVersion 硬编码为 '0.2.2' — 应从 DocumentAst 实际使用的 parser 动态获取
+- [x] **FIX-02**: 修复 fileFormat 硬编码为 'docx' — AST 缓存路径应根据实际文件格式动态设置
+- [x] **FIX-03**: 使 file-validator 识别 MinerU 能力 — 当 MinerU token 已配置时，PDF 文件的 parserId 和 capabilities 应反映 MinerU
 - [x] **FIX-04**: 修复 PDF 路径 AbortSignal 死代码 — 将 opts.signal 传递到 MinerU parse → pollBatch → fetch，使用户可以取消长时间解析
 - [x] **FIX-05**: 为 pollBatch 添加硬超时上限和退出机制 — 最长轮询 5 分钟，超时后报错而非无限等待
 

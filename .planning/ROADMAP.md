@@ -39,7 +39,7 @@
 **Milestone Goal:** 把 MinerU 接入实际的风险检测流程，让用户真正用起来。Pipeline 已端到端存在，工作是验证、修复集成 bug、打磨 UX。
 
 - [x] **Phase 11: E2E 验证** — 用真实扫描 PDF 跑通完整链路，验证所有假设 (completed 2026-07-23)
-- [ ] **Phase 12: 集成 Bug 修复** — 修复硬编码元数据、死代码、缺失的能力声明
+- [x] **Phase 12: 集成 Bug 修复** — 修复硬编码元数据、死代码、缺失的能力声明 (completed 2026-07-23)
 - [ ] **Phase 13: UX 打磨** — 进度反馈、友好错误、离线检测、并发控制
 
 ### Phase 11: E2E 验证
@@ -66,7 +66,7 @@ Plans:
   4. pollBatch 轮询在 5 分钟后自动超时并报错，不会无限等待
 **Plans**: 2 plans
 Plans:
-- [ ] 12-01-PLAN.md — 修复 parserVersion/fileFormat 硬编码 + file-validator MinerU 能力识别 (FIX-01, FIX-02, FIX-03)
+- [x] 12-01-PLAN.md — 修复 parserVersion/fileFormat 硬编码 + file-validator MinerU 能力识别 (FIX-01, FIX-02, FIX-03)
 - [x] 12-02-PLAN.md — MinerU AbortSignal 传播 + pollBatch 硬超时 (FIX-04, FIX-05)
 
 ### Phase 13: UX 打磨
@@ -99,5 +99,5 @@ Phases execute in numeric order: 11 → 12 → 13
 | 9. 分发方案评估 | v0.3.3 | 2/2 | Complete | 2026-07-23 |
 | 10. node-pdf-to-markdown 评估 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
 | 11. E2E 验证 | v0.3.4 | 4/4 | Complete   | 2026-07-23 |
-| 12. 集成 Bug 修复 | v0.3.4 | 1/2 | In Progress|  |
+| 12. 集成 Bug 修复 | v0.3.4 | 2/2 | Complete   | 2026-07-23 |
 | 13. UX 打磨 | v0.3.4 | 0/? | Not started | - |
