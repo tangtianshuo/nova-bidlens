@@ -10,7 +10,9 @@ import { registerHistoryHandlers } from './ipc/history-handlers';
 import { registerSettingsHandlers } from './ipc/settings-handlers';
 import { registerAnnotationHandlers } from './ipc/annotation-handlers';
 import { registerRiskReviewHandlers, shutdownRiskEngine } from './ipc/risk-review-handlers';
+import { registerMineruConfigHandlers } from './ipc/mineru-config-handlers';
 import { PersistenceManager } from './services/persistence';
+import { MineruConfigService } from './services/mineru-config';
 
 const isDev = !app.isPackaged;
 
@@ -88,6 +90,11 @@ function createWindow() {
     taskRepo: persistence.taskRepo,
   });
   registerRiskReviewHandlers(win, persistence.db.getDb(), persistence.keyManager.getKey());
+
+  // MinerU token management
+  const mineruDataDir = process.env.BIDLENS_DATA_DIR || app.getPath('userData');
+  const mineruConfig = new MineruConfigService(mineruDataDir);
+  registerMineruConfigHandlers({ config: mineruConfig });
 
   if (isDev) {
     log.info('[Main] Loading dev URL: http://localhost:5373');
