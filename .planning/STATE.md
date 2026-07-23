@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.3.4
 milestone_name: MinerU 接入风险检测流程
 status: verifying
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-07-23T08:04:06.848Z"
+stopped_at: Completed 11-04-PLAN.md
+last_updated: "2026-07-23T08:04:16.577Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 3
@@ -71,6 +71,7 @@ Recent decisions affecting current work:
 - [Phase 11]: risk.analyzeWithAst is async: returns 'started' first, then actual result with same request id
 - [Phase 11]: Inlined toEngineDocumentAst in test to avoid Electron ipcMain import chain
 - [Phase 11]: RPC helper skips {status:started} ack for async engine methods
+- [Phase 11]: fileHash uses 'd'.repeat(64) and 'e'.repeat(64) for valid 64-char hex strings
 
 ### Pending Todos
 
@@ -82,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-23T08:04:04.281Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-07-23T08:04:16.569Z
+Stopped at: Completed 11-04-PLAN.md
 Resume file: None
