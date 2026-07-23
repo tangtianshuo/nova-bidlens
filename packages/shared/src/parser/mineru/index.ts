@@ -15,6 +15,35 @@ const MINERU_BATCH_URL = 'https://mineru.net/api/v4/file-urls/batch';
 const MINERU_POLL_INTERVAL_MS = 3000;
 const SCANNED_PDF_CHAR_THRESHOLD = 50;
 
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 1000;
+
+/**
+ * Retry wrapper with exponential backoff for transient network failures.
+ * Only retries on: ECONNRESET, ETIMEDOUT, fetch failed, 429, 503.
+ */
+async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isRetryable = err instanceof Error && (
+        err.message.includes('ECONNRESET') ||
+        err.message.includes('ETIMEDOUT') ||
+        err.message.includes('fetch failed') ||
+        err.message.includes('429') ||
+        err.message.includes('503')
+      );
+      if (!isRetryable || attempt === MAX_RETRIES) throw err;
+      const delay = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+      console.warn(`[MinerU] ${label} attempt ${attempt + 1} failed, retrying in ${delay}ms:`, err.message);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  throw new Error('unreachable');
+}
+
 /**
  * 检测 PDF 是否为扫描版（文本层极少或为空）
  * 读取前几页文本，平均少于 50 字符/页 → 扫描版
@@ -124,7 +153,7 @@ export class MinerUParser implements DocumentParser {
    */
   private async uploadFile(fileBuffer: Buffer, fileName: string): Promise<string> {
     // Step 1: Get signed upload URL
-    const urlRes = await fetch(MINERU_BATCH_URL, {
+    const urlRes = await withRetry(() => fetch(MINERU_BATCH_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiToken}`,
@@ -134,7 +163,7 @@ export class MinerUParser implements DocumentParser {
         files: [{ name: fileName, data_id: fileName }],
         model_version: 'pipeline',
       }),
-    });
+    }), 'batch upload');
 
     if (!urlRes.ok) {
       throw new Error(`MinerU batch URL error ${urlRes.status}: ${await urlRes.text()}`);
@@ -151,10 +180,10 @@ export class MinerUParser implements DocumentParser {
     }
 
     // Step 2: PUT file to signed URL (no Content-Type header per research)
-    const putRes = await fetch(urlData.data.file_urls[0], {
+    const putRes = await withRetry(() => fetch(urlData.data.file_urls[0], {
       method: 'PUT',
       body: new Uint8Array(fileBuffer),
-    });
+    }), 'file upload');
 
     if (!putRes.ok) {
       throw new Error(`MinerU file upload failed: ${putRes.status}`);
@@ -211,7 +240,7 @@ export class MinerUParser implements DocumentParser {
    * Download ZIP, extract *_content_list.json, parse it
    */
   private async downloadAndParseZip(zipUrl: string): Promise<ContentListItem[]> {
-    const res = await fetch(zipUrl);
+    const res = await withRetry(() => fetch(zipUrl), 'ZIP download');
     if (!res.ok) throw new Error(`MinerU ZIP download failed: ${res.status}`);
 
     const zipBuffer = Buffer.from(await res.arrayBuffer());
