@@ -348,7 +348,11 @@ export class RiskReviewService {
         this.emitProgress(projectId, 'running', 'parsing', '正在解析投标文件...', 0, inputs.length);
         parsed = [];
         for (let i = 0; i < inputs.length; i++) {
-          const result = await parseDocumentFile(inputs[i].path, { signal: abort.signal } satisfies ParserServiceOptions);
+          const fileIndex = i;
+          const onProgress = (stageLabel: string) => {
+            this.emitProgress(projectId, 'running', 'parsing', stageLabel, fileIndex + 1, inputs.length);
+          };
+          const result = await parseDocumentFile(inputs[i].path, { signal: abort.signal, onProgress } satisfies ParserServiceOptions);
           if (!result.success || !result.ast) throw new Error(result.error?.message ?? '文档解析失败');
           parsed.push(result.ast);
           // Cache AST to document_versions for resume
@@ -366,7 +370,11 @@ export class RiskReviewService {
           if (cached) {
             parsed.push(cached);
           } else {
-            const result = await parseDocumentFile(inputs[i].path, { signal: abort.signal } satisfies ParserServiceOptions);
+            const fileIndex = i;
+            const onProgress = (stageLabel: string) => {
+              this.emitProgress(projectId, 'running', 'parsing', stageLabel, fileIndex + 1, inputs.length);
+            };
+            const result = await parseDocumentFile(inputs[i].path, { signal: abort.signal, onProgress } satisfies ParserServiceOptions);
             if (!result.success || !result.ast) throw new Error(result.error?.message ?? '文档解析失败');
             parsed.push(result.ast);
             this.cacheDocumentAst(result.ast);
