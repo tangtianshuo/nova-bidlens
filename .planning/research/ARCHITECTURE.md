@@ -1,10 +1,16 @@
-# Architecture: BidLens V0.3.0
+# Architecture: MinerU Integration into Risk Detection Pipeline
 
-**Domain:** Electron desktop app — bid document similarity risk review
-**Researched:** 2026-07-22
-**Confidence:** HIGH (all claims verified against source code)
+**Domain:** Bid document similarity risk review (投标文件雷同性风险审查)
+**Researched:** 2026-07-23
+**Overall confidence:** HIGH (all claims verified against source code)
 
-## Data Flow: End-to-End
+## Executive Summary
+
+MinerU is **already wired** into the parsing layer. The `parser-service.ts` in desktop main implements a complete PDF fallback strategy (D-03): `detectPdfType()` routes scanned PDFs directly to MinerU, and digital PDFs fall back to MinerU when `pdf-parse` fails. The `RiskReviewService.run()` pipeline calls `parseDocumentFile()` for each submission, so MinerU-produced ASTs already flow into the Rust risk engine automatically.
+
+The integration gap is **not** plumbing -- it is operational: ensuring MinerU token is configured, verifying end-to-end with real PDFs, and handling edge cases (network failures mid-pipeline, partial results, timeout tuning for large scanned PDFs).
+
+## Current Architecture: End-to-End Data Flow
 
 ```
 Renderer (React/Zustand/React-Query)
@@ -15,8 +21,8 @@ Preload (contextBridge → ipcRenderer.invoke)
   ▼
 Main Process (ipcMain.handle → RiskReviewService)
   │  1. Validate files
-  │  2. Parse DOCX/PDF via parser-service → DocumentAst
-  │  3. Call EngineManager.riskAnalyzeWithAst()
+  │  2. Parse via parser-service → DocumentAst    ← MinerU enters here
+  │  3. Call EngineManager.riskAnalyzeWithAst()    ← Rust engine processes ASTs
   ▼
 Rust Engine (JSON-RPC over stdio)
   │  'risk.analyzeWithAst' method
@@ -30,215 +36,182 @@ Main Process
 Renderer receives progress + queries project detail via React Query
 ```
 
-## 1. IPC Flow: Fully Wired, Not Stubbed
+## MinerU Integration Point: parser-service.ts
 
-**Verdict: The risk:* IPC calls are real and functional.** All calls go through actual implementations.
+The key file is `apps/desktop/src/main/services/parser-service.ts`. It implements a **PDF fallback strategy** that is **outside** the `ParserRegistry` priority system, using manual routing instead:
 
-### Registration chain:
-- `apps/desktop/src/main/index.ts` line 88: `registerRiskReviewHandlers(win, persistence.db.getDb(), persistence.keyManager.getKey())`
-- `apps/desktop/src/main/ipc/risk-review-handlers.ts`: Creates `EngineManager` + `RiskReviewService`, registers all 12 `ipcMain.handle` calls
+```typescript
+// parser-service.ts lines 88-115
+if (ext === '.pdf') {
+  const pdfType = await detectPdfType(filePath);  // 'digital' | 'scanned' | 'unknown'
 
-### Active IPC channels (all real):
+  if (pdfType === 'scanned') {
+    // Scanned PDF → try MinerU directly (pdf-parse can't OCR)
+    const mineru = getMinerUParser();
+    if (mineru) return mineru.parse(input, options);
+    // else fall through to pdf-parse (will likely fail)
+  }
 
-| Channel | Handler | Status |
-|---------|---------|--------|
-| `risk:listProjects` | `service.listProjects()` | REAL — queries DB |
-| `risk:getProject` | `service.getProject(projectId)` | REAL — reconstructs detail from DB |
-| `risk:createProject` | `service.createProject(request)` | REAL — full pipeline |
-| `risk:cancelProject` | `service.cancel(projectId)` | REAL — abort controller |
-| `risk:resumeProject` | `service.resumeRiskProject(projectId)` | REAL — checkpoint-based resume |
-| `risk:retrySubmission` | `service.retryRiskSubmission(projectId, submissionId)` | REAL — re-triggers analysis |
-| `risk:acceptPartial` | `service.acceptPartial(projectId)` | REAL — status update |
-| `risk:deleteProject` | `service.deleteProject(projectId)` | REAL — CASCADE delete |
-| `risk:saveFindingReview` | `service.saveRiskFindingReview(request)` | REAL — updates DB |
-| `risk:getAuditEvents` | `service.getAuditEvents(projectId)` | REAL — queries DB |
-| `risk:exportReport` | `service.exportRiskReport(request)` | REAL — generates PDF/HTML/MD |
-| `risk:openFile` / `risk:openFolder` | shell helpers | REAL |
+  // Digital PDF → use pdf-parse (priority=1 in registry)
+  const result = await parser.parse(input, options);
 
-### Progress push channel:
-- `risk:progress` — Main pushes `RiskProgress` objects via `window.webContents.send()`
-- `risk:detectorProgress` — Preload wired but **NOT currently pushed** by Main (detector progress goes through `risk:progress` with phase updates)
+  // pdf-parse fails → fallback to MinerU
+  if (!result.success && pdfType !== 'scanned') {
+    const mineru = getMinerUParser();
+    if (mineru) return mineru.parse(input, options);
+  }
 
-## 2. Rust Integration: JSON-RPC over stdio
-
-**Transport:** JSON-RPC 2.0 newline-delimited over stdin/stdout of a child process.
-
-### EngineManager (`apps/desktop/src/main/services/engine-manager.ts`):
-- Spawns `bidlens-engine` binary as child process via `spawn()`
-- Sends requests as `{id, method, params}\n` to stdin
-- Parses responses from stdout line-by-line
-- Handles notifications (progress) and responses (results) separately
-- Crash recovery with exponential backoff (max 3 restarts)
-- Request timeout: 5 minutes for analysis, 5s for ping, 3s for shutdown
-
-### Rust-side JSON-RPC methods (verified in `bidlens-engine/src/main.rs`):
-
-| Method | Status | Notes |
-|--------|--------|-------|
-| `ping` / `engine.handshake` | REAL | Returns engine version + capabilities |
-| `compare` | REAL | V0.2.2 dual-doc comparison |
-| `compare.cancel` | REAL | |
-| `risk.createProject` | REAL | File-path based (legacy) — validates files, creates in-memory project |
-| `risk.analyzeWithAst` | REAL | **Primary path** — accepts pre-parsed ASTs from TS |
-| `risk.cancelProject` | REAL | |
-| `risk.getProject` | REAL | In-memory project state |
-| `shutdown` | REAL | |
-
-### Two risk analysis paths:
-1. **`risk.createProject`** (legacy): Rust validates files itself, creates project in HashMap, runs `run_analysis()` — currently a **placeholder** that just iterates phases with 10ms sleeps
-2. **`risk.analyzeWithAst`** (real): TS parses documents, sends ASTs to Rust. Rust runs the real pipeline: `build_review_nodes` → `tender::filter_tender_content` → `sparse_index::RecallIndex` → 4 detectors → `aggregation::aggregate_findings`
-
-**The main process always uses path 2** (`risk.analyzeWithAst`) — see `risk-review-service.ts` line 421. Path 1 exists in Rust but is never called from the TS main process.
-
-### Key mapping: TS ↔ Rust AST format
-`EngineManager.toEngineDocumentAst()` converts shared `DocumentAst` (camelCase) into engine format (snake_case with flat run/text structure). This is the serialization boundary.
-
-## 3. Database: Real SQLite Schema with Migrations
-
-**No migration files** — migrations are inline in `apps/desktop/src/main/db/migrations.ts`.
-
-### Schema versions:
-- **V1** (initial): `tasks`, `document_snapshots`, `diff_snapshots`, `review_annotations`, `settings`, `migration_history`
-- **V2** (V0.3): All risk-project tables — **additive only**, does not touch V1 tables
-
-### V2 tables (all verified in code):
-
-| Table | Purpose | Encrypted Columns |
-|-------|---------|-------------------|
-| `risk_projects` | Project metadata, status, phase, versions | None |
-| `risk_submissions` | Per-file submission record | `file_path_encrypted` |
-| `document_versions` | Cached ASTs (shared by hash) | `ast_encrypted`, `review_nodes_encrypted` |
-| `tender_baselines` | Baseline document reference | None |
-| `risk_findings` | Risk findings with scores | `review_note_encrypted` |
-| `risk_evidence` | Evidence items per finding | `source_original_text_encrypted`, `source_normalized_text_encrypted`, `target_*`, `context_*` (8 encrypted columns) |
-| `file_pair_assessments` | Per-pair similarity scores | None |
-| `project_risk_assessments` | Project-level risk summary | None |
-| `review_decisions` | Review status per finding | `note_encrypted` |
-| `analysis_checkpoints` | Resume checkpoints | None |
-| `detector_runs` | Per-detector execution stats | None |
-| `audit_events` | Full audit trail | None |
-| `exported_reports` | Export history | `file_path_encrypted` |
-
-### Encryption:
-- AES-256-GCM via `apps/desktop/src/main/db/crypto.ts`
-- Key derived by `KeyManager` from machine-specific material
-- Applied to: ASTs, evidence text, review notes, file paths
-
-### Foreign keys: All risk tables use `ON DELETE CASCADE` from `risk_projects`.
-
-## 4. State Management: Zustand + React Query
-
-### Zustand stores:
-
-| Store | File | Purpose |
-|-------|------|---------|
-| `useAppStore` | `renderer/stores/app-store.ts` | Global view state machine (8 views), mode toggle |
-| `useRiskReviewStore` | `renderer/features/risk-review/risk-review-store.ts` | Tab, filters, selected finding, bulk selection |
-| `useProjectStore` | `renderer/features/projects/project-store.ts` | Selected project ID |
-| `useResultStore` | `renderer/stores/result-store.ts` | V0.2 compare result state (legacy) |
-
-### React Query:
-- `useRiskResultDetail(projectId)` — calls `window.bidlens.getProject(projectId)` 
-- `useProjectDetail(projectId)` — similar for processing page
-- Query client with `retry: false` (line 22 of App.tsx)
-
-### View state machine (App.tsx):
-```
-project-list → new-project → project-processing → project-result
-                                                         ↓
-                                                   project-list (back)
+  return result;
+}
 ```
 
-Legal transitions are enforced in `VALID_TRANSITIONS` map. `startTask()` auto-transitions to `project-processing`. Progress listener auto-transitions to `project-result` on `ready` status.
+### Why MinerU Is Not in ParserRegistry
 
-## 5. File Processing Pipeline: Fully Real
+MinerU is intentionally **not auto-registered** in `packages/shared/src/parser/index.ts`:
 
-### Flow when user creates a project:
-
-1. **Renderer** (`App.tsx:56`): `startRiskProject()` calls `window.bidlens.createRiskProject({name, preset, submissions, baseline})`
-2. **Main** (`risk-review-service.ts:114`): Creates project row + submission rows in DB, starts async `run()`
-3. **Phase: validating** (line 330): `validateFile()` on each input
-4. **Phase: parsing** (line 339): `parseDocumentFile()` for each — produces `DocumentAst`
-5. **Phase: extracting-nodes** (line 400): Calls `engineManager.riskAnalyzeWithAst()` which sends all ASTs to Rust
-6. **Rust pipeline** (`risk_engine.rs:307`): 
-   - `build_review_nodes()` — traverses AST blocks, extracts entities + key facts
-   - `tender::build_baseline()` + `filter_tender_content()` — if baseline provided
-   - `sparse_index::RecallIndex` — builds n-gram/hash index, finds candidate pairs
-   - 4 detectors: `TextDetector`, `TableDetector`, `EntityDetector`, `FactDetector`
-   - `aggregation::aggregate_findings()` — merges evidence into findings
-   - `aggregation::assess_file_pairs()` + `compute_project_risk()`
-7. **Main persists results** (line 538-647): Findings, evidence, file pair assessments, project risk assessment, detector runs
-8. **Emits progress** throughout via `window.webContents.send('risk:progress', ...)`
-9. **Renderer** (`project-processing-page.tsx:60`): Listens for progress, auto-navigates to result on `ready`
-
-### Fallback path (no engine):
-If `engineManager` is null, `risk-review-service.ts` line 527 uses `buildFindings()` — a naive exact-match function that compares normalized paragraph text. This is the degraded/development mode.
-
-## 6. Evidence Chain: RiskFinding → Evidence → Source Location
-
-### Type hierarchy:
-```
-RiskFinding
-  ├── id, detectorType, riskLevel, involvedSubmissionIds[]
-  ├── symmetricSimilarity, directionalCoverage[]
-  ├── confidenceScore, scoreBreakdown (ScoreBreakdown)
-  ├── reviewStatus, important, reviewNote, reviewedAt
-  └── evidence: Evidence[]
-        ├── id, detectorType, matchBasis (lexical|semantic|structural|entity|fact)
-        ├── similarityScore
-        ├── sourceSubmissionId, sourceNodeId
-        ├── sourceOriginalText, sourceNormalizedText  (encrypted in DB)
-        ├── sourceSectionPath: string[]               (JSON in DB)
-        ├── sourcePageRange: [number, number] | null  (JSON in DB)
-        ├── sourceTableLocation: TableLocation | null (JSON in DB)
-        ├── target* (mirror of source fields)
-        ├── contextBefore, contextAfter               (encrypted in DB)
-        ├── tenderFiltered, tenderFilterReason
-        └── ruleVersion
+```typescript
+// MinerU parser: not auto-registered (needs API token)
+// Consumer should: const p = new MinerUParser(token); globalRegistry.register(p);
 ```
 
-### Rust → TS mapping:
-Rust `review_core::RiskFinding` is serialized to JSON via serde (camelCase). Main process maps it to shared `RiskFinding` type at `risk-review-service.ts:469-495`. The mapping is field-by-field with type assertions.
+`MinerUParser` requires an API token at construction time. The `parser-service.ts` handles this via lazy-init:
 
-### Key observation: Evidence has complete location info.
-`sourceSectionPath`, `sourcePageRange`, `sourceTableLocation` are all populated by the Rust engine (from `build_review_nodes()` which uses `Traverser` to walk the AST). This is the V0.3 improvement over V0.2.
+```typescript
+let mineruParserInstance: MinerUParser | null = null;
 
-### DB → UI flow:
-1. DB stores evidence with encrypted text fields + JSON location fields
-2. `EvidenceRepository.getByFinding()` decrypts and parses
-3. `RiskReviewService.rowToFinding()` assembles `RiskFinding` with `Evidence[]`
-4. React Query fetches via `window.bidlens.getProject()`
-5. `RiskResultPage` passes findings to `EvidenceViewport`, `EvidenceDetailTabs`, etc.
+function getMinerUParser(): MinerUParser | null {
+  if (!mineruParserInstance) {
+    const token = mineruConfig?.getToken() ?? process.env.MINERU_API_TOKEN;
+    if (token) mineruParserInstance = new MinerUParser(token);
+  }
+  return mineruParserInstance;
+}
+```
 
-## Component Boundaries Summary
+## Integration Points Map
 
-| Layer | Component | Responsibility | Communicates With |
-|-------|-----------|---------------|-------------------|
-| Renderer | `App.tsx` | View routing, project creation | Zustand stores, IPC |
-| Renderer | `RiskResultPage` | Evidence workbench UI | React Query, Zustand |
-| Renderer | `ProjectProcessingPage` | Progress display, recovery | IPC progress events |
-| Preload | `index.ts` | IPC bridge (contextBridge) | Renderer ↔ Main |
-| Main | `risk-review-handlers.ts` | IPC registration | Main ↔ Renderer |
-| Main | `RiskReviewService` | Pipeline orchestration, DB persistence | EngineManager, Repositories |
-| Main | `EngineManager` | Rust process lifecycle, JSON-RPC | Rust binary |
-| Main | `repositories.ts` | SQLite CRUD (13 repositories) | better-sqlite3 |
-| Main | `DatabaseManager` | DB lifecycle, migrations | SQLite |
-| Rust | `main.rs` | JSON-RPC dispatcher, task events | Main process (stdio) |
-| Rust | `risk_engine.rs` | Project state, pipeline orchestration | review-core crate |
-| Rust | `review-core` | Detectors, aggregation, scoring, sparse index | document-ast crate |
+| Component | File | Role | MinerU Status |
+|-----------|------|------|---------------|
+| ParserRegistry | `packages/shared/src/parser/registry.ts` | Priority-based parser selection | MinerU NOT registered (by design) |
+| ParserService | `apps/desktop/src/main/services/parser-service.ts` | PDF fallback routing | **PRIMARY integration point** -- already routes scanned PDFs to MinerU |
+| MinerU Parser | `packages/shared/src/parser/mineru/index.ts` | Cloud API parser | Produces `DocumentAst` compatible with pipeline |
+| MinerU Mapper | `packages/shared/src/parser/mineru/mapper.ts` | content_list.json to BlockNode[] | Converts MinerU output to shared AST format |
+| PDF Type Detector | `packages/shared/src/parser/mineru/pdf-type-detector.ts` | Scanned vs digital detection | Determines routing in parser-service |
+| MineruConfigService | `apps/desktop/src/main/services/mineru-config.ts` | Token storage (encrypted via DPAPI) | Provides token for MinerU instantiation |
+| RiskReviewService | `apps/desktop/src/main/services/risk-review-service.ts` | Pipeline orchestration | Calls `parseDocumentFile()` which routes to MinerU |
+| EngineManager | `apps/desktop/src/main/services/engine-manager.ts` | Rust engine bridge | Accepts any `DocumentAst`, including MinerU-produced |
+| Main index | `apps/desktop/src/main/index.ts` | Startup wiring | Sets MineruConfigService on parser-service (line 99) |
 
-## Known Architecture Issues
+## Component Boundaries
 
-1. **Dual project state**: Rust `RiskEngine` keeps an in-memory `HashMap<String, ProjectState>` for `risk.createProject` path, but the main process never uses that path — it uses `risk.analyzeWithAst` which is stateless per-call. The Rust in-memory state is vestigial.
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| `parser-service.ts` | File to DocumentAst (with MinerU routing) | ParserRegistry, MinerUParser, pdf-parse |
+| `MinerUParser` | Cloud API call to DocumentAst | MinerU cloud API (mineru.net) |
+| `RiskReviewService` | Pipeline orchestration, DB persistence | parser-service, EngineManager, 13 repositories |
+| `EngineManager` | TypeScript AST to Rust engine, JSON-RPC | bidlens-engine child process (stdio) |
+| `MineruConfigService` | Token lifecycle (encrypt/decrypt/validate) | Electron safeStorage, IPC handlers |
 
-2. **`risk.createProject` in Rust is dead code** from the main process perspective. It exists for potential future direct-from-file-path usage but is currently unreachable.
+## What Is Already Working
 
-3. **Progress channel naming mismatch**: Preload wires `risk:detectorProgress` but Main never sends on that channel. Detector progress is embedded in `risk:progress` phase updates.
+1. MinerU parser class with full API v4 integration (upload, poll, download ZIP, parse)
+2. PDF type detection (`detectPdfType` -- scanned vs digital via text density heuristic)
+3. Fallback strategy in parser-service (scanned -> MinerU, digital -> pdf-parse with MinerU fallback)
+4. Token management (encrypted storage via DPAPI, validation, CRUD IPC)
+5. Mapper from MinerU `content_list.json` to `DocumentAst` with `BlockNode[]`
+6. Risk pipeline calls `parseDocumentFile()` which already routes through MinerU
+7. Engine bridge accepts any `DocumentAst` regardless of parser origin
+8. Retry with exponential backoff for transient MinerU API failures (ECONNRESET, ETIMEDOUT, 429, 503)
 
-4. **No `engine:handshake` handler in risk-review-handlers**: The preload has `engineHandshake()` but it's only wired for the compare flow, not the risk flow. The `EngineManager.handshake()` method exists but is never called in the risk path.
+## Gaps for v0.3.4
 
-5. **`ReviewDecision` duplicates `RiskFinding.reviewStatus`**: Both `risk_findings.review_status` and `review_decisions` table track the same state. The `saveRiskFindingReview()` method updates both.
+### Gap 1: End-to-End Verification (Critical)
+
+The plumbing exists but has **not been tested** with real scanned PDFs through the full pipeline. Need to verify:
+- `detectPdfType()` correctly identifies scanned PDFs in production
+- MinerU API returns valid `content_list.json` for real bid documents
+- Mapper produces correct `BlockNode[]` structure for Rust engine consumption
+- Rust engine processes MinerU-produced ASTs without errors
+- Findings reference correct node IDs and page locations from MinerU output
+
+### Gap 2: Timeout Tuning
+
+Current `DEFAULT_TIMEOUT_MS = 60_000` (60 seconds) in parser-service. MinerU's `parse()` uses `options.timeout` for its polling deadline. Scanned PDFs may take significantly longer via cloud API. The timeout chain:
+- `parseDocumentFile()` default: 60s
+- `MinerUParser.parse()` uses `options.timeout` for polling
+- MinerU poll interval: 3s between checks
+
+For large scanned PDFs (100+ pages), 60s may be insufficient. Timeout should be MinerU-aware or configurable per-parser.
+
+### Gap 3: parserVersion Tracking
+
+MinerU-produced ASTs set `parserVersion: 'mineru-api-v4'`. But `RiskReviewService.createProject()` hardcodes `parserVersion: '0.2.2'` (line 125). This should reflect the actual parser used, or at minimum not overwrite with stale metadata.
+
+### Gap 4: Progress Granularity
+
+During parsing, progress shows generic `已解析 1/4`. MinerU parsing has distinct sub-phases (upload, poll, download, map) that could be surfaced. Not blocking but improves UX for long-running scanned PDF processing.
+
+### Gap 5: Error Recovery Verification
+
+If MinerU fails mid-pipeline after some submissions are already parsed, the checkpoint/resume mechanism handles re-parsing. AST cache stores by SHA256, so a failed MinerU parse won't cache -- subsequent resume re-attempts the API call. This is correct behavior but should be verified with real failure scenarios.
+
+## IPC Surface (Already Wired)
+
+All `risk:*` IPC channels are real and functional (not stubs):
+
+| Channel | Status | Notes |
+|---------|--------|-------|
+| `risk:createProject` | REAL | Full pipeline including MinerU routing |
+| `risk:listProjects` | REAL | Queries DB |
+| `risk:getProject` | REAL | Reconstructs detail from DB |
+| `risk:cancelProject` | REAL | Abort controller |
+| `risk:resumeProject` | REAL | Checkpoint-based resume |
+| `risk:retrySubmission` | REAL | Re-triggers analysis |
+| `risk:exportReport` | REAL | PDF/HTML/MD generation |
+| `mineruGetToken/Save/Delete/Validate` | REAL | Token lifecycle |
+
+## Token Management Chain
+
+```
+Renderer (Settings UI)
+  → window.bidlens.mineruSaveToken({token})
+    → ipcMain.handle('mineru:saveToken')
+      → MineruConfigService.setToken()
+        → safeStorage.encryptString() → .mineru-token.enc
+
+Parser-service lazy-init:
+  getMinerUParser()
+    → mineruConfig.getToken()
+      → safeStorage.decryptString()
+        → new MinerUParser(token)
+```
+
+## Build Order Recommendation
+
+The integration plumbing is done. Remaining work is verification and hardening:
+
+1. **Verify end-to-end** with a real scanned PDF -- highest priority, validates entire chain
+2. **Fix parserVersion tracking** in `RiskReviewService.createProject()` -- small fix, prevents stale metadata
+3. **Tune timeouts** for MinerU-heavy paths -- depends on real-world timing data from step 1
+4. **Add MinerU-specific progress events** (optional) -- improves UX for long scans
+5. **Test error recovery** -- kill network mid-parse, verify resume works
 
 ## Sources
 
-All findings verified directly against source code in this repository. No external sources needed.
+All findings verified directly against source code in this repository (HIGH confidence):
+
+- `packages/shared/src/parser/mineru/index.ts` -- MinerU parser implementation
+- `packages/shared/src/parser/mineru/mapper.ts` -- content_list.json to BlockNode[] mapper
+- `packages/shared/src/parser/mineru/pdf-type-detector.ts` -- PDF type detection
+- `packages/shared/src/parser/registry.ts` -- ParserRegistry (MinerU intentionally not registered)
+- `packages/shared/src/parser/index.ts` -- Parser module entry (registration comments)
+- `packages/shared/src/parser/types.ts` -- DocumentParser interface
+- `packages/shared/src/document-ast.ts` -- DocumentAst type
+- `packages/shared/src/ipc.ts` -- IPC contracts including MinerU token management
+- `packages/shared/src/risk-review.ts` -- Domain types
+- `apps/desktop/src/main/services/parser-service.ts` -- PDF fallback strategy
+- `apps/desktop/src/main/services/mineru-config.ts` -- Token management
+- `apps/desktop/src/main/services/risk-review-service.ts` -- Pipeline orchestration
+- `apps/desktop/src/main/services/engine-manager.ts` -- Rust engine bridge
+- `apps/desktop/src/main/index.ts` -- Startup wiring
+- `apps/desktop/src/main/ipc/risk-review-handlers.ts` -- IPC handler registration

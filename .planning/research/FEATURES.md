@@ -1,229 +1,152 @@
-# MinerU PDF Parsing — Feature Landscape
+# Risk Detection Pipeline — Feature Landscape
 
-**Domain:** Bid document PDF parsing for similarity risk review
-**Researched:** 2026-07-22
-**Confidence:** MEDIUM — based on training data; live sources blocked by network restrictions
+**Domain:** Bid document similarity risk review (投标文件雷同性风险审查)
+**Researched:** 2026-07-23
+**Confidence:** HIGH — based on codebase inspection, PRD, and existing type contracts
 
-## Context: Current PDF Parser
+## Context
 
-The current `pdf-parser.ts` uses `pdf-parse` (a wrapper around Mozilla's pdf.js). It:
-- Extracts raw text per page
-- Splits paragraphs by consecutive empty lines
-- Produces `ParagraphNode[]` blocks only — no tables, no sections, no images
-- No OCR — scanned PDFs yield empty/garbled text
-- No layout awareness — multi-column PDFs merge columns incorrectly
+v0.3.3 built MinerU PDF parsing infrastructure (cloud API parser, PDF type detector, content-list mapper). v0.3.4 needs to wire MinerU into the actual risk detection flow so users can import PDFs and get risk results end-to-end.
 
-This is adequate for text-based digital PDFs but fails on:
-- Scanned/image-based PDFs (common in Chinese bid documents)
-- PDFs with tables (bill of quantities, pricing schedules)
-- Multi-column layouts (technical proposals)
+**Current state of the pipeline:**
+- ParserRegistry has Docx4jsParser, PdfParser, NzbtfParser registered. MinerU parser exists but is NOT registered (needs API token, lazy-init).
+- `parser-service.ts` has custom PDF fallback logic (pdf-parse → detectPdfType → MinerU fallback) that bypasses the registry for PDFs.
+- `RiskReviewService.run()` implements the full pipeline: validate → parse → call Rust engine (riskAnalyzeWithAst) → aggregate → persist.
+- MinerU produces `DocumentAst` (same type as all parsers), so downstream pipeline works identically once parsing succeeds.
+- UI pages exist: NewProjectPage, ProjectProcessingPage, RiskResultPage with evidence workbench.
+- All shared types defined: RiskFinding, Evidence, ReviewNode, FilePairAssessment, ProjectRiskAssessment.
 
-## MinerU Overview
+**Key insight:** The "pipeline" is already built. The gap is (1) MinerU parser registration, (2) making PDF parsing robust end-to-end, and (3) ensuring MinerU's richer AST output (tables, sections) flows correctly through the Rust engine.
 
-**MinerU** (PyPI: `magic-pdf`) is OpenDataLab's open-source document extraction tool. It uses deep learning models for layout analysis, OCR, and table recognition.
+## Table Stakes
 
-### Core Capabilities
+Features that must work for v0.3.4 to be usable. Missing = product feels broken.
 
-| Capability | Model/Tech | Output |
-|------------|-----------|--------|
-| Layout analysis | DocLayout-YOLO | Bounding boxes for text, table, image, title, etc. |
-| OCR | PaddleOCR / RapidOCR | Text from scanned/image regions |
-| Table extraction | Table structure recognition | HTML/Markdown tables with rows/cols/merged cells |
-| Formula recognition | LaTeX model | LaTeX strings |
-| Reading order | Heuristic + layout | Correct text sequence across columns |
-| Multi-column | Layout-aware merging | Separate column text streams |
+| Feature | Why Expected | Complexity | Current State |
+|---------|-------------|------------|---------------|
+| **PDF auto-routed to MinerU** | Users import PDFs; if MinerU token configured, scanned/complex PDFs should auto-route to MinerU parser | Low | `parser-service.ts` has fallback logic but MinerU not in registry. Need to register with token-aware `canParse`. |
+| **MinerU token config persisted** | Users configure MinerU token once in Settings; subsequent parses use it | Low | `mineru-config.ts` + IPC handlers exist. Settings UI has token field. Just needs wiring into parser-service lazy-init. |
+| **DocumentAst flows to Rust engine** | Parsed AST must convert to engine format via `toEngineDocumentAst()` and pass to `riskAnalyzeWithAst()` | Low | Already works for DOCX. MinerU produces same `DocumentAst` type. `toEngineBlocks()` handles paragraph/section/list/table. |
+| **Table blocks from PDF reach table detector** | MinerU extracts tables as `TableNode`; Rust engine's table detector must receive them | Medium | `toEngineBlocks()` maps `TableNode` to engine format. Need to verify Rust engine's `risk.analyzeWithAst` actually processes table blocks. |
+| **Section structure from PDF preserved** | MinerU detects titles/sections; these become `SectionNode` in AST, which `toEngineBlocks()` flattens to heading paragraphs | Low | Already handled: `toEngineBlocks()` converts section titles to paragraph nodes with heading IDs. |
+| **Progress events during MinerU parse** | MinerU cloud API has upload + poll latency (5-30s). User must see progress, not a frozen UI | Medium | `parser-service.ts` emits progress for file-level parsing. MinerU's internal stages (upload/poll/download) are opaque to the caller. Need to surface MinerU-specific stage labels. |
+| **MinerU failure fallback** | If MinerU API fails (timeout, auth error, network), fall back gracefully and report warning | Low | `parser-service.ts` already catches parse failures. Need to ensure warnings propagate to project warnings. |
+| **RiskFinding with PDF evidence** | Findings from PDF documents must have valid sourceOriginalText, sourcePageRange, sourceSectionPath | Medium | MinerU mapper produces blocks with page ranges. Evidence extraction depends on ReviewNode generation from AST — currently done by Rust engine, not TypeScript. |
+| **Relationship matrix for mixed formats** | Project with DOCX + PDF submissions must produce correct file-pair assessments | Low | File-pair assessment is format-agnostic; operates on RiskFinding objects regardless of source format. |
+| **Report includes PDF-sourced findings** | Exported report (PDF/HTML/Markdown) must show evidence from PDF documents | Low | Report generator uses RiskFinding + Evidence objects, which are format-agnostic. |
 
-### Output Formats
+## Differentiators
 
-MinerU outputs to a directory structure:
-```
-<output_dir>/<pdf_name>/
-  ├── auto/
-  │   ├── <name>.md              # Markdown with text, tables, images
-  │   ├── <name>_content_list.json  # Structured JSON (blocks with coordinates)
-  │   └── images/                # Extracted images
-```
-
-The `_content_list.json` is the key integration point — it contains structured blocks with:
-- Block type (text, table, title, image, etc.)
-- Text content or table HTML
-- Bounding box coordinates (page, x, y, w, h)
-- Page number
-
-### CLI Usage
-
-```bash
-magic-pdf -p <input.pdf> -o <output_dir> -m auto
-# -m auto: auto-detect digital vs scanned
-# -m txt:  text-only (no OCR)
-# -m ocr:  force OCR
-```
-
-Batch mode: `-p <directory>` processes all PDFs in directory.
-
-### Python API
-
-```python
-from magic_pdf.pipe.UNIPipe import UNIPipe
-from magic_pdf.data.data_reader_writer import FileBasedDataWriter, FileBasedDataReader
-
-reader = FileBasedDataReader("")
-pdf_bytes = reader.read(pdf_path)
-writer = FileBasedDataWriter(output_dir)
-
-pipe = UNIPipe(pdf_bytes, [], writer)
-pipe.pipe_classify()   # Detect page types
-pipe.pipe_analyze()    # Layout analysis
-pipe.pipe_parse()      # Extract content
-md = pipe.pipe_mk_markdown("images")  # Generate markdown
-```
-
-### Dependencies (Heavy)
-
-| Dependency | Size | Purpose |
-|------------|------|---------|
-| PyTorch | ~2-4 GB | Deep learning inference |
-| PaddlePaddle + PaddleOCR | ~500 MB - 1 GB | OCR engine |
-| ONNX Runtime | ~200 MB | Model inference |
-| detectron2 | ~300 MB | Object detection |
-| opencv-python | ~100 MB | Image processing |
-| pymupdf | ~50 MB | PDF rendering |
-| Model weights | ~500 MB - 1 GB | Layout, OCR, table models |
-
-**Total environment footprint: 4-5+ GB.** This is the single biggest integration challenge.
-
-### Hardware Requirements
-
-- **GPU (CUDA):** Strongly recommended. Layout analysis + OCR on CPU is 5-10x slower.
-- **CPU-only:** Works but impractical for batch processing (>1 min per page vs ~5 sec with GPU).
-- **RAM:** 4-8 GB minimum during processing.
-
-## Table Stakes Features
-
-Features MinerU adds that the current parser critically lacks.
-
-| Feature | Why Table Stakes | Complexity | Current Gap |
-|---------|-----------------|------------|-------------|
-| **Table extraction** | Bid documents contain bill-of-quantity tables critical for similarity detection. Current parser merges table text into paragraphs, losing structure. | Medium | `pdf-parser.ts` has no table detection |
-| **Scanned PDF OCR** | Many Chinese bid documents are scanned images. Current parser returns empty/garbled text. | High | `pdf-parse` cannot OCR |
-| **Layout-aware text extraction** | Multi-column PDFs (technical proposals) merge columns. Current parser produces scrambled text. | Medium | No column detection |
-
-## Differentiator Features
-
-Features that improve quality but aren't strictly required.
+Features that improve quality but aren't strictly required for v0.3.4.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Formula recognition** | Technical proposals may contain formulas. LaTeX output enables comparison. | Low (MinerU handles) | Rarely relevant for bid similarity |
-| **Image extraction** | Could detect copied diagrams/charts between submissions. | Low (MinerU handles) | Deferred — image comparison is a separate problem |
-| **Reading order detection** | Ensures text sequence is correct for structural comparison. | Low (MinerU handles) | Improves n-gram accuracy |
-| **Bounding box coordinates** | Enables precise evidence location (page + position). | Low (JSON output) | Enhances evidence traceability |
+| **PDF page number in evidence** | Users can jump to exact page in original PDF when reviewing evidence | Medium | MinerU provides page indices per block. Need to thread through AST → ReviewNode → Evidence. Currently page ranges in Evidence are nullable. |
+| **Table cell-level evidence location** | Evidence from tables shows exact row/cell position, not just "somewhere in this table" | Medium | MinerU provides structured table data. `TableNode.rows: string[][]` maps to engine table format. Cell-level evidence requires engine support. |
+| **Scanned PDF quality warning** | Warn user when OCR quality is likely low (few chars/page, many garbled characters) | Low | MinerU doesn't expose OCR confidence scores in content_list.json. Could heuristic-check post-parse word count. |
+| **Multi-column PDF correct ordering** | Technical proposals with 2-3 column layouts parse in correct reading order | Low | MinerU handles this natively via layout analysis. No extra work if using MinerU. |
+| **PDF parser version in report** | Report shows which parser (pdf-parse vs MinerU) was used for each document | Low | `DocumentAst.parserVersion` already stores this. Just needs to surface in report. |
+| **Batch PDF import with progress** | Import 8 PDF files with per-file progress indication | Medium | Current UI shows file list. Per-file parse progress already emitted via `risk:progress`. |
 
 ## Anti-Features
 
-Features to NOT build or defer.
+Features to explicitly NOT build in v0.3.4.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **Ship Python with the app** | 4-5 GB footprint, Python version conflicts, update nightmare | Use pre-processed JSON output; run MinerU as external tool or dev-only |
-| **Real-time GPU inference in Electron** | Requires CUDA, massive dependency, incompatible with offline-first desktop distribution | Pre-parse PDFs to JSON, parse JSON in Node.js |
-| **Custom MinerU fork** | Maintenance burden, upstream changes fast | Use CLI as-is, parse standard output format |
-| **Replace pdf-parse entirely** | MinerU is overkill for simple digital PDFs | Keep pdf-parse for text-only PDFs, use MinerU for complex/scanned |
-
-## Integration Approaches
-
-### Approach A: Python Subprocess (CLI)
-
-Electron spawns `magic-pdf` as child process, reads output JSON.
-
-```
-Main Process → spawn('magic-pdf', ['-p', file, '-o', tmpDir, '-m', 'auto'])
-  → Wait for process exit
-  → Read <tmpDir>/<name>/auto/<name>_content_list.json
-  → Map JSON blocks to DocumentAst
-```
-
-**Pros:** Simple, no Python API coupling, standard output format.
-**Cons:** Requires Python + magic-pdf installed on user machine. Cold start ~10-30s (model loading).
-
-### Approach B: Bundled Python Environment
-
-Ship a standalone Python environment (PyInstaller, conda-pack, or embedded Python) with pre-installed magic-pdf.
-
-**Pros:** No user-side installation.
-**Cons:** 4-5 GB package size. Complex build pipeline. Platform-specific binaries.
-
-### Approach C: Pre-processing Tool (Recommended)
-
-Separate CLI tool (Python script) that pre-processes PDFs to JSON. The Electron app reads pre-processed JSON files.
-
-```
-# Developer/admin tool (run once per batch)
-python preprocess_pdfs.py --input ./bid_docs/ --output ./parsed/
-
-# Electron app reads pre-parsed JSON
-Main Process → readJson(preParsedPath) → map to DocumentAst
-```
-
-**Pros:** Zero Python dependency in Electron. Clean separation. Pre-processing can run on GPU machine.
-**Cons:** Two-step workflow. User must run pre-processing separately.
-
-### Approach D: Local HTTP Server
-
-Run a Python FastAPI server locally. Electron sends PDF path, receives JSON.
-
-**Pros:** Persistent process (no cold start after first). Clean API boundary.
-**Cons:** Server lifecycle management. Port conflicts. Still requires Python installed.
+| **GPU inference in Electron** | 4-5 GB dependency, CUDA requirement, incompatible with offline desktop distribution | Use MinerU cloud API (already implemented) |
+| **Replace pdf-parse entirely** | MinerU is overkill for simple digital PDFs; cloud API has latency cost | Keep pdf-parse as primary for digital PDFs, MinerU as fallback for scanned/failed |
+| **PDF image extraction/comparison** | Image similarity detection is a separate product concern; not in PRD scope | Defer to future version |
+| **Formula recognition/comparison** | Rarely relevant for bid similarity; LaTeX comparison is complex | Defer entirely |
+| **Offline MinerU (local Python)** | 4-5 GB footprint, Python version conflicts, platform-specific binaries | Cloud API is the v0.3.x approach |
+| **Custom OCR pipeline** | MinerU handles OCR internally; building custom PaddleOCR integration is redundant | Use MinerU as-is |
+| **PDF annotation/comment extraction** | PDFs don't have DOCX-style comments; annotations are rare in bid documents | Not in PRD scope |
+| **Real-time PDF preview during parsing** | PDF rendering in Electron requires pdf.js viewer; not needed for risk review workflow | Show parse status, not document preview |
 
 ## Feature Dependencies
 
 ```
-MinerU integration
-  ├── Python environment setup (prerequisite for all)
-  ├── CLI/API invocation layer
-  │     └── Approach selection (A/B/C/D)
-  ├── JSON-to-DocumentAst mapper
-  │     ├── Table block mapping (TableNode from MinerU table HTML)
-  │     ├── Paragraph block mapping (ParagraphNode from MinerU text blocks)
-  │     └── Section detection (from MinerU title blocks)
-  ├── Parser registry integration
-  │     └── MinerU parser implements DocumentParser interface
-  └── Fallback strategy
-        └── pdf-parse for simple PDFs, MinerU for complex/scanned
+User imports PDF
+  └── File validation (file-validator.ts)
+        ├── File existence, readability, size check
+        ├── Encryption detection
+        └── Parser availability check (globalRegistry.findByExtension)
+
+Parser selection (parser-service.ts)
+  ├── .docx → Docx4jsParser (priority=0)
+  ├── .pdf → detectPdfType(filePath)
+  │     ├── digital → pdf-parse (priority=1)
+  │     │     └── fails → MinerU fallback (if token configured)
+  │     └── scanned → MinerU (priority=2, if token configured)
+  │           └── no token → pdf-parse (will likely fail, warning emitted)
+  └── .nzbtf → NzbtfParser
+
+MinerU parse (mineru/index.ts)
+  ├── Upload to mineru.net batch API
+  ├── Poll for completion
+  ├── Download ZIP, extract content_list.json
+  ├── mapContentListToAst() → BlockNode[]
+  └── Return DocumentAst
+
+Risk pipeline (risk-review-service.ts → engine-manager.ts)
+  ├── Validate all files
+  ├── Parse all files (loop, per-file progress)
+  ├── toEngineDocumentAst() converts DocumentAst → engine JSON format
+  ├── engineManager.riskAnalyzeWithAst() sends to Rust engine
+  │     ├── Extracting nodes (ReviewNode generation)
+  │     ├── Extracting entities
+  │     ├── Filtering tender content (if baseline provided)
+  │     ├── Recalling candidates (4-way sparse recall)
+  │     ├── Detecting (text/table/entity/key-fact detectors)
+  │     └── Aggregating (RiskFinding, FilePairAssessment, ProjectRiskAssessment)
+  ├── Persist findings + evidence to SQLite (encrypted)
+  └── Emit completion progress
+
+Result display (risk-result-page.tsx)
+  ├── Risk overview (project risk level, score)
+  ├── Relationship matrix (file-pair similarities)
+  ├── Finding list (filtered, sortable)
+  ├── Evidence workbench (3-column: list + evidence + review)
+  └── Report export (PDF/HTML/Markdown)
 ```
 
-## MVP Recommendation
+## MVP Recommendation for v0.3.4
 
-**Phase 1 — Feasibility spike (Approach C: Pre-processing tool)**
-1. Write a Python script that runs MinerU on a directory of PDFs and outputs JSON
-2. Write a TypeScript mapper: MinerU JSON → DocumentAst (paragraphs + tables)
-3. Validate with real bid document PDFs (scanned + digital)
+The pipeline is 90% built. v0.3.4 is about wiring, not building new features.
 
-**Phase 2 — Integration**
-4. Implement `MinerUParser` in parser registry (reads pre-parsed JSON)
-5. Keep `pdf-parse` as fallback for simple digital PDFs
-6. Add MinerU detection heuristic (if pdf-parse yields <N chars/page, try MinerU)
+**Priority 1 — Wire MinerU into the pipeline (Low complexity)**
+1. Register MinerU parser in ParserRegistry when token is available (not in global registry, but in main-process registry at app startup)
+2. Ensure `parser-service.ts` fallback logic works end-to-end: pdf-parse fails → MinerU → DocumentAst → engine
+3. Verify MinerU token config flow: Settings → save token → parser-service picks it up
 
-**Phase 3 — Distribution (if needed)**
-7. Evaluate bundled Python vs. user-installed Python
-8. Build pre-processing CLI tool as separate package
+**Priority 2 — Verify AST → Engine data flow (Medium complexity)**
+4. Verify `toEngineDocumentAst()` correctly maps MinerU's table blocks (TableNode with rows/cells) to engine format
+5. Verify Rust engine's `risk.analyzeWithAst` actually processes table blocks from the engine JSON
+6. Test with real MinerU-parsed PDF: does the engine produce findings with valid evidence?
 
-**Defer:** GPU inference in Electron, real-time parsing, image extraction, formula comparison.
+**Priority 3 — Progress and error handling (Medium complexity)**
+7. Surface MinerU-specific progress stages (uploading, processing, downloading) during parse
+8. Ensure MinerU failures (auth error, timeout, network) produce meaningful project warnings
+9. Ensure partial results work: if MinerU fails for 1 of 8 files, project enters partial state
 
-## Open Questions
+**Defer to later milestones:**
+- PDF page number in evidence (v0.3.5+)
+- Table cell-level evidence location (depends on Rust engine support)
+- Scanned PDF quality warning (nice-to-have)
+- Batch import UX improvements (v0.3.5+)
 
-1. **Training data confidence:** All MinerU details below are from training data (pre-2025). The API, CLI flags, and output format may have changed significantly. **Must verify with live repo before implementation.**
+## Key Risks
 
-2. **content_list.json schema:** The exact JSON structure needs verification. Training data suggests blocks with `type`, `text`/`html`, `bbox`, `page_idx` fields — but this needs confirmation.
-
-3. **MinerU version stability:** MinerU has been iterating rapidly. The API changed between 0.x and 1.x releases. Need to pin a specific version.
-
-4. **Model download:** MinerU downloads models on first run (~500 MB - 1 GB). This needs internet access. For offline-first constraint, models must be pre-downloaded and bundled.
-
-5. **Chinese text quality:** MinerU is developed by a Chinese team (OpenDataLab) and should handle Chinese well, but real bid document testing is needed.
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| MinerU cloud API latency (5-30s per file) | 8 PDFs = 40-240s parse time. Users may think app is stuck. | Surface per-file progress with MinerU stage labels. Show elapsed time. |
+| MinerU API token expires mid-parse | Parse fails, project enters partial state | Already handled by parser-service fallback + project status. |
+| Rust engine doesn't process MinerU's table blocks | Table detector produces 0 findings for PDF tables | Must verify engine's table handling. May need engine-side fix. |
+| MinerU content_list.json schema changes | Mapper breaks silently | Pin MinerU API version. Add mapper validation with warnings. |
+| Mixed DOCX+PDF project: AST quality差异 | PDF AST has less structure than DOCX AST (no comments/revisions) | Acceptable — PRD scope is text/table/entity/key-fact, not format comparison. |
 
 ## Sources
 
-- **Training data** (LOW confidence): MinerU GitHub repo, PyPI package, community discussions
-- **Codebase inspection** (HIGH confidence): `pdf-parser.ts`, parser registry, DocumentAst types
-- **No live sources verified** — all external fetches blocked by network restrictions
+- **Codebase inspection** (HIGH confidence): parser-service.ts, risk-review-service.ts, engine-manager.ts, MinerU parser, shared types
+- **PRD** (HIGH confidence): docs/product/PRD-v0.3-similarity-risk-review.md
+- **IPC contracts** (HIGH confidence): packages/shared/src/ipc.ts, packages/shared/src/risk-review.ts

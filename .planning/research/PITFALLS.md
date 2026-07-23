@@ -1,235 +1,222 @@
-# MinerU Integration Pitfalls
+# MinerU Cloud API Integration Pitfalls
 
-**Domain:** Python ML tool embedded in Electron desktop app
-**Researched:** 2026-07-22
-**Overall confidence:** MEDIUM
+**Domain:** Cloud PDF parsing in Electron desktop app
+**Researched:** 2026-07-23
+**Overall confidence:** HIGH (based on actual codebase inspection)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Dependency Footprint Explosion
+### Pitfall 1: AbortSignal Dead Code in PDF Path
 
-**What goes wrong:** MinerU (`magic-pdf[full]`) pulls PyTorch + PaddlePaddle + PaddleOCR + transformers + ultralytics. Combined install is 5-10 GB on disk. BidLens Electron app is already ~200-400 MB; adding Python runtime + ML frameworks balloons installer to 3-6 GB.
+**What goes wrong:** `parser-service.ts` creates timeout and cancel races (lines 131-183), but the PDF code path (lines 89-115) returns `mineru.parse()` directly, bypassing the race entirely. The `opts.signal` and `opts.timeoutMs` parameters are silently ignored for all PDF files. Users cannot cancel a MinerU parse in progress, and the 60s default timeout never applies.
 
-**Why it happens:** MinerU depends on two separate deep learning frameworks (PyTorch for layout detection, PaddlePaddle for OCR). Neither is optional in `[full]` install. MinerU v1.3.0 added option to skip PaddlePaddle, but core functionality still needs PyTorch.
+**Why it happens:** The PDF branch was added as an early-return before the race logic. The race block at line 131 only runs for non-PDF files.
 
 **Consequences:**
-- Users in China on typical office networks face 30-60 min download on first install
-- Distribution via USB/offline media becomes impractical
-- Auto-update mechanism (electron-updater) must now handle multi-GB deltas
+- MinerU poll loop (3s intervals, 1-3 min duration) is completely uncancellable
+- App close during parse leaves fetch requests dangling
+- UI shows no cancellation option; user must force-quit
 
 **Prevention:**
-- Use `pip install magic-pdf` (without `[full]`) for lighter footprint if features suffice
-- Consider MinerU v1.3.0+ which made PaddlePaddle optional
-- Evaluate if only a subset of MinerU's pipeline is needed (layout detection only? OCR only?)
+- Pass `opts.signal` into `mineru.parse()` and propagate it to `pollBatch`
+- In `pollBatch`, check `signal.aborted` before each poll iteration
+- In `pollBatch`, listen for `abort` event to break the loop
+- Wrap MinerU calls in the same `Promise.race` pattern used for non-PDF parsers
 
-**Detection:** Run `pip install magic-pdf[full] --dry-run` to measure actual download size before committing.
+**Detection:** Start a MinerU parse on a scanned PDF, click cancel in UI, observe that polling continues in the background.
 
 ---
 
-### Pitfall 2: Model Download at Runtime (Violates Offline-First)
+### Pitfall 2: Infinite Polling with No Escape Hatch
 
-**What goes wrong:** MinerU downloads ML models from HuggingFace on first use. Models are 4-8 GB (PDF-Extract-Kit-1.0, DocLayoutYOLO, UniMERNet, PaddleOCR models). First PDF parse triggers multi-GB download, hangs for minutes, fails on slow/offline networks.
+**What goes wrong:** `pollBatch` sets `deadline = Infinity` when `timeoutMs = 0`. The loop runs `fetch → wait 3s → fetch → wait 3s` forever. If the MinerU task is stuck (server-side bug, lost result), the app hangs indefinitely with no feedback.
 
-**Why it happens:** Models are not bundled with pip package. HuggingFace Hub downloads them lazily. BidLens is offline-first by design — this directly violates the product constraint.
+**Why it happens:** `ParseOptions.timeout` defaults to `0` (no timeout) in the type definition. The parser-service passes 60s, but MinerU's parse path doesn't use it (see Pitfall 1).
 
 **Consequences:**
-- First-run experience is broken: user opens app, loads PDF, waits 10+ min for model download
-- Offline users (common in Chinese government/enterprise offices) cannot use the feature at all
-- HuggingFace is sometimes slow/blocked in China
+- User sees a spinner for minutes with no progress or ETA
+- No way to cancel (see Pitfall 1)
+- Support gets tickets: "app stuck on analyzing PDF"
 
 **Prevention:**
-- Bundle models with the app installer (adds 4-8 GB to distribution)
-- Download models during app installation/setup wizard (one-time, with progress bar)
-- Use `MINERU_MODEL_SOURCE=local` env var to point to bundled model directory
-- Mirror models to domestic CDN (ModelScope, modelscope.cn) for Chinese users
-- Consider ONNX-converted smaller models if MinerU supports them
+- Set a hard maximum poll duration (e.g., 5 minutes) regardless of `timeoutMs`
+- Show poll progress in UI: "MinerU 解析中... (已等待 45s)"
+- After N polls (e.g., 60 polls = 3 min), surface a "still working, continue waiting?" dialog
+- Log each poll attempt with elapsed time for debugging
 
-**Detection:** Delete `~/.cache/huggingface/` and run a parse — if it hangs or fails, models aren't bundled.
+**Detection:** Simulate MinerU returning `state: 'pending'` indefinitely. Verify the app surfaces progress and eventually gives up.
 
 ---
 
-### Pitfall 3: Python Runtime Packaging in Electron
+### Pitfall 3: Offline-First Constraint Violation
 
-**What goes wrong:** Electron bundles Node.js but not Python. Must either require users to install Python 3.10+ separately, or bundle an embedded Python (via PyInstaller, Nuitka, or python-embed).
+**What goes wrong:** `PROJECT.md` states "Offline-first: No network calls during analysis." MinerU is a cloud API. This is a direct architectural contradiction. Users in offline environments (common in Chinese government offices) will hit network errors with no graceful fallback.
 
-**Why it happens:** MinerU is a Python library. There is no Node.js/Rust/WASM port. Every integration path requires a Python interpreter somewhere.
+**Why it happens:** MinerU was added for scanned PDF OCR capability, but the offline-first constraint predates this decision.
 
 **Consequences:**
-- **Option A (require system Python):** Users must install Python 3.10+, pip, then `pip install magic-pdf`. Installation guide becomes 10 steps. Support tickets explode.
-- **Option B (bundle with PyInstaller):** Adds 150-500 MB. Hidden imports frequently missing (numpy, scipy, torch). Must build on each target OS (no cross-compilation). macOS code signing is painful. Windows Defender flags unsigned EXEs.
-- **Option C (bundle python-embed):** Smaller (~50 MB for base Python), but pip doesn't work out of the box. Must manually manage site-packages.
+- Scanned PDFs fail silently in offline environments (no MinerU → no OCR → `UNSUPPORTED_FORMAT` or garbage output from pdf-parse)
+- No UI indication that a network feature was attempted and failed
+- Product messaging ("local-only") contradicts actual behavior
 
 **Prevention:**
-- Start with Option C (python-embed + pre-installed site-packages) for smallest footprint
-- Use `child_process.spawn()` from Electron main process — never from renderer
-- Always use `-u` flag or `PYTHONUNBUFFERED=1` to prevent stdout deadlocks
-- Build PyInstaller/embed bundles on CI for each target OS (Windows, macOS, Linux)
-- Test with Windows Defender / macOS Gatekeeper early
+- **Decide the policy:** Is MinerU an accepted exception to offline-first? If so, update PROJECT.md. If not, queue MinerU tasks for when online.
+- Show clear status: "此文件需要云端解析，请检查网络连接"
+- Add network detection before attempting MinerU calls (`navigator.onLine` in main process via `net` module)
+- Consider a "fully offline mode" that skips scanned PDFs entirely with a warning
 
-**Detection:** Fresh Windows VM without Python installed — does the app work?
+**Detection:** Disable network, import a scanned PDF. Verify user gets a clear error, not a 3-minute hang.
 
 ---
 
-### Pitfall 4: Subprocess Communication Deadlocks
+### Pitfall 4: Token Lifecycle — No Expiration or Refresh
 
-**What goes wrong:** Electron main process spawns Python subprocess, communicates via stdin/stdout with JSON messages. Python's print() buffers output when stdout is not a TTY. Node.js `child_process` waits for data that never arrives. App freezes.
+**What goes wrong:** `MineruConfigService` stores a single encrypted token. There is no expiration check, no refresh mechanism, and no handling of mid-session token revocation. If the MinerU API token expires during a long session, every parse fails with a raw 401 error. The cached `mineruParserInstance` holds a stale token forever.
 
-**Why it happens:** Python buffers stdout by default when not connected to a terminal. Electron's `child_process.spawn()` creates pipes, not TTYs. Large JSON payloads (full document ASTs) can also overflow buffers.
-
-**Consequences:**
-- App hangs silently during PDF parsing
-- No error message — just frozen UI
-- Intermittent: works for small files, fails for large ones
-
-**Prevention:**
-- Always spawn Python with `-u` (unbuffered) flag
-- Set `PYTHONUNBUFFERED=1` in spawn environment
-- Use `print(..., flush=True)` in Python code
-- For large payloads, use file-based IPC (write JSON to temp file, pass path over stdout) instead of piping multi-MB JSON through stdout
-- Set `maxBuffer` option in `child_process.execSync` if using exec
-
-**Detection:** Parse a 50-page PDF. If it hangs but 1-page works, it's a buffer issue.
-
----
-
-### Pitfall 5: Startup Latency (Python Cold Start)
-
-**What goes wrong:** Python process + PyTorch + model loading takes 5-15 seconds on first launch. User clicks "analyze" and waits with no feedback. Second invocation is faster (models cached in memory), but first-run is brutal.
-
-**Why it happens:** PyTorch initialization + loading layout detection models into memory is inherently slow. Even CPU-only mode takes 3-8 seconds for cold start.
+**Why it happens:** Token was designed as "set once, use forever." No token refresh protocol exists in the MinerU API (as of v4).
 
 **Consequences:**
-- First PDF parse feels broken — 10-20 second delay with no progress indication
-- Users kill the app thinking it's frozen
-- BidLens currently parses DOCX in <1 second — the UX regression is jarring
+- User sets token, it works. Days later, token expires. Every PDF parse fails with "MinerU batch URL error 401"
+- `getMinerUParser()` caches the parser instance; even if user updates the token, the old instance is reused until `resetMinerUParser()` is called
+- `validateToken` creates a real batch as a side effect (wasteful, confusing)
 
 **Prevention:**
-- Start Python subprocess at app launch (not on first parse) — "warm up" in background
-- Show explicit loading state: "PDF 分析引擎初始化中..." with progress
-- Keep Python process alive across parses (don't spawn/kill per file)
-- Cache loaded models in process memory (MinerU does this by default within a session)
-- Consider lazy initialization: only start Python if user imports a PDF (not DOCX-only projects)
+- On 401 during parse: invalidate cached parser, prompt user to re-enter token
+- Call `resetMinerUParser()` when token is updated via settings
+- Add a lightweight token check endpoint (if MinerU has one) or skip validation side effects
+- Log token source: "using env MINERU_API_TOKEN" vs "using stored token" for debugging
 
-**Detection:** Time from app launch to first PDF parse completing. Target: <10s with loading indicator.
+**Detection:** Set a token, revoke it on mineru.net, try to parse. Verify the app shows a re-auth prompt, not a generic error.
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 6: Windows + CUDA GPU Detection Failures
+### Pitfall 5: pollBatch Missing Retry Logic
 
-**What goes wrong:** MinerU on Windows frequently fails to detect NVIDIA GPUs, silently falling back to CPU. PyTorch CUDA version must match installed CUDA toolkit version exactly. Mismatched versions = CPU fallback with no error.
+**What goes wrong:** `withRetry` wraps upload and download operations, but `pollBatch`'s fetch call (line 202) has no retry wrapper. A single ECONNRESET or 503 during polling kills the entire parse — even though the task is still running on MinerU's server.
 
-**Why it happens:** Windows CUDA ecosystem is fragmented. User may have CUDA 12.x driver but PyTorch built for CUDA 11.8. PaddlePaddle has its own CUDA version requirements separate from PyTorch.
+**Why it happens:** Polling was written separately from the upload/download code. The retry pattern wasn't applied consistently.
 
 **Consequences:**
-- GPU users get CPU performance (10-50x slower) without knowing why
-- Support team cannot reproduce — depends on user's GPU driver version
+- Transient network blip during a 2-minute poll loop wastes the entire parse (file was already uploaded, task is running)
+- User must re-upload and wait another 1-3 minutes
 
-**Prevention:**
-- Bundle CPU-only PyTorch for consistency (sacrifice speed for reliability)
-- OR: detect GPU at startup, log `torch.cuda.is_available()` result, show GPU/CPU status in UI
-- Document supported CUDA versions explicitly
-- Consider ONNX Runtime as inference backend (better Windows GPU support)
+**Prevention:** Wrap the poll fetch in `withRetry` with a short retry (1-2 attempts, not 3) since the poll interval already provides spacing.
 
-**Detection:** Check logs for `torch.cuda.is_available()` return value on target machines.
+**Detection:** Simulate a network drop during polling. Verify retry occurs instead of immediate failure.
 
 ---
 
-### Pitfall 7: HuggingFace Access in China
+### Pitfall 6: No Progress Feedback to User
 
-**What goes wrong:** HuggingFace (huggingface.co) is slow or intermittently blocked in China. Model downloads fail or take 30+ minutes.
+**What goes wrong:** MinerU parsing takes 1-3 minutes. The current code returns a `ParseResult` only when complete or failed. There are no intermediate progress updates pushed to the renderer. The user sees a spinner for up to 3 minutes with no indication of progress, ETA, or whether the app is still working.
 
-**Why it happens:** GFW (Great Firewall) throttles/blocks certain international CDNs. HuggingFace is on the list intermittently.
+**Why it happens:** The `DocumentParser` interface is synchronous (call parse, await result). No progress callback mechanism exists.
 
 **Consequences:**
-- First-run model download fails for majority of Chinese users
-- Users assume the app is broken
+- Users assume the app is frozen and force-quit
+- Support tickets for "app hangs on PDF"
+- Users on slow connections may wait 5+ minutes with no feedback
 
 **Prevention:**
-- Mirror models to ModelScope (modelscope.cn) — Alibaba's HuggingFace equivalent for China
-- Bundle models with installer to avoid runtime download entirely
-- Set `HF_ENDPOINT=https://hf-mirror.com` as fallback (community mirror)
-- Use MinerU's `MINERU_MODEL_SOURCE=local` to bypass HuggingFace entirely
+- Add an `onProgress` callback to `ParseOptions` or emit IPC events during polling
+- Push progress to renderer via `webContents.send('risk:progress', { ... })` pattern (already exists in IPC contracts)
+- Show: "MinerU 解析中 (已等待 30s / 预计 60-180s)" in UI
+- At minimum, log poll iterations to the structured logger
 
-**Detection:** Test model download from a machine in mainland China without VPN.
+**Detection:** Time a real MinerU parse. Verify the UI shows progress updates, not just a static spinner.
 
 ---
 
-### Pitfall 8: macOS Code Signing + Notarization
+### Pitfall 7: PDF Type Misclassification → Silent Garbage Output
 
-**What goes wrong:** Bundled Python executable (PyInstaller output) is unsigned. macOS Gatekeeper blocks it. electron-builder notarization process doesn't cover child executables automatically.
+**What goes wrong:** `parser-service.ts` routes based on `detectPdfType()` which calls `isScannedPdf()` from `mineru/index.ts`. The detection heuristic (avg <50 chars/page on first 3 pages) is fragile. A digital PDF with image-heavy pages (charts, diagrams) may be misclassified as "scanned" and routed to MinerU unnecessarily. Conversely, a scanned PDF with OCR text layer may be classified as "digital" and routed to pdf-parse, which extracts the OCR layer (often garbage) instead of doing proper OCR.
 
-**Why it happens:** Apple requires all executables to be signed and notarized. PyInstaller outputs a standalone binary that needs separate signing. electron-builder signs the Electron app but not arbitrary child processes.
+**Why it happens:** The threshold (50 chars/page) is arbitrary. OCR text layers on scanned PDFs vary wildly in quality.
 
 **Consequences:**
-- macOS users see "app is damaged" or "cannot be opened" dialog
-- App Store rejection if targeting Mac App Store
+- Digital PDFs with charts: unnecessary MinerU call (costs time, API quota)
+- Scanned PDFs with bad OCR layer: pdf-parse returns garbage text, MinerU is never tried
+- Evidence linking breaks because the AST is based on garbage text
 
 **Prevention:**
-- Sign the Python binary separately in build script: `codesign --deep --force --sign "Developer ID" python-worker`
-- Include Python binary in `extraResources` and sign it during electron-builder `afterSign` hook
-- Test on clean macOS machine without developer tools installed
+- For "digital" PDFs that pdf-parse fails on: already handled (fallback to MinerU at line 106-112)
+- For "digital" PDFs that pdf-parse returns low-quality text on: add a quality check (word count, gibberish detection) and fallback to MinerU
+- Log the classification decision and chars/page ratio for debugging
+- Consider letting the user override: "此 PDF 解析质量较低，是否使用云端解析？"
 
-**Detection:** Download app on fresh macOS, try to open — does Gatekeeper block?
+**Detection:** Parse a scanned PDF with a poor OCR text layer. Verify it doesn't silently produce garbage AST.
 
 ---
 
-### Pitfall 9: Document AST Schema Mismatch
+### Pitfall 8: Concurrent MinerU Requests — No Rate Limiting
 
-**What goes wrong:** MinerU outputs Markdown/JSON with its own schema (headings, tables, images, formulas). BidLens expects `DocumentAst` with `BlockNode[]` (paragraph | section | list | table). Mapping is lossy and incomplete.
+**What goes wrong:** User imports 4 scanned PDFs simultaneously. Parser-service calls MinerU for all 4 in parallel. MinerU API may rate-limit (429), or the user's API quota may be exhausted. All 4 requests fail or degrade.
 
-**Why it happens:** MinerU's output format is designed for LLM data extraction, not bid document risk review. Its table representation differs from BidLens's `TableNode`. Its section detection uses different heuristics than the existing DOCX parser.
+**Why it happens:** No request queue or concurrency limiter exists. Each file import calls `parseDocumentFile` independently.
 
 **Consequences:**
-- Evidence linking breaks — MinerU's page/position info doesn't map to existing AST node IDs
-- Table diff engine may not work on MinerU-extracted tables
-- Two different "views" of the same document confuse the review UI
+- 429 errors cascade — all files fail simultaneously
+- API quota burned faster than expected
+- No clear error: "rate limited" vs "quota exceeded"
 
 **Prevention:**
-- Write a MinerU-to-DocumentAst adapter layer (same pattern as existing `PdfParser` adapter in `packages/shared/src/parser/pdf/index.ts`)
-- Map MinerU blocks to existing `BlockNode` types, generate compatible node IDs
-- Run table-diff engine on MinerU output to verify compatibility early
-- Consider using MinerU only for PDF text/table extraction, not for the full AST
+- Queue MinerU requests, process 1-2 at a time
+- On 429: back off and retry with exponential delay (already partially handled in `withRetry`)
+- Show queue position: "MinerU 排队中 (2/4)..."
+- Track API usage in config service for user visibility
 
-**Detection:** Parse same PDF with current parser and MinerU, compare AST structure.
+**Detection:** Import 5+ scanned PDFs simultaneously. Verify they don't all fail with 429.
+
+---
+
+### Pitfall 9: Error Messages Leak Internal Details
+
+**What goes wrong:** Raw error messages from the MinerU API are surfaced to users: "MinerU batch URL error 401: {\"msg\":\"Unauthorized\"}", "MinerU task failed: model_version not supported". These are developer-facing, not user-facing.
+
+**Why it happens:** Error handling in `parse()` catches and re-throws with the raw message. No user-friendly error mapping exists.
+
+**Consequences:**
+- Users confused by HTTP status codes and JSON error bodies
+- Security concern: internal API structure exposed
+- Chinese users get English error messages (product is zh-CN)
+
+**Prevention:**
+- Map known error codes to user-friendly Chinese messages:
+  - 401 → "API Token 无效或已过期"
+  - 429 → "请求过于频繁，请稍后重试"
+  - timeout → "MinerU 解析超时，请检查网络或稍后重试"
+- Log raw errors to structured logger for debugging
+- Show generic message to user with "查看详情" expand for technical details
 
 ---
 
 ## Minor Pitfalls
 
-### Pitfall 10: Process Cleanup on App Quit
+### Pitfall 10: validateToken Creates Side Effects
 
-**What goes wrong:** User closes Electron app while Python subprocess is mid-parse. Zombie Python process remains, holding GPU memory and file locks.
+**What goes wrong:** `MineruConfigService.validateToken()` sends a real batch creation request to MinerU API. This creates an actual batch entry on MinerU's server, consuming quota and leaving orphaned tasks.
 
-**Prevention:**
-- Listen for `app.on('before-quit')` and `pythonProcess.kill('SIGTERM')`
-- Use `pythonProcess.kill('SIGKILL')` as fallback after 5s timeout
-- On Windows, use `taskkill /pid` since SIGTERM doesn't work on Windows processes
+**Prevention:** If MinerU has a lighter auth-check endpoint, use it. Otherwise, accept the side effect but document it. Or just check if the token format is valid locally before making the API call.
 
 ---
 
-### Pitfall 11: Virtual Environment Path Fragility
+### Pitfall 11: SHA256 as Document ID Is Fragile
 
-**What goes wrong:** Hardcoded venv paths break when app is moved or installed to path with spaces/non-ASCII characters (common in Chinese Windows: `C:\Users\张三\AppData\...`).
+**What goes wrong:** `MinerUParser` uses `sha256(fileBuffer)` as `DocumentAst.id`. If the same file is parsed twice (e.g., user re-imports after a failed attempt), the ID collides. This is fine for deduplication but may cause issues if the AST is stored and the second parse produces a different AST (MinerU API results may vary).
 
-**Prevention:**
-- Use `app.getPath('userData')` for venv location (stable, no spaces guaranteed)
-- Test with Chinese username paths explicitly
-- Use `process.resourcesPath` for bundled Python
+**Prevention:** Accept this as a feature (dedup), not a bug. But ensure the persistence layer handles AST replacement correctly when the same SHA256 is re-parsed.
 
 ---
 
-### Pitfall 12: Concurrent Parse Requests
+### Pitfall 12: nodeIdCounter Not Globally Unique
 
-**What goes wrong:** User imports 4 PDFs simultaneously. Single Python process handles them sequentially (GIL). Or: spawning 4 Python processes crashes on 8GB RAM machines.
+**What goes wrong:** `mapper.ts` uses a module-level counter (`nodeIdCounter`) that resets on import. If two ASTs are parsed in the same process, node IDs collide (`paragraph-1`, `paragraph-2` reused). Currently harmless since ASTs are processed independently, but risky if merged later.
 
-**Prevention:**
-- Queue parse requests in main process, process one at a time
-- Show progress per document: "正在解析 2/4..."
-- Monitor Python process memory, kill if >2GB
+**Prevention:** Prefix node IDs with the document SHA256 or a short UUID: `${sha256.slice(0,8)}-paragraph-1`. Or keep the counter but reset per-parse (already done via `resetNodeIdCounter()` — verify it's called).
 
 ---
 
@@ -237,41 +224,25 @@
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |---|---|---|
-| Python runtime bundling | PyInstaller hidden imports, platform-specific builds | CI builds per-OS, test on clean VMs |
-| Model distribution | HuggingFace blocked in China, 4-8GB download | Bundle with installer or use ModelScope mirror |
-| Subprocess IPC | stdout deadlocks on large PDFs | `-u` flag + file-based IPC for payloads >1MB |
-| First-run UX | 10-20s cold start with no feedback | Background warm-up at app launch + loading indicator |
-| Windows GPU | CUDA version mismatch, silent CPU fallback | Bundle CPU-only PyTorch OR log GPU detection status |
-| macOS signing | Unsigned Python binary blocked by Gatekeeper | Sign in afterSign hook, test on clean Mac |
-| AST integration | MinerU output schema != DocumentAst | Adapter layer, early table-diff compatibility test |
-| Memory | 4 PDFs * 2GB model memory = OOM | Queue + memory monitoring + kill threshold |
-
----
-
-## Decision Matrix: Integration Approach
-
-| Approach | Size Impact | Offline | Complexity | Recommended |
-|---|---|---|---|---|
-| Require system Python + pip install | 0 MB bundled | No (needs pip) | Low dev, high user cost | No |
-| Bundle python-embed + pre-installed packages | +500MB-1GB | Yes | Medium | Maybe |
-| Bundle PyInstaller binary | +500MB-1.5GB | Yes | High (signing, hidden imports) | Maybe |
-| Run MinerU as separate service (Docker/standalone) | Separate install | Partial | Low coupling | No (violates local-only) |
-| Use MinerU's CLI from subprocess | Same as above | Depends on bundling | Lowest code change | Yes for PoC |
+| Wiring MinerU into risk pipeline | AbortSignal not propagated (Pitfall 1) | Pass signal through parse → poll → fetch |
+| User experience | 3-min spinner with no feedback (Pitfall 6) | Progress IPC events + ETA display |
+| Offline environments | Silent failure or 3-min hang (Pitfall 3) | Network check + clear error message |
+| Token management | Stale token cache (Pitfall 4) | Invalidate on 401, reset singleton on update |
+| Multi-file import | Rate limiting cascade (Pitfall 8) | Queue MinerU requests, 1-2 concurrent |
+| Error handling | Raw API errors shown to user (Pitfall 9) | Map to zh-CN user-friendly messages |
 
 ---
 
 ## Sources
 
-- MinerU GitHub: https://github.com/opendatalab/MinerU (Python 3.10+, PyTorch + PaddlePaddle)
-- MinerU Installation Guide: https://github.com/opendatalab/MinerU/blob/master/docs/Installation.md
-- MinerU v1.3.0 Release: https://github.com/opendatalab/MinerU/releases/tag/v1.3.0 (PaddlePaddle optional)
-- PyPI magic-pdf: https://pypi.org/project/magic-pdf/
-- HuggingFace models: https://huggingface.co/opendatalab/PDF-Extract-Kit
-- python-shell npm: https://www.npmjs.com/package/python-shell (subprocess IPC patterns)
-- PyInstaller docs: https://pyinstaller.org/ (hidden imports, platform builds)
+- `packages/shared/src/parser/mineru/index.ts` — MinerU API parser implementation
+- `packages/shared/src/parser/mineru/mapper.ts` — Content list to AST mapper
+- `apps/desktop/src/main/services/mineru-config.ts` — Token management
+- `apps/desktop/src/main/services/parser-service.ts` — Parser routing and fallback
+- `packages/shared/src/parser/types.ts` — Parser interface contracts
+- `.planning/PROJECT.md` — Offline-first constraint
 
 **Confidence notes:**
-- Dependency sizes (5-10 GB): MEDIUM — based on PyTorch (~2GB) + PaddlePaddle (~2GB) + models (~4-8GB), but exact sizes vary by version
-- Model download behavior: MEDIUM — confirmed HuggingFace-based, but MinerU may have added ModelScope support since last check
-- Windows CUDA issues: MEDIUM — widely reported but not verified against latest MinerU version
-- HuggingFace blocking in China: HIGH — well-documented, ongoing issue
+- All pitfalls above are derived from code inspection of the current codebase (HIGH confidence)
+- MinerU API rate limits: LOW confidence — not documented in code, inferred from typical cloud API behavior
+- Token expiration behavior: LOW confidence — no MinerU API docs available for token lifecycle
