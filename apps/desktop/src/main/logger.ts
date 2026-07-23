@@ -69,7 +69,7 @@ ipcMain.handle('log:getBuffer', () => logBuffer);
 
 // Receive logs from renderer
 ipcMain.on('log:fromRenderer', (_event, entry: Omit<LogEntry, 'source'>) => {
-  const full: LogEntry = { ...entry, source: 'renderer' };
+  const full: LogEntry = { ts: entry.ts || new Date().toISOString(), level: entry.level, tag: entry.tag, text: entry.text, source: 'renderer' };
   // Write to file transport
   const logFn = log[entry.level as keyof typeof log] as ((...args: unknown[]) => void) | undefined;
   if (logFn) {

@@ -53,8 +53,8 @@ export function LogViewer({ open, onClose }: LogViewerProps) {
     if (!api) return;
 
     api.getLogBuffer().then((buffer: LogEntry[]) => {
-      setLogs(buffer);
-    });
+      if (Array.isArray(buffer)) setLogs(buffer);
+    }).catch(() => {});
 
     const unsub = api.onLogEntry((entry: LogEntry) => {
       setLogs(prev => {
@@ -207,7 +207,7 @@ export function LogViewer({ open, onClose }: LogViewerProps) {
                 )}
               >
                 <span className="shrink-0 text-[10px] text-[var(--color-text-muted)] w-20 pt-px">
-                  {l.ts.slice(11, 23)}
+                  {l.ts?.slice(11, 23) ?? '--:--:--'}
                 </span>
                 <span className={cn('shrink-0 w-12 text-center font-medium', LEVEL_COLORS[l.level])}>
                   {l.level.toUpperCase()}
