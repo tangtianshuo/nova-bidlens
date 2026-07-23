@@ -75,6 +75,8 @@ export interface ParserServiceOptions {
   signal?: AbortSignal;
   /** Timeout in ms (0 = no timeout) */
   timeoutMs?: number;
+  /** Progress callback for long-running parses (e.g. MinerU cloud) */
+  onProgress?: (stageLabel: string) => void;
 }
 
 /**
@@ -82,13 +84,23 @@ export interface ParserServiceOptions {
  * Supports cancellation via AbortSignal and timeout.
  */
 /** Wrap MinerU parse with offline detection, concurrency limit, and 401 cache reset */
-async function parseWithMinerU(mineru: MinerUParser, input: ParseInput, options: ParseOptions): Promise<ParseResult> {
+async function parseWithMinerU(mineru: MinerUParser, input: ParseInput, options: ParseOptions, opts?: ParserServiceOptions): Promise<ParseResult> {
   // UX-03: Check network before cloud parse
   if (!(await isOnline())) {
     return {
       success: false, warnings: [], duration: 0, parserId: 'mineru-parser',
       error: { code: 'MINERU_OFFLINE', message: '此文件需要云端解析，请检查网络连接' },
     };
+  }
+
+  // UX-01: Progress timer for long MinerU cloud parses
+  const parseStart = Date.now();
+  let progressTimer: ReturnType<typeof setInterval> | null = null;
+  if (opts?.onProgress) {
+    progressTimer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - parseStart) / 1000);
+      opts.onProgress!(`MinerU 解析中 (已等待 ${elapsed}s)`);
+    }, 1000);
   }
 
   // UX-05: Acquire concurrency slot
@@ -102,6 +114,7 @@ async function parseWithMinerU(mineru: MinerUParser, input: ParseInput, options:
     }
     return result;
   } finally {
+    if (progressTimer) clearInterval(progressTimer);
     releaseMinerUSlot();
   }
 }
@@ -157,7 +170,7 @@ export async function parseDocumentFile(
       // Scanned PDF → try MinerU directly (pdf-parse can't OCR)
       const mineru = getMinerUParser();
       if (mineru) {
-        return parseWithMinerU(mineru, input, options);
+        return parseWithMinerU(mineru, input, options, opts);
       }
       log.warn('[Parser] Scanned PDF but no MinerU parser available, falling back to pdf-parse');
     }
@@ -170,7 +183,7 @@ export async function parseDocumentFile(
       const mineru = getMinerUParser();
       if (mineru) {
         log.info('[Parser] pdf-parse failed, falling back to MinerU for:', fileName);
-        return parseWithMinerU(mineru, input, options);
+        return parseWithMinerU(mineru, input, options, opts);
       }
     }
 
