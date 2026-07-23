@@ -80,3 +80,8 @@ None - no external service configuration required.
 ---
 *Phase: 11-e2e-verification*
 *Completed: 2026-07-23*
+
+## Self-Check: PASSED
+- tests/integration/mixed-format-risk.test.ts: FOUND
+- .planning/phases/11-e2e-verification/11-04-SUMMARY.md: FOUND
+- Commit 15cbf21: FOUND
