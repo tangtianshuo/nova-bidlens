@@ -51,11 +51,17 @@ Plans:
 **Depends on**: Phase 7
 **Requirements**: INTEG-01, INTEG-02, INTEG-03, INTEG-04
 **Success Criteria** (what must be TRUE):
-  1. 预处理 CLI 工具模式已设计，输入输出接口明确（PDF 目录 → JSON）
-  2. MinerU JSON 到 ParagraphNode/TableNode/SectionNode 的映射规则已定义
-  3. MinerU parser 实现 DocumentParser 接口的方案已明确
-  4. pdf-parse 与 MinerU 的 fallback 检测启发式规则已确定
-**Plans**: TBD
+  1. PDF 预检测分流模式已设计，扫描版直接走 MinerU，数字版走 pdf-parse
+  2. MinerU content_list.json 到 ParagraphNode/TableNode/SectionNode 的映射规则已定义并测试
+  3. MinerU parser 实现 DocumentParser 接口，已注册到 globalRegistry
+  4. pdf-parse 与 MinerU 的 fallback 检测启发式规则已确定并实现
+**Plans**: 4 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — nZBTF 文件上传过滤修复
+- [ ] 08-02-PLAN.md — MinerU content_list.json → DocumentAst 映射器
+- [ ] 08-03-PLAN.md — MinerU parser 实现 + 注册到 ParserRegistry
+- [ ] 08-04-PLAN.md — PDF 预检测分流 + fallback 策略
 
 ### Phase 9: 分发方案评估
 **Goal**: 确定 MinerU Python 依赖和模型权重的分发策略
@@ -85,6 +91,6 @@ Phases execute in numeric order: 7 → 8 → 9 → 10
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 7. MinerU 可行性验证 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
-| 8. 集成方案设计 | v0.3.3 | 0/TBD | Not started | - |
+| 8. 集成方案设计 | v0.3.3 | 0/4 | Not started | - |
 | 9. 分发方案评估 | v0.3.3 | 0/TBD | Not started | - |
 | 10. node-pdf-to-markdown 评估 | v0.3.3 | 0/TBD | Not started | - |
