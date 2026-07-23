@@ -1,13 +1,14 @@
 # Roadmap: BidLens
 
-## Overview
-
-BidLens is a local Electron desktop app for bid document similarity risk review. This roadmap tracks milestones from v0.3.0 through v0.3.3. V0.3.0 phases 1-6 are complete; v0.3.3 is a research milestone to evaluate MinerU and node-pdf-to-markdown integration feasibility.
-
 ## Milestones
 
+- ✅ **v0.3.0 Non-Embedding Similarity Risk Review** — Phases 1-6 (shipped)
+- ✅ **v0.3.3 MinerU PDF 解析集成调研** — Phases 7-10 (shipped 2026-07-23)
+
+## Phases
+
 <details>
-<summary>v0.3.0 Non-Embedding Similarity Risk Review (Phases 1-6) — COMPLETE</summary>
+<summary>✅ v0.3.0 Non-Embedding Similarity Risk Review (Phases 1-6)</summary>
 
 **Milestone Goal:** Complete local, explainable, multi-submission similarity risk review product using text, table, entity and key-fact detectors.
 
@@ -20,85 +21,35 @@ BidLens is a local Electron desktop app for bid document similarity risk review.
 
 </details>
 
-### v0.3.3 MinerU PDF 解析集成调研 (Phases 7-10)
+<details>
+<summary>✅ v0.3.3 MinerU PDF 解析集成调研 (Phases 7-10) — Shipped 2026-07-23</summary>
 
 **Milestone Goal:** 调研 MinerU 和 node-pdf-to-markdown 在 Electron 桌面应用中的集成可行性，确定最佳接入方式和实施路径。
 
-## Phases
+- [x] **Phase 7: MinerU 可行性验证** — 通过 MinerU 云端 API 验证输出格式和中文解析质量 ✅ 2026-07-23
+- [x] **Phase 8: 集成方案设计** — MinerU mapper, parser, fallback 策略, nZBTF 修复 ✅ 2026-07-23
+- [x] **Phase 9: 分发方案评估** — Token 安全管理, 网络重试, 设置 UI ✅ 2026-07-23
+- [x] **Phase 10: node-pdf-to-markdown 评估** — 轻量替代方案评估 ✅ 2026-07-23
 
-- [x] **Phase 7: MinerU 可行性验证** - 通过 MinerU 云端 API 验证输出格式（content_list.json schema）和中文解析质量（pipeline vs vlm） ✅ 2026-07-23
-- [x] **Phase 8: 集成方案设计** - 设计预处理工具模式、JSON→DocumentAst 映射、parser registry 集成和 fallback 策略 ✅ 2026-07-23
-- [ ] **Phase 9: 分发方案评估** - API Token 安全管理、网络重试策略和用户配置界面
-- [x] **Phase 10: node-pdf-to-markdown 评估** - 评估 node-pdf-to-markdown 作为轻量替代方案的可行性和发展跟踪 (completed 2026-07-23)
+**Key Deliverables:**
+- MinerU 云端 API 集成 (mapper, parser, fallback)
+- PDF 类型检测 (扫描版/数字版分流)
+- Token 安全管理 (safeStorage + IPC + Settings UI)
+- node-pdf-to-markdown 评估报告
 
-## Phase Details
-
-### Phase 7: MinerU 可行性验证
-**Goal**: 确认 MinerU 云端 API 能否满足中文投标文档的 PDF 解析需求
-**Depends on**: Nothing (本里程碑首个 phase)
-**Requirements**: MINERU-01, MINERU-02
-**Success Criteria** (what must be TRUE):
-  1. MinerU `content_list.json` schema 和字段结构已确认，可用真实投标 PDF 复现
-  2. 中文扫描版和数字版 PDF 的 OCR/文本提取质量已有 pipeline vs vlm 对比报告
-  3. API 延迟数据已收集，有明确的可接受性评估
-**Plans:** 1 plan
-
-Plans:
-- [x] 07-01-PLAN.md — MinerU 云端 API 测试 + 验证报告 ✅
-
-### Phase 8: 集成方案设计
-**Goal**: 确定 MinerU 输出到现有 BidLens DocumentAst 的完整集成路径
-**Depends on**: Phase 7
-**Requirements**: INTEG-01, INTEG-02, INTEG-03, INTEG-04
-**Success Criteria** (what must be TRUE):
-  1. PDF 预检测分流模式已设计，扫描版直接走 MinerU，数字版走 pdf-parse
-  2. MinerU content_list.json 到 ParagraphNode/TableNode/SectionNode 的映射规则已定义并测试
-  3. MinerU parser 实现 DocumentParser 接口，已注册到 globalRegistry
-  4. pdf-parse 与 MinerU 的 fallback 检测启发式规则已确定并实现
-**Plans**: 4 plans
-
-Plans:
-- [x] 08-01-PLAN.md — nZBTF 文件上传过滤修复
-- [x] 08-02-PLAN.md — MinerU content_list.json → DocumentAst 映射器
-- [x] 08-03-PLAN.md — MinerU parser 实现 + 注册到 ParserRegistry
-- [x] 08-04-PLAN.md — PDF 预检测分流 + fallback 策略
-
-### Phase 9: 分发方案评估
-**Goal**: 实现 MinerU API Token 安全管理、网络重试策略和用户配置界面
-**Depends on**: Phase 8
-**Requirements**: DIST-01, DIST-02, DIST-03
-**Success Criteria** (what must be TRUE):
-  1. API Token 使用 Electron safeStorage 加密存储，不再依赖环境变量
-  2. 用户可在设置界面输入、验证和管理 API Token
-  3. MinerU API 调用具备指数退避重试机制，处理瞬态网络故障
-  4. Parser service 从配置服务读取 Token，环境变量作为 fallback
-**Plans**: 2 plans
-
-Plans:
-- [x] 09-01-PLAN.md — Token 安全管理 + IPC handlers + 网络重试
-- [x] 09-02-PLAN.md — IPC 桥接 + 设置界面 API 配置 Tab
-
-### Phase 10: node-pdf-to-markdown 评估
-**Goal**: 确认 node-pdf-to-markdown 是否可作为轻量级 PDF 解析替代方案
-**Depends on**: Phase 7
-**Requirements**: NODEPDF-01, NODEPDF-02, NODEPDF-03
-**Success Criteria** (what must be TRUE):
-  1. node-pdf-to-markdown 与 pdf-parse 的文本提取质量对比已完成
-  2. node-pdf-to-markdown 作为轻量替代方案的可行性已有结论
-  3. node-pdf-to-markdown 的表格识别和 OCR 功能路线图已跟踪
-**Plans**: 1 plan
-
-Plans:
-- [x] 10-01-PLAN.md — node-pdf-to-markdown 对比测试 + 可行性评估
+</details>
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 7 → 8 → 9 → 10
-
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
+| 1. Cleanup & Bug Fixes | v0.3.0 | — | Complete | — |
+| 2. Integration Hardening | v0.3.0 | — | Complete | — |
+| 3. E2E Foundation | v0.3.0 | — | Complete | — |
+| 4. Quality Gates | v0.3.0 | — | Complete | — |
+| 5. Business Labels | v0.3.0 | — | Deferred | — |
+| 6. nZBTF File Support | v0.3.0 | — | Complete | — |
 | 7. MinerU 可行性验证 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
 | 8. 集成方案设计 | v0.3.3 | 4/4 | Complete | 2026-07-23 |
-| 9. 分发方案评估 | v0.3.3 | 0/2 | Not started | - |
-| 10. node-pdf-to-markdown 评估 | v0.3.3 | 1/1 | Complete   | 2026-07-23 |
+| 9. 分发方案评估 | v0.3.3 | 2/2 | Complete | 2026-07-23 |
+| 10. node-pdf-to-markdown 评估 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
