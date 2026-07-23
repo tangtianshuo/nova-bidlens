@@ -25,12 +25,36 @@ See: .planning/PROJECT.md (updated 2026-07-23)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (research complete, defining requirements)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-23 - Completed quick task 260723-uxu: renderer global error capture
+Status: Research phase complete (4/4 agents), synthesizer pending, then define requirements
+Last activity: 2026-07-23
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [▓▓▓▓░░░░░░] 40%
+
+### Research Status
+
+| Agent | Status | File |
+|-------|--------|------|
+| Stack | ✓ Complete | .planning/research/STACK.md |
+| Features | ✓ Complete | .planning/research/FEATURES.md |
+| Architecture | ✓ Complete | .planning/research/ARCHITECTURE.md |
+| Pitfalls | ✓ Complete | .planning/research/PITFALLS.md |
+| Synthesizer | Pending | .planning/research/SUMMARY.md |
+
+### Key Research Findings (pre-synthesis)
+
+- **MinerU bbox 数据已存在** — mapper 丢弃了，零成本保留
+- **仅需 1 个新依赖** — `react-pdf` ^10.4.1，pdfjs-dist 已是间接依赖
+- **Evidence 模型扩展** — 添加 `sourceBBox/targetBBox` 可选字段，向后兼容
+- **缺少 PDF 文件访问 IPC** — 需新增 `risk:getPdfFile` 端点
+- **坐标系兼容** — MinerU 和 PDF.js 均使用 PDF 点坐标（原点左上）
+
+### Next Steps
+
+1. 运行 synthesizer 生成 SUMMARY.md
+2. 定义需求 REQUIREMENTS.md
+3. 创建路线图 ROADMAP.md
 
 ## Performance Metrics
 
