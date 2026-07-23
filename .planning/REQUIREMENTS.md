@@ -33,9 +33,9 @@
 
 ### Category 4: node-pdf-to-markdown 评估
 
-- [ ] **NODEPDF-01**: 验证 node-pdf-to-markdown 文本提取质量 — 对比 pdf-parse 的输出
-- [ ] **NODEPDF-02**: 评估 node-pdf-to-markdown 作为轻量替代方案的可行性 — 当前版本是否满足基本需求
-- [ ] **NODEPDF-03**: 跟踪 node-pdf-to-markdown 发展 — 表格识别和 OCR 功能是否计划实现
+- [x] **NODEPDF-01**: 验证 node-pdf-to-markdown 文本提取质量 — 对比 pdf-parse 的输出
+- [x] **NODEPDF-02**: 评估 node-pdf-to-markdown 作为轻量替代方案的可行性 — 当前版本是否满足基本需求
+- [x] **NODEPDF-03**: 跟踪 node-pdf-to-markdown 发展 — 表格识别和 OCR 功能是否计划实现
 
 ---
 

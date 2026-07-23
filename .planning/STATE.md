@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.3.3
 milestone_name: MinerU PDF 解析集成调研
 status: verifying
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-07-23T05:05:46.037Z"
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-07-23T05:19:07.407Z"
 last_activity: 2026-07-23
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
   percent: 25
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-22)
 
 **Core value:** Deliver explainable, traceable risk evidence for bid document similarity
-**Current focus:** Phase 09 — distribution-evaluation
+**Current focus:** Phase 10 — node-pdf-evaluation
 
 ## Current Position
 
-Phase: 09 (distribution-evaluation) — EXECUTING
-Plan: 2 of 2
+Phase: 10 (node-pdf-evaluation) — EXECUTING
+Plan: 1 of 1
 Status: Phase complete — ready for verification
 Last activity: 2026-07-23
 
@@ -58,6 +58,7 @@ Progress: [██░░░░░░░░] 25%
 | Phase 08 P04 | 3min | 2 tasks | 4 files |
 | Phase 09 P01 | 2min | 2 tasks | 4 files |
 | Phase 09 P02 | 2min | 2 tasks | 5 files |
+| Phase 10 P01 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,7 @@ Recent decisions affecting current work:
 - [Phase 09]: Token validation uses actual batch API call (401=invalid, code 0=valid)
 - [Phase 09]: Retry only on transient network errors, not business logic errors
 - [Phase 09]: Parser service reads MinerU token from MineruConfigService with env var fallback
+- [Phase 10]: node-pdf-to-markdown conditionally recommended as pdf-parse replacement, NOT MinerU replacement
 
 ### Pending Todos
 
@@ -87,6 +89,6 @@ None — Phase 7 验证完成，MinerU 可行性已确认
 
 ## Session Continuity
 
-Last session: 2026-07-23T05:05:45.716Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-07-23T05:19:07.402Z
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None

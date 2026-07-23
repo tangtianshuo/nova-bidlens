@@ -29,7 +29,7 @@ BidLens is a local Electron desktop app for bid document similarity risk review.
 - [x] **Phase 7: MinerU 可行性验证** - 通过 MinerU 云端 API 验证输出格式（content_list.json schema）和中文解析质量（pipeline vs vlm） ✅ 2026-07-23
 - [x] **Phase 8: 集成方案设计** - 设计预处理工具模式、JSON→DocumentAst 映射、parser registry 集成和 fallback 策略 ✅ 2026-07-23
 - [ ] **Phase 9: 分发方案评估** - API Token 安全管理、网络重试策略和用户配置界面
-- [ ] **Phase 10: node-pdf-to-markdown 评估** - 评估 node-pdf-to-markdown 作为轻量替代方案的可行性和发展跟踪
+- [x] **Phase 10: node-pdf-to-markdown 评估** - 评估 node-pdf-to-markdown 作为轻量替代方案的可行性和发展跟踪 (completed 2026-07-23)
 
 ## Phase Details
 
@@ -89,7 +89,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 10-01-PLAN.md — node-pdf-to-markdown 对比测试 + 可行性评估
+- [x] 10-01-PLAN.md — node-pdf-to-markdown 对比测试 + 可行性评估
 
 ## Progress
 
@@ -101,4 +101,4 @@ Phases execute in numeric order: 7 → 8 → 9 → 10
 | 7. MinerU 可行性验证 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
 | 8. 集成方案设计 | v0.3.3 | 4/4 | Complete | 2026-07-23 |
 | 9. 分发方案评估 | v0.3.3 | 0/2 | Not started | - |
-| 10. node-pdf-to-markdown 评估 | v0.3.3 | 0/1 | Not started | - |
+| 10. node-pdf-to-markdown 评估 | v0.3.3 | 1/1 | Complete   | 2026-07-23 |
