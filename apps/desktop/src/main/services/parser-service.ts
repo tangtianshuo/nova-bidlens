@@ -21,6 +21,10 @@ export function resetMinerUParser(): void {
   mineruParserInstance = null;
 }
 
+export function isMinerUAvailable(): boolean {
+  return !!(mineruConfig?.getToken() || process.env.MINERU_API_TOKEN);
+}
+
 function getMinerUParser(): MinerUParser | null {
   if (!mineruParserInstance) {
     const token = mineruConfig?.getToken() ?? process.env.MINERU_API_TOKEN;
@@ -82,6 +86,7 @@ export async function parseDocumentFile(
     extractImages: false,
     maxPages: 0,
     timeout: opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    signal: opts?.signal,
   };
 
   // PDF fallback strategy (per D-03): detect type → route accordingly

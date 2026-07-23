@@ -13,6 +13,7 @@ import { mapContentListToAst, type ContentListItem } from './mapper.js';
 
 const MINERU_BATCH_URL = 'https://mineru.net/api/v4/file-urls/batch';
 const MINERU_POLL_INTERVAL_MS = 3000;
+const MINERU_HARD_TIMEOUT_MS = 300_000; // 5 minutes max
 const SCANNED_PDF_CHAR_THRESHOLD = 50;
 
 // Retry configuration
@@ -93,22 +94,31 @@ export class MinerUParser implements DocumentParser {
   async parse(input: ParseInput, options: ParseOptions): Promise<ParseResult> {
     const startTime = Date.now();
     const warnings: ParseWarning[] = [];
+    const { signal } = options;
 
     try {
+      signal?.throwIfAborted();
+
       // 1. Read file and compute SHA256
       const fileBuffer = await readFile(input.filePath);
       const sha256 = createHash('sha256').update(fileBuffer).digest('hex');
 
+      signal?.throwIfAborted();
+
       // 2. Upload via batch API and get batch_id
-      const batchId = await this.uploadFile(fileBuffer, input.fileName);
+      const batchId = await this.uploadFile(fileBuffer, input.fileName, signal);
       warnings.push({ code: 'MINERU_BATCH', message: `MinerU batch created: ${batchId}`, severity: 'info' });
 
+      signal?.throwIfAborted();
+
       // 3. Poll until done
-      const result = await this.pollBatch(batchId, options.timeout);
+      const result = await this.pollBatch(batchId, options.timeout, signal);
       const { fullZipUrl } = result as { fullZipUrl: string };
 
+      signal?.throwIfAborted();
+
       // 4. Download and extract ZIP
-      const contentList = await this.downloadAndParseZip(fullZipUrl);
+      const contentList = await this.downloadAndParseZip(fullZipUrl, signal);
 
       // 5. Map to BlockNode[]
       const blocks = mapContentListToAst(contentList);
@@ -151,7 +161,7 @@ export class MinerUParser implements DocumentParser {
   /**
    * Upload file via batch API → get signed URL → PUT file
    */
-  private async uploadFile(fileBuffer: Buffer, fileName: string): Promise<string> {
+  private async uploadFile(fileBuffer: Buffer, fileName: string, signal?: AbortSignal): Promise<string> {
     // Step 1: Get signed upload URL
     const urlRes = await withRetry(() => fetch(MINERU_BATCH_URL, {
       method: 'POST',
@@ -163,6 +173,7 @@ export class MinerUParser implements DocumentParser {
         files: [{ name: fileName, data_id: fileName }],
         model_version: 'pipeline',
       }),
+      signal,
     }), 'batch upload');
 
     if (!urlRes.ok) {
@@ -183,6 +194,7 @@ export class MinerUParser implements DocumentParser {
     const putRes = await withRetry(() => fetch(urlData.data.file_urls[0], {
       method: 'PUT',
       body: new Uint8Array(fileBuffer),
+      signal,
     }), 'file upload');
 
     if (!putRes.ok) {
@@ -195,12 +207,16 @@ export class MinerUParser implements DocumentParser {
   /**
    * Poll batch status until complete or failed
    */
-  private async pollBatch(batchId: string, timeoutMs: number): Promise<unknown> {
-    const deadline = timeoutMs > 0 ? Date.now() + timeoutMs : Infinity;
+  private async pollBatch(batchId: string, timeoutMs: number, signal?: AbortSignal): Promise<unknown> {
+    const effectiveTimeout = timeoutMs > 0 ? Math.min(timeoutMs, MINERU_HARD_TIMEOUT_MS) : MINERU_HARD_TIMEOUT_MS;
+    const deadline = Date.now() + effectiveTimeout;
 
     while (Date.now() < deadline) {
+      signal?.throwIfAborted();
+
       const res = await fetch(`https://mineru.net/api/v4/extract-results/batch/${batchId}`, {
         headers: { 'Authorization': `Bearer ${this.apiToken}` },
+        signal,
       });
 
       if (!res.ok) {
@@ -230,6 +246,7 @@ export class MinerUParser implements DocumentParser {
       }
 
       // pending/running → wait
+      signal?.throwIfAborted();
       await new Promise(r => setTimeout(r, MINERU_POLL_INTERVAL_MS));
     }
 
@@ -239,8 +256,8 @@ export class MinerUParser implements DocumentParser {
   /**
    * Download ZIP, extract *_content_list.json, parse it
    */
-  private async downloadAndParseZip(zipUrl: string): Promise<ContentListItem[]> {
-    const res = await withRetry(() => fetch(zipUrl), 'ZIP download');
+  private async downloadAndParseZip(zipUrl: string, signal?: AbortSignal): Promise<ContentListItem[]> {
+    const res = await withRetry(() => fetch(zipUrl, { signal }), 'ZIP download');
     if (!res.ok) throw new Error(`MinerU ZIP download failed: ${res.status}`);
 
     const zipBuffer = Buffer.from(await res.arrayBuffer());

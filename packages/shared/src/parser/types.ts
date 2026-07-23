@@ -34,6 +34,8 @@ export interface ParseOptions {
   maxPages: number;
   /** 超时时间 (ms, 0 = 不限制) */
   timeout: number;
+  /** AbortSignal for cancellation */
+  signal?: AbortSignal;
 }
 
 /**
