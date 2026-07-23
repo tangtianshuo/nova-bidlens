@@ -15,7 +15,7 @@
 
 - [x] **E2E-01**: 用真实扫描 PDF 跑通完整链路 — 导入 PDF → MinerU 解析 → mapper → DocumentAst → Rust 引擎 → 风险检测结果 → UI 展示
 - [x] **E2E-02**: 验证 MinerU mapper 输出的 TableNode 在 Rust 引擎表格检测器中正确处理 — 确认 table detector 产出有效的 RiskFinding
-- [ ] **E2E-03**: 验证混合格式项目 (DOCX + PDF) 的风险检测 — 确认 file-pair assessment 跨格式正确工作
+- [x] **E2E-03**: 验证混合格式项目 (DOCX + PDF) 的风险检测 — 确认 file-pair assessment 跨格式正确工作
 
 ### Category 2: 集成 Bug 修复
 

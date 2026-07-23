@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.3.4
 milestone_name: MinerU 接入风险检测流程
-status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-07-23T07:42:57.361Z"
+status: verifying
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-07-23T07:44:24.845Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-23)
 
 Phase: 11 (E2E 验证) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-23
 
 Progress: [░░░░░░░░░░] 0%
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: —
 
 | Phase 11 P01 | 5min | 2 tasks | 1 files |
+| Phase 11 P02 | 8min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,8 @@ Recent decisions affecting current work:
 - v0.3.3: Token 管理通过 safeStorage 加密 + IPC + Settings UI
 - [Phase 11]: MinerU HTML tables may have non-rectangular rows — mapper preserves raw structure
 - [Phase 11]: risk.analyzeWithAst is async: returns 'started' first, then actual result with same request id
+- [Phase 11]: Inlined toEngineDocumentAst in test to avoid Electron ipcMain import chain
+- [Phase 11]: RPC helper skips {status:started} ack for async engine methods
 
 ### Pending Todos
 
@@ -78,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-23T07:42:57.349Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-07-23T07:44:24.837Z
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None
