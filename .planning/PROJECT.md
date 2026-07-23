@@ -66,9 +66,16 @@ Deliver explainable, traceable risk evidence for bid document similarity — eve
 
 **封存说明:** v0.3.1 (BGE-M3 semantic enhancement) 和 v0.3.2 (gold-set calibration) 计划封存
 
-## Next Milestone Goals
+## Current Milestone: v0.3.5 功能验证与 Bug 修复
 
-TBD — 运行 `/gsd:new-milestone` 开始下一个里程碑
+**Goal:** 通过功能性测试闭环验证，发现并修复 bug，打磨 UI，达到可发布质量
+
+**Target features:**
+- 功能性测试闭环验证（端到端手动/自动测试）
+- Bug 修复（基于 .planning/V0.3.5-BUG-TRACKER.md 登记的问题）
+- UI 重构（基于测试中发现的 UX 问题）
+
+**工作方式:** 人机协同，边验证边开发。用户登记 bug → Claude 读取并修复 → 再验证
 
 ## Key Decisions
 
@@ -97,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-23 after milestone v0.3.4 completion*
+*Last updated: 2026-07-23 after milestone v0.3.5 initialization*

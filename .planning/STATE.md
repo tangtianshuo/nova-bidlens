@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.3.4
-milestone_name: MinerU 接入风险检测流程
-status: executing
-stopped_at: Completed 13-02-PLAN.md
-last_updated: "2026-07-23T08:33:58Z"
+milestone: v0.3.5
+milestone_name: 功能验证与 Bug 修复
+status: testing
+stopped_at: Milestone initialized, awaiting functional testing
+last_updated: "2026-07-23T16:30:00Z"
 last_activity: 2026-07-23
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 33
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,42 +21,32 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-23)
 
 **Core value:** Deliver explainable, traceable risk evidence for bid document similarity
-**Current focus:** Phase 11 — E2E 验证
+**Current focus:** v0.3.5 功能验证与 Bug 修复
 
 ## Current Position
 
-Phase: 12 (集成 Bug 修复)
-Plan: 2 of 2
-Status: Ready to execute
+Phase: Not started (functional testing phase)
+Plan: —
+Status: Bug tracker created, awaiting user testing and bug registration
 Last activity: 2026-07-23
 
-Progress: [███░░░░░░░] 33%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-**Velocity:**
+**Velocity (v0.3.4):**
 
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: —
+- Total plans completed: 8
+- Total execution time: ~25 min
+- Average duration: ~3 min/plan
 
-**By Phase:**
+**By Phase (v0.3.4):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-
-**Recent Trend:**
-
-- Last 5 plans: —
-- Trend: —
-
-| Phase 11 P01 | 5min | 2 tasks | 1 files |
-| Phase 11 P02 | 8min | 2 tasks | 1 files |
-| Phase 11 P04 | 2min | 1 tasks | 1 files |
-| Phase 12 P01 | 3min | 2 tasks | 4 files |
-| Phase 12 P02 | 5min | 1 tasks | 3 files |
-| Phase 13 P01 | 5min | 2 tasks | 2 files |
-| Phase 13 P02 | 2min | 2 tasks | 2 files |
+| 11. E2E 验证 | 4 | 15min | 4min |
+| 12. 集成 Bug 修复 | 2 | 8min | 4min |
+| 13. UX 打磨 | 2 | 7min | 3.5min |
 
 ## Accumulated Context
 
@@ -66,32 +56,24 @@ Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
 - v0.3.3: MinerU 集成采用云端 API（mineru.net），不进行本地部署
-- v0.3.3: 推荐使用 pipeline 后端（延迟更低，支持更多语言）
-- v0.3.3: content_list.json → DocumentAst 映射路径已明确
-- v0.3.3: 扫描版 PDF 需异步处理（1-3 分钟）
 - v0.3.3: PDF pre-detect routing: scanned→MinerU, digital→pdf-parse→fallback
 - v0.3.3: Token 管理通过 safeStorage 加密 + IPC + Settings UI
-- [Phase 11]: MinerU HTML tables may have non-rectangular rows — mapper preserves raw structure
-- [Phase 11]: risk.analyzeWithAst is async: returns 'started' first, then actual result with same request id
-- [Phase 11]: Inlined toEngineDocumentAst in test to avoid Electron ipcMain import chain
-- [Phase 11]: RPC helper skips {status:started} ack for async engine methods
-- [Phase 11]: fileHash uses 'd'.repeat(64) and 'e'.repeat(64) for valid 64-char hex strings
-- [Phase 12]: MINERU_HARD_TIMEOUT_MS set to 300s (5 min) as safety ceiling for pollBatch
-- [Phase 12]: parserVersion initialized empty, updated from first parsed AST after parsing loop
-- [Phase 12]: MinerU availability checked via exported isMinerUAvailable() from parser-service
-- [Phase 13]: Error codes via Object.assign on Error, preserved through catch chain
-- [Phase 13]: Max 2 concurrent MinerU requests via simple counter+queue semaphore
+- [Phase 11]: risk.analyzeWithAst is async: returns 'started' first, then actual result
+- [Phase 12]: MINERU_HARD_TIMEOUT_MS = 300s, parserVersion dynamic from AST
+- [Phase 13]: Max 2 concurrent MinerU requests, DNS offline check, error codes with Chinese messages
+- [v0.3.5]: 人机协同方式 — 用户测试 + 登记 bug，Claude 读取 bug tracker 并修复
 
 ### Pending Todos
 
-None yet.
+- 用户进行功能性测试并登记 bug 到 V0.3.5-BUG-TRACKER.md
+- 根据登记的 bug 创建 v0.3.5 需求和路线图
 
 ### Blockers/Concerns
 
-- Pipeline 从未用真实扫描 PDF 端到端测试过，MinerU API 响应格式、mapper 输出质量、Rust 引擎对 MinerU AST 的处理均为验证假设
+- 需要用户手动测试 Electron app 的完整流程（集成测试只覆盖了 API 层，未覆盖 UI 层）
 
 ## Session Continuity
 
-Last session: 2026-07-23T08:33:58Z
-Stopped at: Completed 13-02-PLAN.md
-Resume file: None
+Last session: 2026-07-23T16:30:00Z
+Stopped at: v0.3.5 milestone initialized
+Resume file: .planning/V0.3.5-BUG-TRACKER.md
