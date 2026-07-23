@@ -52,7 +52,7 @@
   3. 混合格式项目（DOCX + PDF）的 file-pair assessment 跨格式正确工作，风险矩阵中显示跨格式结果
 **Plans**: 2 plans
 Plans:
-- [ ] 11-01-PLAN.md — PDF 全链路 E2E 验证（MinerU → mapper → AST → Rust 引擎 → RiskFinding）
+- [x] 11-01-PLAN.md — PDF 全链路 E2E 验证（MinerU → mapper → AST → Rust 引擎 → RiskFinding）
 - [ ] 11-02-PLAN.md — 混合格式项目（DOCX + PDF）跨格式风险检测验证
 
 ### Phase 12: 集成 Bug 修复
@@ -95,6 +95,6 @@ Phases execute in numeric order: 11 → 12 → 13
 | 8. 集成方案设计 | v0.3.3 | 4/4 | Complete | 2026-07-23 |
 | 9. 分发方案评估 | v0.3.3 | 2/2 | Complete | 2026-07-23 |
 | 10. node-pdf-to-markdown 评估 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
-| 11. E2E 验证 | v0.3.4 | 0/2 | Not started | - |
+| 11. E2E 验证 | v0.3.4 | 1/2 | In Progress|  |
 | 12. 集成 Bug 修复 | v0.3.4 | 0/? | Not started | - |
 | 13. UX 打磨 | v0.3.4 | 0/? | Not started | - |
