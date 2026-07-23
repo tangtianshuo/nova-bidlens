@@ -182,6 +182,12 @@ export interface BidLensApi {
   getStorageReport(): Promise<StorageReport>;
   cleanup(request: CleanupRequest): Promise<{ deletedCount: number }>;
 
+  // MinerU API config
+  mineruGetToken(): Promise<{ token: string | null }>;
+  mineruSaveToken(request: { token: string }): Promise<{ success: boolean }>;
+  mineruDeleteToken(): Promise<{ success: boolean }>;
+  mineruValidateToken(request?: { token?: string }): Promise<{ valid: boolean; error?: string }>;
+
   // Engine
   engineHandshake(): Promise<EngineHandshake>;
 

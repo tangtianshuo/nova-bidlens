@@ -75,6 +75,12 @@ const api: BidLensApi = {
   getStorageReport: () => ipcRenderer.invoke('settings:storageReport'),
   cleanup: (request: CleanupRequest) => ipcRenderer.invoke('settings:cleanup', request),
 
+  // MinerU API config
+  mineruGetToken: () => ipcRenderer.invoke('mineru:getToken'),
+  mineruSaveToken: (request: { token: string }) => ipcRenderer.invoke('mineru:saveToken', request),
+  mineruDeleteToken: () => ipcRenderer.invoke('mineru:deleteToken'),
+  mineruValidateToken: (request?: { token?: string }) => ipcRenderer.invoke('mineru:validateToken', request),
+
   // Engine
   engineHandshake: () => ipcRenderer.invoke('engine:handshake'),
 

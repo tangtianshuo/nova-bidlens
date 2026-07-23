@@ -7,13 +7,23 @@ import path from 'node:path';
 import type { ParseInput, ParseOptions, ParseResult } from '@bidlens/shared';
 import { globalRegistry, detectPdfType, MinerUParser } from '@bidlens/shared';
 import { log } from '../logger';
+import type { MineruConfigService } from './mineru-config';
 
 // Lazy-init MinerU parser instance (needs API token)
 let mineruParserInstance: MinerUParser | null = null;
+let mineruConfig: MineruConfigService | null = null;
+
+export function setMineruConfigService(config: MineruConfigService): void {
+  mineruConfig = config;
+}
+
+export function resetMinerUParser(): void {
+  mineruParserInstance = null;
+}
 
 function getMinerUParser(): MinerUParser | null {
   if (!mineruParserInstance) {
-    const token = process.env.MINERU_API_TOKEN;
+    const token = mineruConfig?.getToken() ?? process.env.MINERU_API_TOKEN;
     if (token) {
       mineruParserInstance = new MinerUParser(token);
     }

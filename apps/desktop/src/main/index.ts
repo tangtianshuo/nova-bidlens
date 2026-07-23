@@ -13,6 +13,7 @@ import { registerRiskReviewHandlers, shutdownRiskEngine } from './ipc/risk-revie
 import { registerMineruConfigHandlers } from './ipc/mineru-config-handlers';
 import { PersistenceManager } from './services/persistence';
 import { MineruConfigService } from './services/mineru-config';
+import { setMineruConfigService } from './services/parser-service';
 
 const isDev = !app.isPackaged;
 
@@ -95,6 +96,7 @@ function createWindow() {
   const mineruDataDir = process.env.BIDLENS_DATA_DIR || app.getPath('userData');
   const mineruConfig = new MineruConfigService(mineruDataDir);
   registerMineruConfigHandlers({ config: mineruConfig });
+  setMineruConfigService(mineruConfig);
 
   if (isDev) {
     log.info('[Main] Loading dev URL: http://localhost:5373');
