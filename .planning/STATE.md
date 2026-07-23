@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.3.3
 milestone_name: MinerU PDF 解析集成调研
-status: verifying
-stopped_at: Completed 08-04-PLAN.md
-last_updated: "2026-07-23T04:52:05.192Z"
+status: executing
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-07-23T05:02:57.988Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 6
   percent: 25
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-22)
 
 **Core value:** Deliver explainable, traceable risk evidence for bid document similarity
-**Current focus:** Phase 08 — integration-design
+**Current focus:** Phase 09 — distribution-evaluation
 
 ## Current Position
 
-Phase: 08 (integration-design) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
+Phase: 09 (distribution-evaluation) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-07-23
 
 Progress: [██░░░░░░░░] 25%
@@ -56,6 +56,7 @@ Progress: [██░░░░░░░░] 25%
 | Phase 08 P02 | 2min | 1 tasks | 2 files |
 | Phase 08 P03 | 2min | 2 tasks | 2 files |
 | Phase 08 P04 | 3min | 2 tasks | 4 files |
+| Phase 09 P01 | 2min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [Phase 08]: page_idx 0-indexed → 1-indexed conversion for BidLens convention
 - [Phase 08]: MinerU parser uses batch upload API for local files, not auto-registered (needs API token)
 - [Phase 08]: Export detectPdfType from @bidlens/shared main entry for desktop main process compatibility
+- [Phase 09]: Token validation uses actual batch API call (401=invalid, code 0=valid)
+- [Phase 09]: Retry only on transient network errors, not business logic errors
 
 ### Pending Todos
 
@@ -82,6 +85,6 @@ None — Phase 7 验证完成，MinerU 可行性已确认
 
 ## Session Continuity
 
-Last session: 2026-07-23T04:52:05.187Z
-Stopped at: Completed 08-04-PLAN.md
+Last session: 2026-07-23T05:02:57.983Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None

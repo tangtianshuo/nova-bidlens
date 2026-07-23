@@ -75,7 +75,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Token 安全管理 + IPC handlers + 网络重试
+- [x] 09-01-PLAN.md — Token 安全管理 + IPC handlers + 网络重试
 - [ ] 09-02-PLAN.md — IPC 桥接 + 设置界面 API 配置 Tab
 
 ### Phase 10: node-pdf-to-markdown 评估
