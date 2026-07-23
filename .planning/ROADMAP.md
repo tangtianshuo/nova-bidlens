@@ -4,6 +4,7 @@
 
 - ✅ **v0.3.0 Non-Embedding Similarity Risk Review** — Phases 1-6 (shipped)
 - ✅ **v0.3.3 MinerU PDF 解析集成调研** — Phases 7-10 (shipped 2026-07-23)
+- 🚧 **v0.3.4 MinerU 接入风险检测流程** — Phases 11-13 (in progress)
 
 ## Phases
 
@@ -31,15 +32,53 @@
 - [x] **Phase 9: 分发方案评估** — Token 安全管理, 网络重试, 设置 UI ✅ 2026-07-23
 - [x] **Phase 10: node-pdf-to-markdown 评估** — 轻量替代方案评估 ✅ 2026-07-23
 
-**Key Deliverables:**
-- MinerU 云端 API 集成 (mapper, parser, fallback)
-- PDF 类型检测 (扫描版/数字版分流)
-- Token 安全管理 (safeStorage + IPC + Settings UI)
-- node-pdf-to-markdown 评估报告
-
 </details>
 
+### 🚧 v0.3.4 MinerU 接入风险检测流程 (In Progress)
+
+**Milestone Goal:** 把 MinerU 接入实际的风险检测流程，让用户真正用起来。Pipeline 已端到端存在，工作是验证、修复集成 bug、打磨 UX。
+
+- [ ] **Phase 11: E2E 验证** — 用真实扫描 PDF 跑通完整链路，验证所有假设
+- [ ] **Phase 12: 集成 Bug 修复** — 修复硬编码元数据、死代码、缺失的能力声明
+- [ ] **Phase 13: UX 打磨** — 进度反馈、友好错误、离线检测、并发控制
+
+### Phase 11: E2E 验证
+**Goal**: 用真实扫描 PDF 跑通完整链路，验证 MinerU → mapper → DocumentAst → Rust 引擎 → 风险检测 → UI 展示的每个环节
+**Depends on**: Phase 10 (v0.3.3 调研完成)
+**Requirements**: E2E-01, E2E-02, E2E-03
+**Success Criteria** (what must be TRUE):
+  1. 用户导入扫描版 PDF 后，能在 UI 中看到风险检测结果（文本相似度 findings）
+  2. MinerU mapper 输出的 TableNode 能被 Rust 引擎表格检测器正确处理，产出有效的 RiskFinding
+  3. 混合格式项目（DOCX + PDF）的 file-pair assessment 跨格式正确工作，风险矩阵中显示跨格式结果
+**Plans**: TBD
+
+### Phase 12: 集成 Bug 修复
+**Goal**: 修复管道中的硬编码值、死代码和缺失能力声明，使 MinerU 路径行为正确
+**Depends on**: Phase 11
+**Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05
+**Success Criteria** (what must be TRUE):
+  1. DocumentAst 中的 parserVersion 和 fileFormat 反映实际使用的解析器和文件格式，而非硬编码值
+  2. file-validator 在 MinerU token 已配置时，为 PDF 文件返回正确的 parserId 和 MinerU capabilities
+  3. 用户可以取消正在进行的 MinerU 解析（AbortSignal 正确传播到 API 调用）
+  4. pollBatch 轮询在 5 分钟后自动超时并报错，不会无限等待
+**Plans**: TBD
+
+### Phase 13: UX 打磨
+**Goal**: MinerU 解析体验达到生产质量——有进度反馈、友好错误提示、网络检测和并发控制
+**Depends on**: Phase 12
+**Requirements**: UX-01, UX-02, UX-03, UX-04, UX-05
+**Success Criteria** (what must be TRUE):
+  1. MinerU 解析期间 UI 显示实时进度（已等待秒数），而非冻结的加载动画
+  2. Token 过期（401）时自动清除缓存实例并提示用户重新输入，而非永久失败
+  3. 离线状态下导入 PDF 时显示明确中文提示 "此文件需要云端解析，请检查网络连接"
+  4. API 错误（401/429/timeout）映射为用户友好的中文消息
+  5. 多文件导入时 MinerU 请求排队处理，不会同时发起过多云端请求
+**Plans**: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 11 → 12 → 13
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -53,3 +92,6 @@
 | 8. 集成方案设计 | v0.3.3 | 4/4 | Complete | 2026-07-23 |
 | 9. 分发方案评估 | v0.3.3 | 2/2 | Complete | 2026-07-23 |
 | 10. node-pdf-to-markdown 评估 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
+| 11. E2E 验证 | v0.3.4 | 0/? | Not started | - |
+| 12. 集成 Bug 修复 | v0.3.4 | 0/? | Not started | - |
+| 13. UX 打磨 | v0.3.4 | 0/? | Not started | - |

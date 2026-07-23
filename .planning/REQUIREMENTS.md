@@ -53,16 +53,16 @@
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| E2E-01 | TBD | TBD | Pending |
-| E2E-02 | TBD | TBD | Pending |
-| E2E-03 | TBD | TBD | Pending |
-| FIX-01 | TBD | TBD | Pending |
-| FIX-02 | TBD | TBD | Pending |
-| FIX-03 | TBD | TBD | Pending |
-| FIX-04 | TBD | TBD | Pending |
-| FIX-05 | TBD | TBD | Pending |
-| UX-01 | TBD | TBD | Pending |
-| UX-02 | TBD | TBD | Pending |
-| UX-03 | TBD | TBD | Pending |
-| UX-04 | TBD | TBD | Pending |
-| UX-05 | TBD | TBD | Pending |
+| E2E-01 | Phase 11 | TBD | Pending |
+| E2E-02 | Phase 11 | TBD | Pending |
+| E2E-03 | Phase 11 | TBD | Pending |
+| FIX-01 | Phase 12 | TBD | Pending |
+| FIX-02 | Phase 12 | TBD | Pending |
+| FIX-03 | Phase 12 | TBD | Pending |
+| FIX-04 | Phase 12 | TBD | Pending |
+| FIX-05 | Phase 12 | TBD | Pending |
+| UX-01 | Phase 13 | TBD | Pending |
+| UX-02 | Phase 13 | TBD | Pending |
+| UX-03 | Phase 13 | TBD | Pending |
+| UX-04 | Phase 13 | TBD | Pending |
+| UX-05 | Phase 13 | TBD | Pending |
