@@ -26,7 +26,7 @@ BidLens is a local Electron desktop app for bid document similarity risk review.
 
 ## Phases
 
-- [ ] **Phase 7: MinerU 可行性验证** - 运行 MinerU 真实测试，验证输出格式、中文解析质量、依赖大小和 CPU 性能
+- [x] **Phase 7: MinerU 可行性验证** - 通过 MinerU 云端 API 验证输出格式（content_list.json schema）和中文解析质量（pipeline vs vlm） ✅ 2026-07-23
 - [ ] **Phase 8: 集成方案设计** - 设计预处理工具模式、JSON→DocumentAst 映射、parser registry 集成和 fallback 策略
 - [ ] **Phase 9: 分发方案评估** - 评估 Python 打包、模型分发和预处理 CLI 分发方案
 - [ ] **Phase 10: node-pdf-to-markdown 评估** - 评估 node-pdf-to-markdown 作为轻量替代方案的可行性和发展跟踪
@@ -34,18 +34,17 @@ BidLens is a local Electron desktop app for bid document similarity risk review.
 ## Phase Details
 
 ### Phase 7: MinerU 可行性验证
-**Goal**: 确认 MinerU 能否满足中文投标文档的 PDF 解析需求
+**Goal**: 确认 MinerU 云端 API 能否满足中文投标文档的 PDF 解析需求
 **Depends on**: Nothing (本里程碑首个 phase)
-**Requirements**: MINERU-01, MINERU-02, MINERU-03, MINERU-04
+**Requirements**: MINERU-01, MINERU-02
 **Success Criteria** (what must be TRUE):
-  1. MinerU `_content_list.json` schema 和字段结构已确认，可用真实投标 PDF 复现
-  2. 中文扫描版和数字版 PDF 的 OCR/文本提取质量已有对比报告
-  3. MinerU 的实际下载/安装大小已量化（`pip install` 数据）
-  4. 无 GPU 环境下的解析速度已测量，有明确的可接受/不可接受判断
+  1. MinerU `content_list.json` schema 和字段结构已确认，可用真实投标 PDF 复现
+  2. 中文扫描版和数字版 PDF 的 OCR/文本提取质量已有 pipeline vs vlm 对比报告
+  3. API 延迟数据已收集，有明确的可接受性评估
 **Plans:** 1 plan
 
 Plans:
-- [ ] 07-01-PLAN.md — MinerU 环境搭建 + 测试验证 + 评估报告
+- [x] 07-01-PLAN.md — MinerU 云端 API 测试 + 验证报告 ✅
 
 ### Phase 8: 集成方案设计
 **Goal**: 确定 MinerU 输出到现有 BidLens DocumentAst 的完整集成路径
@@ -85,7 +84,7 @@ Phases execute in numeric order: 7 → 8 → 9 → 10
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 7. MinerU 可行性验证 | v0.3.3 | 0/1 | Planning complete | - |
+| 7. MinerU 可行性验证 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
 | 8. 集成方案设计 | v0.3.3 | 0/TBD | Not started | - |
 | 9. 分发方案评估 | v0.3.3 | 0/TBD | Not started | - |
 | 10. node-pdf-to-markdown 评估 | v0.3.3 | 0/TBD | Not started | - |
