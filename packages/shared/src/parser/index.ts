@@ -17,6 +17,9 @@ export { ParserRegistry, globalRegistry } from './registry.js';
 export { Docx4jsParser, docx4jsParser } from './docx/index.js';
 export { PdfParser, pdfParser } from './pdf/index.js';
 export { NzbtfParser, nzbtfParser } from './nzbtf/index.js';
+// MinerU parser: not auto-registered (needs API token)
+// Consumer should: const p = new MinerUParser(token); globalRegistry.register(p);
+export { MinerUParser } from './mineru/index.js';
 
 // 导出便捷解析函数
 import { globalRegistry } from './registry.js';
