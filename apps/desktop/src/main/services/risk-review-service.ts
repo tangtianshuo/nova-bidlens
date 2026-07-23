@@ -9,7 +9,7 @@ import type {
   SubmissionState, AuditEvent, AnalysisCheckpoint, DetectorRun, Evidence,
   ExportRiskReportRequest, ExportRiskReportResponse, FilePairAssessment,
 } from '@bidlens/shared';
-import { parseDocumentFile, type ParserServiceOptions } from './parser-service.js';
+import { parseDocumentFile, type ParserServiceOptions, isMinerUAvailable } from './parser-service.js';
 import { validateFile } from './file-validator.js';
 import { generateMarkdownReport, generateHtmlReport, computeReportHash } from './report-generator.js';
 import { EngineManager, toEngineDocumentAst, type RiskAnalyzeRequest, type RiskProgressNotification } from './engine-manager.js';
@@ -121,7 +121,7 @@ export class RiskReviewService {
       preset: request.preset,
       modelVersion: 'rust-engine',
       ruleVersion: '1.0.0',
-      parserVersion: '0.2.2',
+      parserVersion: '',
       matcherVersion: 'lexical-1.0.0',
     });
 
@@ -335,7 +335,8 @@ export class RiskReviewService {
       // ── validating ──
       if (startIdx <= 0) {
         this.setPhase(projectId, 'validating');
-        const validations = await Promise.all(inputs.map((file) => validateFile(file.path)));
+        const mineruAvailable = isMinerUAvailable();
+        const validations = await Promise.all(inputs.map((file) => validateFile(file.path, { mineruAvailable })));
         if (validations.some((result) => !result.supported || result.error)) throw new Error('存在不可解析或不支持的文件');
         this.checkCancelled(abort, projectId);
       }
@@ -371,6 +372,11 @@ export class RiskReviewService {
             this.cacheDocumentAst(result.ast);
           }
         }
+      }
+
+      // update project parserVersion from actual parser used
+      if (parsed.length > 0 && parsed[0].parserVersion) {
+        this.projectRepo.updateParserVersion(projectId, parsed[0].parserVersion);
       }
 
       // update submission statuses to 'extracted'
@@ -653,7 +659,8 @@ export class RiskReviewService {
       const astJson = JSON.stringify(ast);
       const astEncrypted = encrypt(astJson, this.encryptionKey);
       this.documentVersionRepo.create({
-        sha256: ast.sha256, fileName: ast.filename, fileFormat: 'docx',
+        sha256: ast.sha256, fileName: ast.filename,
+        fileFormat: (path.extname(ast.filename).slice(1).toLowerCase() || 'docx') as 'docx' | 'pdf' | 'nzbtf',
         fileSizeBytes: 0, pageCount: ast.pageCount ?? undefined,
         parserVersion: ast.parserVersion, astEncrypted,
       });

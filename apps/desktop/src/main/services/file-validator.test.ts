@@ -109,4 +109,28 @@ describe('file-validator', async () => {
     expect(result.encrypted).toBe(true);
     expect(result.error?.code).toBe('FILE_ENCRYPTED');
   });
+
+  it('returns mineru-parser parserId for PDF when mineruAvailable is true', async () => {
+    vi.mocked(fs.access).mockResolvedValueOnce(undefined as never);
+    vi.mocked(fs.stat).mockResolvedValueOnce({ size: 1024 } as never);
+
+    const result = await validateFile('/test/file.pdf', { mineruAvailable: true });
+
+    expect(result.parserId).toBe('mineru-parser');
+    expect(result.supported).toBe(true);
+    // MinerU supports table extraction
+    const tableCap = result.capabilities.find(c => c.dimension === 'table');
+    expect(tableCap?.state).toBe('supported');
+  });
+
+  it('returns pdf-parser parserId for PDF when mineruAvailable is false', async () => {
+    vi.mocked(fs.access).mockResolvedValueOnce(undefined as never);
+    vi.mocked(fs.stat).mockResolvedValueOnce({ size: 1024 } as never);
+
+    const result = await validateFile('/test/file.pdf', { mineruAvailable: false });
+
+    expect(result.parserId).toBe('pdf-parser');
+    const tableCap = result.capabilities.find(c => c.dimension === 'table');
+    expect(tableCap?.state).toBe('degraded');
+  });
 });

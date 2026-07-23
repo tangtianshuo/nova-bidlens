@@ -61,6 +61,10 @@ function detectCapabilities(ext: string, parserId?: string): CapabilityResult[] 
       if (parserId === 'docx4js') {
         return { dimension, state: 'supported' as const };
       }
+      if (parserId === 'mineru-parser') {
+        // MinerU provides good table extraction for PDFs
+        return { dimension, state: 'supported' as const };
+      }
       if (parserId === 'pdf-parser') {
         // PDF tables are harder to extract, degrade
         return { dimension, state: 'degraded' as const, reason: 'PDF表格提取精度有限' };
@@ -99,7 +103,7 @@ function detectCapabilities(ext: string, parserId?: string): CapabilityResult[] 
 /**
  * Validate a single file and detect its capabilities
  */
-export async function validateFile(filePath: string): Promise<FileValidationResult> {
+export async function validateFile(filePath: string, options?: { mineruAvailable?: boolean }): Promise<FileValidationResult> {
   const { access, stat } = await import('fs/promises');
   const ext = path.extname(filePath).slice(1).toLowerCase();
   const warnings: string[] = [];
@@ -162,7 +166,12 @@ export async function validateFile(filePath: string): Promise<FileValidationResu
   // Check if parser exists for this extension
   const parser = globalRegistry.findByExtension(ext);
   const supported = parser !== null;
-  const parserId = parser?.id;
+  let parserId = parser?.id;
+
+  // Override parserId for PDFs when MinerU is available
+  if (ext === 'pdf' && options?.mineruAvailable) {
+    parserId = 'mineru-parser';
+  }
 
   if (!supported) {
     warnings.push(`不支持的文件格式: .${ext}`);

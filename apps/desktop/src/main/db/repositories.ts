@@ -226,6 +226,11 @@ export function createProjectRepository(db: Database.Database) {
         .run(elapsedMs, now(), id);
     },
 
+    updateParserVersion(id: string, parserVersion: string): void {
+      db.prepare(`UPDATE risk_projects SET parser_version = ?, updated_at = ? WHERE id = ?`)
+        .run(parserVersion, now(), id);
+    },
+
     delete(id: string): void {
       db.prepare(`DELETE FROM risk_projects WHERE id = ?`).run(id);
     },
