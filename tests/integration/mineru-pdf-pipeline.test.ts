@@ -397,18 +397,21 @@ describe('MinerU PDF Pipeline E2E', () => {
 
     it('risk.analyzeWithAst returns findings with evidence', async () => {
       const blocks = mapContentListToAst(scannedItems);
-      const ast = makeAst(blocks, 'scanned-test.pdf', 'sha256-scanned-test');
+      const hash1 = 'a'.repeat(64); // valid 32-byte hex
+      const hash2 = 'b'.repeat(64);
+      const ast = makeAst(blocks, 'scanned-test.pdf', hash1);
 
-      // Build two identical submissions to trigger similarity detection
+      // Build two submissions with same content but different fileHash
+      // to trigger cross-submission similarity detection
       const submission = {
         submissionId: 'sub-pdf-1',
-        fileHash: ast.sha256,
+        fileHash: hash1,
         ast: buildEngineAst(ast),
       };
       const submission2 = {
         submissionId: 'sub-pdf-2',
-        fileHash: 'sha256-scanned-test-2',
-        ast: buildEngineAst(makeAst(blocks, 'scanned-test-2.pdf', 'sha256-scanned-test-2')),
+        fileHash: hash2,
+        ast: buildEngineAst(makeAst(blocks, 'scanned-test-2.pdf', hash2)),
       };
 
       const result = (await rpcCall(engineBinary!, {
