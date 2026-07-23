@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Monitor, Moon, Sun, HardDrive, Info } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Monitor, Moon, Sun, HardDrive, Info, Key, CheckCircle, XCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getThemePreference, setThemePreference, type Theme } from '../../lib/theme';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 import { Separator } from '../../components/ui/separator';
 
 interface SettingsDialogProps {
@@ -20,11 +21,61 @@ interface SettingsDialogProps {
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [theme, setTheme] = useState<Theme>(getThemePreference);
+  const [tokenInput, setTokenInput] = useState('');
+  const [showToken, setShowToken] = useState(false);
+  const [maskedToken, setMaskedToken] = useState<string | null>(null);
+  const [hasStoredToken, setHasStoredToken] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{ valid: boolean; error?: string } | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      window.bidlens.mineruGetToken().then(({ token }) => {
+        setMaskedToken(token);
+        setHasStoredToken(!!token);
+        setValidationResult(null);
+      });
+    }
+  }, [open]);
 
   const handleThemeChange = (newTheme: Theme) => {
     setThemePreference(newTheme);
     setTheme(newTheme);
   };
+
+  const handleSaveToken = useCallback(async () => {
+    if (!tokenInput.trim()) return;
+    setSaving(true);
+    try {
+      await window.bidlens.mineruSaveToken({ token: tokenInput.trim() });
+      setTokenInput('');
+      const { token } = await window.bidlens.mineruGetToken();
+      setMaskedToken(token);
+      setHasStoredToken(!!token);
+    } finally {
+      setSaving(false);
+    }
+  }, [tokenInput]);
+
+  const handleValidateToken = useCallback(async () => {
+    setValidating(true);
+    try {
+      const result = await window.bidlens.mineruValidateToken(
+        tokenInput.trim() ? { token: tokenInput.trim() } : undefined
+      );
+      setValidationResult(result);
+    } finally {
+      setValidating(false);
+    }
+  }, [tokenInput]);
+
+  const handleDeleteToken = useCallback(async () => {
+    await window.bidlens.mineruDeleteToken();
+    setMaskedToken(null);
+    setHasStoredToken(false);
+    setValidationResult(null);
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -38,6 +89,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           <TabsList>
             <TabsTrigger value="appearance">外观</TabsTrigger>
             <TabsTrigger value="data">数据与隐私</TabsTrigger>
+            <TabsTrigger value="api">API 配置</TabsTrigger>
             <TabsTrigger value="about">关于</TabsTrigger>
           </TabsList>
 
@@ -108,6 +160,86 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   清除所有数据
                 </Button>
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="api" className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text)]">
+                MinerU API Token
+              </label>
+              <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                用于解析扫描版 PDF 文档的云端 API 令牌
+              </p>
+
+              <div className="mt-3 flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type={showToken ? 'text' : 'password'}
+                    value={tokenInput}
+                    onChange={(e) => setTokenInput(e.target.value)}
+                    placeholder="sk-..."
+                    className="pr-9"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowToken(!showToken)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                  >
+                    {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleSaveToken}
+                  disabled={!tokenInput.trim() || saving}
+                >
+                  {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                  保存
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleValidateToken}
+                  disabled={validating}
+                >
+                  {validating ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                  验证
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteToken}
+                  disabled={!hasStoredToken}
+                >
+                  清除
+                </Button>
+              </div>
+
+              {validationResult !== null && (
+                <div className="mt-3 flex items-center gap-2 text-sm">
+                  {validationResult.valid ? (
+                    <>
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span className="text-green-600">Token 有效</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      <span className="text-red-600">{validationResult.error ?? 'Token 无效'}</span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {maskedToken && (
+                <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+                  当前存储: {maskedToken}
+                </p>
+              )}
             </div>
           </TabsContent>
 
