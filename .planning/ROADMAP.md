@@ -64,10 +64,13 @@ Plans:
   2. file-validator 在 MinerU token 已配置时，为 PDF 文件返回正确的 parserId 和 MinerU capabilities
   3. 用户可以取消正在进行的 MinerU 解析（AbortSignal 正确传播到 API 调用）
   4. pollBatch 轮询在 5 分钟后自动超时并报错，不会无限等待
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 12-01-PLAN.md — 修复 parserVersion/fileFormat 硬编码 + file-validator MinerU 能力识别 (FIX-01, FIX-02, FIX-03)
+- [x] 12-02-PLAN.md — MinerU AbortSignal 传播 + pollBatch 硬超时 (FIX-04, FIX-05)
 
 ### Phase 13: UX 打磨
-**Goal**: MinerU 解析体验达到生产质量——有进度反馈、友好错误提示、网络检测和并发控制
+**Goal**: MinerU 解析体验达到生产质量——有进度反馈、友好错误提示、离线检测和并发控制
 **Depends on**: Phase 12
 **Requirements**: UX-01, UX-02, UX-03, UX-04, UX-05
 **Success Criteria** (what must be TRUE):
@@ -96,5 +99,5 @@ Phases execute in numeric order: 11 → 12 → 13
 | 9. 分发方案评估 | v0.3.3 | 2/2 | Complete | 2026-07-23 |
 | 10. node-pdf-to-markdown 评估 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
 | 11. E2E 验证 | v0.3.4 | 4/4 | Complete   | 2026-07-23 |
-| 12. 集成 Bug 修复 | v0.3.4 | 0/? | Not started | - |
+| 12. 集成 Bug 修复 | v0.3.4 | 1/2 | In Progress|  |
 | 13. UX 打磨 | v0.3.4 | 0/? | Not started | - |

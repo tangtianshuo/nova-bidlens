@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.3.4
 milestone_name: MinerU 接入风险检测流程
 status: verifying
-stopped_at: Completed 11-04-PLAN.md
-last_updated: "2026-07-23T08:04:16.577Z"
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-07-23T08:18:39.421Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
-  percent: 0
+  total_plans: 6
+  completed_plans: 5
+  percent: 33
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-07-23)
 
 ## Current Position
 
-Phase: 11 (E2E 验证) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Phase: 12 (集成 Bug 修复) — NEXT
+Plan: 0 of TBD
+Status: Phase 11 verified (12/12 truths), starting Phase 12
 Last activity: 2026-07-23
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 11 P01 | 5min | 2 tasks | 1 files |
 | Phase 11 P02 | 8min | 2 tasks | 1 files |
 | Phase 11 P04 | 2min | 1 tasks | 1 files |
+| Phase 12 P02 | 5min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,7 @@ Recent decisions affecting current work:
 - [Phase 11]: Inlined toEngineDocumentAst in test to avoid Electron ipcMain import chain
 - [Phase 11]: RPC helper skips {status:started} ack for async engine methods
 - [Phase 11]: fileHash uses 'd'.repeat(64) and 'e'.repeat(64) for valid 64-char hex strings
+- [Phase 12]: MINERU_HARD_TIMEOUT_MS set to 300s (5 min) as safety ceiling for pollBatch
 
 ### Pending Todos
 
@@ -83,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-23T08:04:16.569Z
-Stopped at: Completed 11-04-PLAN.md
+Last session: 2026-07-23T08:18:39.415Z
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None
