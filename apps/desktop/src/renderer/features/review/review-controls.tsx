@@ -150,7 +150,7 @@ export function ReviewControls({
           onChange={handleNoteChange}
           disabled={disabled}
           placeholder="添加备注..."
-          className="w-full rounded-[5px] border border-[var(--color-border)] bg-[var(--color-bg-input)] p-2 text-xs text-[var(--color-text)] resize-vertical focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg-input)] p-2 text-xs text-[var(--color-text)] resize-vertical focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
           style={{ minHeight: 66 }}
           aria-label="审核备注"
         />

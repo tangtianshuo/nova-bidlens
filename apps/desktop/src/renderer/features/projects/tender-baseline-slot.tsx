@@ -120,7 +120,7 @@ export function TenderBaselineSlot({
         {/* Slot content */}
         {value ? (
           <div className="flex items-center gap-4 p-5">
-            <div className="flex h-[58px] w-[48px] shrink-0 items-center justify-center rounded-[5px] border border-[var(--color-border-strong)] bg-[var(--color-bg-subtle)]">
+            <div className="flex h-[58px] w-[48px] shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-subtle)]">
               <FileText className="h-6 w-6 text-[var(--color-text-muted)]" />
             </div>
             <div className="flex flex-col gap-0.5 overflow-hidden">
@@ -147,7 +147,7 @@ export function TenderBaselineSlot({
             className="flex w-full cursor-pointer items-center gap-4 p-5 text-left hover:bg-[var(--color-bg-hover)]"
             onClick={() => { void selectBaseline(); }}
           >
-            <div className="flex h-[58px] w-[48px] shrink-0 items-center justify-center rounded-[5px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-subtle)]">
+            <div className="flex h-[58px] w-[48px] shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-subtle)]">
               <Upload className="h-6 w-6 text-[var(--color-text-muted)]" />
             </div>
             <div className="flex flex-col gap-0.5">

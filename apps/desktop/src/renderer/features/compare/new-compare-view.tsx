@@ -181,7 +181,7 @@ export function NewCompareView() {
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="mr-1 font-semibold text-[var(--color-text-secondary)]">检测维度</span>
             {['正文', '表格', '格式', '批注', '修订'].map((dimension) => (
-              <span key={dimension} className="inline-flex items-center gap-1 rounded-[5px] border border-[var(--color-added-border)] bg-[var(--color-added-bg)] px-2 py-0.5 text-[var(--color-added)]" style={{ minHeight: 26, fontSize: 12 }}>
+              <span key={dimension} className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--color-added-border)] bg-[var(--color-added-bg)] px-2 py-0.5 text-[var(--color-added)]" style={{ minHeight: 26, fontSize: 12 }}>
                 <Check className="h-3 w-3" />{dimension}
               </span>
             ))}
@@ -200,7 +200,7 @@ export function NewCompareView() {
           {showAdvanced && (
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 pt-1">
               <div><strong className="block text-sm text-[var(--color-text)]">匹配灵敏度</strong><span className="text-xs text-[var(--color-text-muted)]">标准适用于结构相近但措辞可能调整的文档</span></div>
-              <div className="inline-flex items-center p-[3px] border border-[var(--color-border)] rounded-[5px] bg-[var(--color-bg-subtle)]">
+              <div className="inline-flex items-center p-[3px] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]">
                 {(['strict', 'standard', 'loose'] as const).map((opt) => (
                   <button
                     key={opt}
@@ -299,7 +299,7 @@ function FileSlotCard({ label, slot, onSelect, onClear, onDropFile }: FileSlotCa
       >
         {hasFile ? (
           <>
-            <div className="flex-shrink-0 grid place-items-center rounded-[5px] border border-[var(--color-border-strong)] bg-[var(--color-bg-subtle)]" style={{ width: 48, height: 58 }}>
+            <div className="flex-shrink-0 grid place-items-center rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-bg-subtle)]" style={{ width: 48, height: 58 }}>
               <FileText className="h-6 w-6 text-[var(--color-text-muted)]" />
             </div>
             <div className="min-w-0 flex-1">
