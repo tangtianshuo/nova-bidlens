@@ -200,7 +200,7 @@ async function buildPdfAst(): Promise<DocumentAst> {
   return {
     id: 'pdf-test-id',
     filename: 'mineru_test_scanned.pdf',
-    sha256: 'pdf-sha256-placeholder',
+    sha256: 'e'.repeat(64), // 合法 64 字符 hex
     pageCount: null,
     wordCount: countWords(blocks),
     parserVersion: 'mineru-api-v4',
@@ -230,7 +230,7 @@ async function buildDocxAst(): Promise<DocumentAst> {
   return {
     id: 'docx-test-id',
     filename: 'mineru_test_file_docx.docx',
-    sha256: 'docx-sha256-placeholder',
+    sha256: 'd'.repeat(64), // 合法 64 字符 hex
     pageCount: 1,
     wordCount: 100,
     parserVersion: 'docx4js',
@@ -342,6 +342,13 @@ describe('Mixed Format Risk Detection', () => {
     // findings may be empty (different documents) — that's OK
     expect(Array.isArray(result.findings)).toBe(true);
 
+    // 验证检测器执行记录
+    expect(result.detectorRuns).toBeDefined();
+    expect(result.detectorRuns.length).toBeGreaterThan(0);
+    for (const run of result.detectorRuns) {
+      expect(['completed', 'skipped']).toContain(run.status);
+    }
+
     // filePairAssessments must exist with at least one entry
     expect(result.filePairAssessments).toBeDefined();
     expect(result.filePairAssessments.length).toBeGreaterThanOrEqual(1);
@@ -357,7 +364,9 @@ describe('Mixed Format Risk Detection', () => {
     expect(crossPair!.symmetricSimilarity).toBeLessThanOrEqual(1);
     expect(['low', 'medium', 'high']).toContain(crossPair!.riskLevel);
 
-    // If findings exist, verify submission references
+    // 不同内容的 submission 通常不会产出 findings（无相似文本段落）
+    // findings.length === 0 是正常的——这里验证的是 filePairAssessment，不是 findings
+    // 如果有 findings，验证 evidence 引用正确
     if (result.findings.length > 0) {
       for (const finding of result.findings) {
         expect(finding.involvedSubmissionIds.some(
