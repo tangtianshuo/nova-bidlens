@@ -196,7 +196,7 @@ export function SubmissionFileList({
       const incoming: SubmissionFile[] = [];
       for (const file of Array.from(fileList)) {
         const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-        if (ext !== 'docx' && ext !== 'pdf') continue;
+        if (ext !== 'docx' && ext !== 'pdf' && ext !== 'nzbtf') continue;
         // Electron extends File with a `path` property containing the full filesystem path
         const path = (file as File & { path?: string }).path ?? file.name;
         const format = ext as 'docx' | 'pdf' | 'nzbtf';
