@@ -36,7 +36,12 @@ async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
         err.message.includes('429') ||
         err.message.includes('503')
       );
-      if (!isRetryable || attempt === MAX_RETRIES) throw err;
+      if (!isRetryable || attempt === MAX_RETRIES) {
+        if (err instanceof Error && err.message.includes('fetch failed')) {
+          throw Object.assign(err, { code: 'MINERU_OFFLINE' });
+        }
+        throw err;
+      }
       const delay = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
       console.warn(`[MinerU] ${label} attempt ${attempt + 1} failed, retrying in ${delay}ms:`, err.message);
       await new Promise(r => setTimeout(r, delay));
@@ -145,14 +150,21 @@ export class MinerUParser implements DocumentParser {
         parserId: this.id,
       };
     } catch (error) {
+      const errorCode = (error as { code?: string })?.code ?? 'MINERU_ERROR';
+      const friendlyMessages: Record<string, string> = {
+        AUTH_EXPIRED: 'MinerU API 认证失败，请检查 Token 是否过期',
+        MINERU_TIMEOUT: 'MinerU 解析超时（5分钟），请稍后重试',
+        MINERU_OFFLINE: '此文件需要云端解析，请检查网络连接',
+        RATE_LIMITED: 'MinerU API 请求过于频繁，请稍后重试',
+      };
       return {
         success: false,
         warnings,
         duration: Date.now() - startTime,
         parserId: this.id,
         error: {
-          code: 'MINERU_ERROR',
-          message: error instanceof Error ? error.message : 'Unknown MinerU error',
+          code: errorCode,
+          message: friendlyMessages[errorCode] ?? (error instanceof Error ? error.message : '未知 MinerU 错误'),
         },
       };
     }
@@ -176,6 +188,9 @@ export class MinerUParser implements DocumentParser {
       signal,
     }), 'batch upload');
 
+    if (urlRes.status === 401) {
+      throw Object.assign(new Error('MinerU API 认证失败，请检查 Token 是否过期'), { code: 'AUTH_EXPIRED' });
+    }
     if (!urlRes.ok) {
       throw new Error(`MinerU batch URL error ${urlRes.status}: ${await urlRes.text()}`);
     }
@@ -219,6 +234,9 @@ export class MinerUParser implements DocumentParser {
         signal,
       });
 
+      if (res.status === 401) {
+        throw Object.assign(new Error('MinerU API 认证失败，请检查 Token 是否过期'), { code: 'AUTH_EXPIRED' });
+      }
       if (!res.ok) {
         throw new Error(`MinerU poll error ${res.status}`);
       }
@@ -250,7 +268,7 @@ export class MinerUParser implements DocumentParser {
       await new Promise(r => setTimeout(r, MINERU_POLL_INTERVAL_MS));
     }
 
-    throw new Error('MinerU task timeout');
+    throw Object.assign(new Error('MinerU 解析超时（5分钟），请稍后重试'), { code: 'MINERU_TIMEOUT' });
   }
 
   /**
