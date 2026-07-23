@@ -27,8 +27,8 @@ BidLens is a local Electron desktop app for bid document similarity risk review.
 ## Phases
 
 - [x] **Phase 7: MinerU 可行性验证** - 通过 MinerU 云端 API 验证输出格式（content_list.json schema）和中文解析质量（pipeline vs vlm） ✅ 2026-07-23
-- [ ] **Phase 8: 集成方案设计** - 设计预处理工具模式、JSON→DocumentAst 映射、parser registry 集成和 fallback 策略
-- [ ] **Phase 9: 分发方案评估** - 评估 Python 打包、模型分发和预处理 CLI 分发方案
+- [x] **Phase 8: 集成方案设计** - 设计预处理工具模式、JSON→DocumentAst 映射、parser registry 集成和 fallback 策略 ✅ 2026-07-23
+- [ ] **Phase 9: 分发方案评估** - API Token 安全管理、网络重试策略和用户配置界面
 - [ ] **Phase 10: node-pdf-to-markdown 评估** - 评估 node-pdf-to-markdown 作为轻量替代方案的可行性和发展跟踪
 
 ## Phase Details
@@ -64,14 +64,19 @@ Plans:
 - [x] 08-04-PLAN.md — PDF 预检测分流 + fallback 策略
 
 ### Phase 9: 分发方案评估
-**Goal**: 确定 MinerU Python 依赖和模型权重的分发策略
-**Depends on**: Phase 7
+**Goal**: 实现 MinerU API Token 安全管理、网络重试策略和用户配置界面
+**Depends on**: Phase 8
 **Requirements**: DIST-01, DIST-02, DIST-03
 **Success Criteria** (what must be TRUE):
-  1. python-embed vs PyInstaller vs 用户自行安装三种方案的优劣对比已完成
-  2. 模型分发方案（捆绑/首次下载/ModelScope 镜像）已有推荐，考虑中国网络环境
-  3. 预处理 CLI 的分发方式已确定（独立工具 vs 集成到 Electron 安装流程）
-**Plans**: TBD
+  1. API Token 使用 Electron safeStorage 加密存储，不再依赖环境变量
+  2. 用户可在设置界面输入、验证和管理 API Token
+  3. MinerU API 调用具备指数退避重试机制，处理瞬态网络故障
+  4. Parser service 从配置服务读取 Token，环境变量作为 fallback
+**Plans**: 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Token 安全管理 + IPC handlers + 网络重试
+- [ ] 09-02-PLAN.md — IPC 桥接 + 设置界面 API 配置 Tab
 
 ### Phase 10: node-pdf-to-markdown 评估
 **Goal**: 确认 node-pdf-to-markdown 是否可作为轻量级 PDF 解析替代方案
@@ -91,6 +96,6 @@ Phases execute in numeric order: 7 → 8 → 9 → 10
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 7. MinerU 可行性验证 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
-| 8. 集成方案设计 | v0.3.3 | 0/4 | Not started | - |
-| 9. 分发方案评估 | v0.3.3 | 0/TBD | Not started | - |
+| 8. 集成方案设计 | v0.3.3 | 4/4 | Complete | 2026-07-23 |
+| 9. 分发方案评估 | v0.3.3 | 0/2 | Not started | - |
 | 10. node-pdf-to-markdown 评估 | v0.3.3 | 0/TBD | Not started | - |
