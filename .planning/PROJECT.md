@@ -21,7 +21,7 @@ Deliver explainable, traceable risk evidence for bid document similarity — eve
 
 ### Active
 
-- [ ] **MinerU integration research** — assess Python dependency, alternative integration paths, Electron feasibility
+- [ ] **MinerU risk pipeline integration** — wire MinerU parser into document import and risk detection flow
 
 ### Deferred (from v0.3.0)
 
@@ -55,16 +55,16 @@ Deliver explainable, traceable risk evidence for bid document similarity — eve
 - **File ownership:** Hotspot files have single owners until gate merge
 - **Rust edition 2024:** Must align CI and toolchain to compatible compiler
 
-## Current Milestone: v0.3.3 MinerU PDF 解析集成调研
+## Current Milestone: v0.3.4 MinerU 接入风险检测流程
 
-**Goal:** 调研 MinerU 在 Electron 桌面应用中的集成可行性，确定接入方式和 Python 依赖情况
+**Goal:** 把 MinerU 接入实际的风险检测流程，让用户真正用起来
 
 **Target features:**
-- MinerU 集成可行性评估
-- Python 依赖分析与替代方案调研
-- Electron 桌面应用集成路径设计
+- MinerU parser 注册到 ParserRegistry，PDF 自动走 MinerU 解析
+- 解析后的 DocumentAst 流入风险检测 pipeline
+- 端到端可验证：导入 PDF → MinerU 解析 → 风险检测 → 结果展示
 
-**封存说明:** v0.3.1 (BGE-M3 semantic enhancement) 和 v0.3.2 (gold-set calibration) 计划封存，v0.3.4 将讨论 langextract 雷同性分析增强
+**封存说明:** v0.3.1 (BGE-M3 semantic enhancement) 和 v0.3.2 (gold-set calibration) 计划封存
 
 ## Key Decisions
 
@@ -93,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-22 after milestone v0.3.3 initialization*
+*Last updated: 2026-07-23 after milestone v0.3.4 initialization*
