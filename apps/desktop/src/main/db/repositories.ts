@@ -337,6 +337,10 @@ export function createFindingRepository(db: Database.Database) {
       return id;
     },
 
+    deleteByProject(projectId: string): void {
+      db.prepare(`DELETE FROM risk_findings WHERE project_id = ?`).run(projectId);
+    },
+
     getByProject(projectId: string, filters?: { riskLevel?: RiskLevel; reviewStatus?: FindingReviewStatus }): FindingRow[] {
       let sql = `SELECT * FROM risk_findings WHERE project_id = ?`;
       const args: unknown[] = [projectId];
@@ -545,6 +549,10 @@ export function createCheckpointRepository(db: Database.Database) {
       return db.prepare(`SELECT * FROM analysis_checkpoints WHERE project_id = ? ORDER BY created_at DESC LIMIT 1`)
         .get(projectId) as CheckpointRow | undefined;
     },
+
+    deleteByProject(projectId: string): void {
+      db.prepare(`DELETE FROM analysis_checkpoints WHERE project_id = ?`).run(projectId);
+    },
   };
 }
 
@@ -723,6 +731,10 @@ export function createDetectorRunRepository(db: Database.Database) {
     getByProject(projectId: string): DetectorRunRow[] {
       return db.prepare(`SELECT * FROM detector_runs WHERE project_id = ? ORDER BY created_at`).all(projectId) as DetectorRunRow[];
     },
+
+    deleteByProject(projectId: string): void {
+      db.prepare(`DELETE FROM detector_runs WHERE project_id = ?`).run(projectId);
+    },
   };
 }
 
@@ -776,6 +788,10 @@ export function createProjectRiskAssessmentRepository(db: Database.Database) {
 
     getByProject(projectId: string): ProjectRiskAssessmentRow | undefined {
       return db.prepare(`SELECT * FROM project_risk_assessments WHERE project_id = ?`).get(projectId) as ProjectRiskAssessmentRow | undefined;
+    },
+
+    deleteByProject(projectId: string): void {
+      db.prepare(`DELETE FROM project_risk_assessments WHERE project_id = ?`).run(projectId);
     },
   };
 }

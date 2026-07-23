@@ -142,6 +142,7 @@ export interface BidLensApi {
   createRiskProject(request: CreateRiskProjectRequest): Promise<CreateRiskProjectResponse>;
   cancelRiskProject(projectId: string): Promise<{ projectId: string; cancelled: boolean }>;
   resumeRiskProject(projectId: string): Promise<{ projectId: string }>;
+  reanalyzeProject(projectId: string): Promise<{ projectId: string }>;
   retryRiskSubmission(projectId: string, submissionId: string, newFile?: RiskFileInput): Promise<{ projectId: string }>;
   acceptPartial(projectId: string): Promise<{ projectId: string }>;
   deleteProject(projectId: string): Promise<{ deleted: boolean }>;

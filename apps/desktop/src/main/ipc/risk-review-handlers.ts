@@ -8,9 +8,10 @@ import { log } from '../logger';
 let service: RiskReviewService | null = null;
 let engineManager: EngineManager | null = null;
 
-export function registerRiskReviewHandlers(window: BrowserWindow, db: Database.Database, encryptionKey: Buffer) {
+export async function registerRiskReviewHandlers(window: BrowserWindow, db: Database.Database, encryptionKey: Buffer) {
   log.info('[Risk] Registering risk review IPC handlers');
   engineManager = new EngineManager();
+  await engineManager.start();
   service = new RiskReviewService(window, db, encryptionKey, engineManager);
   ipcMain.handle('risk:listProjects', () => service!.listProjects());
   ipcMain.handle('risk:getProject', (_event, projectId: string) => service!.getProject(projectId));
@@ -23,6 +24,10 @@ export function registerRiskReviewHandlers(window: BrowserWindow, db: Database.D
     return service!.cancel(projectId);
   });
   ipcMain.handle('risk:resumeProject', (_event, projectId: string) => service!.resumeRiskProject(projectId));
+  ipcMain.handle('risk:reanalyzeProject', (_event, projectId: string) => {
+    log.info('[Risk] reanalyzeProject —', projectId);
+    return service!.reanalyzeProject(projectId);
+  });
   ipcMain.handle('risk:retrySubmission', (_event, projectId: string, submissionId: string) => service!.retryRiskSubmission(projectId, submissionId));
   ipcMain.handle('risk:acceptPartial', (_event, projectId: string) => service!.acceptPartial(projectId));
   ipcMain.handle('risk:deleteProject', (_event, projectId: string) => service!.deleteProject(projectId));

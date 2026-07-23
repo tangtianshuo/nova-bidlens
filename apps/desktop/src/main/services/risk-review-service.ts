@@ -225,6 +225,53 @@ export class RiskReviewService {
     return { projectId };
   }
 
+  reanalyzeProject(projectId: string): { projectId: string } {
+    log.info('[Risk] reanalyzeProject — projectId:', projectId);
+    const row = this.projectRepo.getById(projectId);
+    if (!row) throw new Error(`风险审查项目不存在: ${projectId}`);
+    if (row.status === 'running') throw new Error('项目正在分析中');
+
+    // Reconstruct request from audit event
+    const createdEvent = this.auditEventRepo.getByProject(projectId, 'project-created');
+    const payload = createdEvent[0] ? JSON.parse(createdEvent[0].payload_json) as Record<string, unknown> : undefined;
+    if (!payload?.submissions) throw new Error('无法重新分析：缺少提交信息');
+
+    const submissions = payload.submissions as { path: string }[];
+    const hasBaseline = Boolean(payload.hasBaseline);
+    const baseline = payload.baseline as { path: string } | undefined;
+
+    const request: CreateRiskProjectRequest = {
+      name: row.name,
+      submissions: submissions.map((s) => ({ path: s.path })),
+      baseline: baseline ? { path: baseline.path } : undefined,
+      preset: row.preset as CreateRiskProjectRequest['preset'],
+    };
+
+    // Clear old results
+    this.findingRepo.deleteByProject(projectId);
+    this.detectorRunRepo.deleteByProject(projectId);
+    this.filePairAssessmentRepo.deleteByProject(projectId);
+    this.projectRiskAssessmentRepo.deleteByProject(projectId);
+    this.checkpointRepo.deleteByProject(projectId);
+
+    // Reset project status
+    this.projectRepo.updateStatus(projectId, 'draft');
+    this.projectRepo.updateElapsed(projectId, 0);
+
+    // Reset submission statuses
+    const submissionRows = this.submissionRepo.getByProject(projectId);
+    for (const sub of submissionRows) {
+      this.submissionRepo.updateStatus(sub.id, 'pending');
+    }
+
+    this.auditEventRepo.append({ projectId, eventType: 'analysis-reanalyzed' });
+
+    const abort = new AbortController();
+    this.activeRuns.set(projectId, { abort, startedAt: Date.now() });
+    void this.run(projectId, request, abort);
+    return { projectId };
+  }
+
   deleteProject(projectId: string): { deleted: boolean } {
     const row = this.projectRepo.getById(projectId);
     if (!row) return { deleted: false };

@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { MoreHorizontal, Eye, Trash2, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { MoreHorizontal, Eye, Trash2, RotateCcw, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import {
   Table,
   TableHeader,
@@ -61,11 +61,12 @@ export interface ProjectTableProps {
   onRowClick: (projectId: string) => void;
   onDelete: (projectId: string) => void;
   onResume: (projectId: string) => void;
+  onReanalyze: (projectId: string) => void;
 }
 
 // ─── Component ──────────────────────────────────────────────────────
 
-export function ProjectTable({ projects, onRowClick, onDelete, onResume }: ProjectTableProps) {
+export function ProjectTable({ projects, onRowClick, onDelete, onResume, onReanalyze }: ProjectTableProps) {
   const { sortBy, sortOrder, setSort } = useProjectStore();
 
   // Sort indicator
@@ -129,6 +130,7 @@ export function ProjectTable({ projects, onRowClick, onDelete, onResume }: Proje
                 onRowClick={onRowClick}
                 onDelete={onDelete}
                 onResume={onResume}
+                onReanalyze={onReanalyze}
               />
             ))
           )}
@@ -145,10 +147,12 @@ interface ProjectRowProps {
   onRowClick: (id: string) => void;
   onDelete: (id: string) => void;
   onResume: (id: string) => void;
+  onReanalyze: (id: string) => void;
 }
 
-function ProjectRow({ project, onRowClick, onDelete, onResume }: ProjectRowProps) {
+function ProjectRow({ project, onRowClick, onDelete, onResume, onReanalyze }: ProjectRowProps) {
   const canResume = project.status === 'interrupted';
+  const canReanalyze = project.status === 'ready' || project.status === 'partial' || project.status === 'failed';
 
   return (
     <TableRow
@@ -221,6 +225,17 @@ function ProjectRow({ project, onRowClick, onDelete, onResume }: ProjectRowProps
               <Eye className="h-3.5 w-3.5" />
               查看详情
             </DropdownMenuItem>
+            {canReanalyze && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReanalyze(project.id);
+                }}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                重新对比
+              </DropdownMenuItem>
+            )}
             {canResume && (
               <>
                 <DropdownMenuSeparator />

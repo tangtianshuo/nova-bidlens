@@ -62,6 +62,7 @@ describe('ProjectTable', () => {
     onRowClick: vi.fn(),
     onDelete: vi.fn(),
     onResume: vi.fn(),
+    onReanalyze: vi.fn(),
   };
 
   beforeEach(() => {

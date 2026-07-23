@@ -27,6 +27,7 @@ const api: BidLensApi = {
   createRiskProject: (request: CreateRiskProjectRequest) => ipcRenderer.invoke('risk:createProject', request),
   cancelRiskProject: (projectId: string) => ipcRenderer.invoke('risk:cancelProject', projectId),
   resumeRiskProject: (projectId: string) => ipcRenderer.invoke('risk:resumeProject', projectId),
+  reanalyzeProject: (projectId: string) => ipcRenderer.invoke('risk:reanalyzeProject', projectId),
   retryRiskSubmission: (projectId: string, submissionId: string, newFile?: unknown) => ipcRenderer.invoke('risk:retrySubmission', projectId, submissionId, newFile),
   acceptPartial: (projectId: string) => ipcRenderer.invoke('risk:acceptPartial', projectId),
   deleteProject: (projectId: string) => ipcRenderer.invoke('risk:deleteProject', projectId),

@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.3.5
-milestone_name: 功能验证与 Bug 修复
-status: testing
-stopped_at: Milestone initialized, awaiting functional testing
-last_updated: "2026-07-23T16:30:00Z"
+milestone: v0.3.6
+milestone_name: PDF 原文定位与数据提取
+status: defining-requirements
+stopped_at: Milestone initialized, defining requirements
+last_updated: "2026-07-23T18:00:00Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 0
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-23)
 
 **Core value:** Deliver explainable, traceable risk evidence for bid document similarity
-**Current focus:** v0.3.5 功能验证与 Bug 修复
+**Current focus:** v0.3.6 PDF 原文定位与数据提取
 
 ## Current Position
 
-Phase: Not started (functional testing phase)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Bug tracker created, awaiting user testing and bug registration
+Status: Defining requirements
 Last activity: 2026-07-23
 
 Progress: [░░░░░░░░░░] 0%
@@ -65,15 +65,19 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- 用户进行功能性测试并登记 bug 到 V0.3.5-BUG-TRACKER.md
-- 根据登记的 bug 创建 v0.3.5 需求和路线图
+- Define v0.3.6 requirements
+- Create v0.3.6 roadmap
 
 ### Blockers/Concerns
 
-- 需要用户手动测试 Electron app 的完整流程（集成测试只覆盖了 API 层，未覆盖 UI 层）
+None
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
 
 ## Session Continuity
 
-Last session: 2026-07-23T16:30:00Z
-Stopped at: v0.3.5 milestone initialized
-Resume file: .planning/V0.3.5-BUG-TRACKER.md
+Last session: 2026-07-23T18:00:00Z
+Stopped at: v0.3.6 milestone initialized

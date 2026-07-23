@@ -23,6 +23,8 @@ import { PersistentBanner } from '@/components/feedback/persistent-banner';
 import { useProjectList } from './project-queries';
 import { useProgressSubscription } from '../../lib/progress-subscription';
 import { useProjectStore } from './project-store';
+import { useRiskReviewStore } from '../risk-review/risk-review-store';
+import { useAppStore } from '../../stores/app-store';
 import { ProjectTable } from './project-table';
 import type { AnalysisProjectStatus, RiskLevel } from '@bidlens/shared/types-only';
 
@@ -144,6 +146,17 @@ export function ProjectListPage({ onNewProject, onOpenProject }: { onNewProject?
 
   const handleResume = useCallback((id: string) => {
     void window.bidlens.resumeRiskProject(id);
+  }, []);
+
+  const handleReanalyze = useCallback((id: string) => {
+    const confirmed = window.confirm(
+      '重新对比将清除当前分析结果并重新执行全部检测流程。\n\n此操作不可撤销，确认继续？',
+    );
+    if (!confirmed) return;
+    void window.bidlens.reanalyzeProject(id).then(() => {
+      useRiskReviewStore.getState().setProjectId(id);
+      useAppStore.getState().setView('project-processing');
+    });
   }, []);
 
   const hasFilters = searchText || statusFilter || riskFilter;
@@ -335,6 +348,7 @@ export function ProjectListPage({ onNewProject, onOpenProject }: { onNewProject?
           onRowClick={handleRowClick}
           onDelete={handleDelete}
           onResume={handleResume}
+          onReanalyze={handleReanalyze}
         />
       </div>
 
