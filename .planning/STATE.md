@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.3.4
 milestone_name: MinerU 接入风险检测流程
-status: verifying
-stopped_at: Completed 12-02-PLAN.md
-last_updated: "2026-07-23T08:18:39.421Z"
+status: executing
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-07-23T08:19:19Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 33
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-07-23)
 
 ## Current Position
 
-Phase: 12 (集成 Bug 修复) — NEXT
-Plan: 0 of TBD
-Status: Phase 11 verified (12/12 truths), starting Phase 12
+Phase: 12 (集成 Bug 修复)
+Plan: 1 of 2
+Status: Completed 12-01 (bug fixes)
 Last activity: 2026-07-23
 
 Progress: [███░░░░░░░] 33%
@@ -53,6 +53,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 11 P01 | 5min | 2 tasks | 1 files |
 | Phase 11 P02 | 8min | 2 tasks | 1 files |
 | Phase 11 P04 | 2min | 1 tasks | 1 files |
+| Phase 12 P01 | 3min | 2 tasks | 4 files |
 | Phase 12 P02 | 5min | 1 tasks | 3 files |
 
 ## Accumulated Context
@@ -74,6 +75,8 @@ Recent decisions affecting current work:
 - [Phase 11]: RPC helper skips {status:started} ack for async engine methods
 - [Phase 11]: fileHash uses 'd'.repeat(64) and 'e'.repeat(64) for valid 64-char hex strings
 - [Phase 12]: MINERU_HARD_TIMEOUT_MS set to 300s (5 min) as safety ceiling for pollBatch
+- [Phase 12]: parserVersion initialized empty, updated from first parsed AST after parsing loop
+- [Phase 12]: MinerU availability checked via exported isMinerUAvailable() from parser-service
 
 ### Pending Todos
 
@@ -85,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-23T08:18:39.415Z
-Stopped at: Completed 12-02-PLAN.md
+Last session: 2026-07-23T08:19:19Z
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
