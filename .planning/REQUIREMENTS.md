@@ -28,7 +28,7 @@
 ### Category 3: 分发方案评估
 
 - [x] **DIST-01**: 评估 Python 打包方案 — 对比 python-embed vs PyInstaller vs 用户自行安装的优劣
-- [ ] **DIST-02**: 评估模型分发方案 — 捆绑安装包 vs 首次下载 vs ModelScope 镜像，考虑中国网络环境
+- [x] **DIST-02**: 评估模型分发方案 — 捆绑安装包 vs 首次下载 vs ModelScope 镜像，考虑中国网络环境
 - [x] **DIST-03**: 设计预处理 CLI 分发 — 作为独立工具还是集成到 Electron 安装流程
 
 ### Category 4: node-pdf-to-markdown 评估

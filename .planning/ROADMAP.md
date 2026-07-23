@@ -76,7 +76,7 @@ Plans:
 
 Plans:
 - [x] 09-01-PLAN.md — Token 安全管理 + IPC handlers + 网络重试
-- [ ] 09-02-PLAN.md — IPC 桥接 + 设置界面 API 配置 Tab
+- [x] 09-02-PLAN.md — IPC 桥接 + 设置界面 API 配置 Tab
 
 ### Phase 10: node-pdf-to-markdown 评估
 **Goal**: 确认 node-pdf-to-markdown 是否可作为轻量级 PDF 解析替代方案
