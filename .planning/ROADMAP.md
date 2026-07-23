@@ -40,7 +40,7 @@
 
 - [x] **Phase 11: E2E 验证** — 用真实扫描 PDF 跑通完整链路，验证所有假设 (completed 2026-07-23)
 - [x] **Phase 12: 集成 Bug 修复** — 修复硬编码元数据、死代码、缺失的能力声明 (completed 2026-07-23)
-- [ ] **Phase 13: UX 打磨** — 进度反馈、友好错误、离线检测、并发控制
+- [x] **Phase 13: UX 打磨** — 进度反馈、友好错误、离线检测、并发控制 (completed 2026-07-23)
 
 ### Phase 11: E2E 验证
 **Goal**: 用真实扫描 PDF 跑通完整链路，验证 MinerU → mapper → DocumentAst → Rust 引擎 → 风险检测 → UI 展示的每个环节
@@ -100,4 +100,4 @@ Phases execute in numeric order: 11 → 12 → 13
 | 10. node-pdf-to-markdown 评估 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
 | 11. E2E 验证 | v0.3.4 | 4/4 | Complete   | 2026-07-23 |
 | 12. 集成 Bug 修复 | v0.3.4 | 2/2 | Complete   | 2026-07-23 |
-| 13. UX 打磨 | v0.3.4 | 0/? | Not started | - |
+| 13. UX 打磨 | v0.3.4 | 1/1 | Complete   | 2026-07-23 |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.3.4
 milestone_name: MinerU 接入风险检测流程
 status: executing
-stopped_at: Completed 12-01-PLAN.md
-last_updated: "2026-07-23T08:19:19Z"
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-07-23T08:29:13.761Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
   percent: 33
 ---
 
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-07-23)
 ## Current Position
 
 Phase: 12 (集成 Bug 修复)
-Plan: 1 of 2
-Status: Completed 12-01 (bug fixes)
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-07-23
 
 Progress: [███░░░░░░░] 33%
@@ -55,6 +55,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 11 P04 | 2min | 1 tasks | 1 files |
 | Phase 12 P01 | 3min | 2 tasks | 4 files |
 | Phase 12 P02 | 5min | 1 tasks | 3 files |
+| Phase 13 P01 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Recent decisions affecting current work:
 - [Phase 12]: MINERU_HARD_TIMEOUT_MS set to 300s (5 min) as safety ceiling for pollBatch
 - [Phase 12]: parserVersion initialized empty, updated from first parsed AST after parsing loop
 - [Phase 12]: MinerU availability checked via exported isMinerUAvailable() from parser-service
+- [Phase 13]: Error codes via Object.assign on Error, preserved through catch chain
+- [Phase 13]: Max 2 concurrent MinerU requests via simple counter+queue semaphore
 
 ### Pending Todos
 
@@ -88,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-07-23T08:19:19Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-07-23T08:29:13.756Z
+Stopped at: Completed 13-01-PLAN.md
 Resume file: None
