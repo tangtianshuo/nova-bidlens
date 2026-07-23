@@ -37,6 +37,39 @@ function getMinerUParser(): MinerUParser | null {
 
 const DEFAULT_TIMEOUT_MS = 60_000; // 60 seconds
 
+// Concurrency limiter for MinerU cloud API (max 2 concurrent)
+let mineruInFlight = 0;
+const MINERU_MAX_CONCURRENT = 2;
+const mineruQueue: Array<() => void> = [];
+
+function acquireMinerUSlot(): Promise<void> {
+  if (mineruInFlight < MINERU_MAX_CONCURRENT) {
+    mineruInFlight++;
+    return Promise.resolve();
+  }
+  return new Promise<void>(resolve => { mineruQueue.push(resolve); });
+}
+
+function releaseMinerUSlot(): void {
+  const next = mineruQueue.shift();
+  if (next) {
+    next();
+  } else {
+    mineruInFlight--;
+  }
+}
+
+/** Quick DNS check for MinerU cloud availability */
+async function isOnline(): Promise<boolean> {
+  try {
+    const { lookup } = await import('node:dns/promises');
+    await lookup('mineru.net');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface ParserServiceOptions {
   /** AbortSignal for cancellation */
   signal?: AbortSignal;
@@ -48,6 +81,31 @@ export interface ParserServiceOptions {
  * Parse a document file using the appropriate parser from the registry.
  * Supports cancellation via AbortSignal and timeout.
  */
+/** Wrap MinerU parse with offline detection, concurrency limit, and 401 cache reset */
+async function parseWithMinerU(mineru: MinerUParser, input: ParseInput, options: ParseOptions): Promise<ParseResult> {
+  // UX-03: Check network before cloud parse
+  if (!(await isOnline())) {
+    return {
+      success: false, warnings: [], duration: 0, parserId: 'mineru-parser',
+      error: { code: 'MINERU_OFFLINE', message: '此文件需要云端解析，请检查网络连接' },
+    };
+  }
+
+  // UX-05: Acquire concurrency slot
+  await acquireMinerUSlot();
+  try {
+    const result = await mineru.parse(input, options);
+    // UX-02: Reset cached parser on 401 so next attempt gets fresh token
+    if (!result.success && result.error?.code === 'AUTH_EXPIRED') {
+      log.warn('[Parser] MinerU auth expired, clearing cached parser instance');
+      resetMinerUParser();
+    }
+    return result;
+  } finally {
+    releaseMinerUSlot();
+  }
+}
+
 export async function parseDocumentFile(
   filePath: string,
   opts?: ParserServiceOptions
@@ -99,7 +157,7 @@ export async function parseDocumentFile(
       // Scanned PDF → try MinerU directly (pdf-parse can't OCR)
       const mineru = getMinerUParser();
       if (mineru) {
-        return mineru.parse(input, options);
+        return parseWithMinerU(mineru, input, options);
       }
       log.warn('[Parser] Scanned PDF but no MinerU parser available, falling back to pdf-parse');
     }
@@ -112,7 +170,7 @@ export async function parseDocumentFile(
       const mineru = getMinerUParser();
       if (mineru) {
         log.info('[Parser] pdf-parse failed, falling back to MinerU for:', fileName);
-        return mineru.parse(input, options);
+        return parseWithMinerU(mineru, input, options);
       }
     }
 
