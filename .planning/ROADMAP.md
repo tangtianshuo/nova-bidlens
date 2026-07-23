@@ -86,7 +86,10 @@ Plans:
   1. node-pdf-to-markdown 与 pdf-parse 的文本提取质量对比已完成
   2. node-pdf-to-markdown 作为轻量替代方案的可行性已有结论
   3. node-pdf-to-markdown 的表格识别和 OCR 功能路线图已跟踪
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 10-01-PLAN.md — node-pdf-to-markdown 对比测试 + 可行性评估
 
 ## Progress
 
@@ -98,4 +101,4 @@ Phases execute in numeric order: 7 → 8 → 9 → 10
 | 7. MinerU 可行性验证 | v0.3.3 | 1/1 | Complete | 2026-07-23 |
 | 8. 集成方案设计 | v0.3.3 | 4/4 | Complete | 2026-07-23 |
 | 9. 分发方案评估 | v0.3.3 | 0/2 | Not started | - |
-| 10. node-pdf-to-markdown 评估 | v0.3.3 | 0/TBD | Not started | - |
+| 10. node-pdf-to-markdown 评估 | v0.3.3 | 0/1 | Not started | - |
