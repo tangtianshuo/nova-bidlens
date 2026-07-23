@@ -337,7 +337,17 @@ export class RiskReviewService {
         this.setPhase(projectId, 'validating');
         const mineruAvailable = isMinerUAvailable();
         const validations = await Promise.all(inputs.map((file) => validateFile(file.path, { mineruAvailable })));
-        if (validations.some((result) => !result.supported || result.error)) throw new Error('存在不可解析或不支持的文件');
+        const problems = validations
+          .map((v, i) => ({ v, name: inputs[i].path.split(/[/\\]/).pop() }))
+          .filter(({ v }) => !v.supported || v.error);
+        if (problems.length > 0) {
+          const details = problems.map(({ v, name }) => {
+            if (v.error) return `${name}: ${v.error.message}`;
+            if (!v.supported) return `${name}: 不支持的文件格式 (.${v.extension})`;
+            return name;
+          }).join('；');
+          throw new Error(`存在不可解析或不支持的文件：${details}。支持的格式：DOCX、PDF、NZBTF`);
+        }
         this.checkCancelled(abort, projectId);
       }
 
