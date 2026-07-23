@@ -60,7 +60,7 @@ Plans:
 Plans:
 - [x] 08-01-PLAN.md — nZBTF 文件上传过滤修复
 - [x] 08-02-PLAN.md — MinerU content_list.json → DocumentAst 映射器
-- [ ] 08-03-PLAN.md — MinerU parser 实现 + 注册到 ParserRegistry
+- [x] 08-03-PLAN.md — MinerU parser 实现 + 注册到 ParserRegistry
 - [ ] 08-04-PLAN.md — PDF 预检测分流 + fallback 策略
 
 ### Phase 9: 分发方案评估

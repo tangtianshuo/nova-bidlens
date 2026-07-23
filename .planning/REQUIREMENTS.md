@@ -20,9 +20,9 @@
 
 ### Category 2: 集成方案设计
 
-- [ ] **INTEG-01**: 设计预处理工具模式 — 编写 Python CLI 工具，输入 PDF 目录，输出解析后的 JSON
+- [x] **INTEG-01**: 设计预处理工具模式 — 编写 Python CLI 工具，输入 PDF 目录，输出解析后的 JSON
 - [x] **INTEG-02**: 设计 JSON → DocumentAst mapper — 定义 MinerU JSON 到现有 BlockNode (ParagraphNode/TableNode/SectionNode) 的映射规则
-- [ ] **INTEG-03**: 设计 parser registry 集成 — MinerU parser 实现 DocumentParser 接口，注册到 globalRegistry
+- [x] **INTEG-03**: 设计 parser registry 集成 — MinerU parser 实现 DocumentParser 接口，注册到 globalRegistry
 - [ ] **INTEG-04**: 设计 fallback 策略 — 简单数字 PDF 用 pdf-parse，复杂/扫描 PDF 用 MinerU，确定检测启发式规则
 
 ### Category 3: 分发方案评估
