@@ -5,8 +5,21 @@
 
 import path from 'node:path';
 import type { ParseInput, ParseOptions, ParseResult } from '@bidlens/shared';
-import { globalRegistry } from '@bidlens/shared';
+import { globalRegistry, detectPdfType, MinerUParser } from '@bidlens/shared';
 import { log } from '../logger';
+
+// Lazy-init MinerU parser instance (needs API token)
+let mineruParserInstance: MinerUParser | null = null;
+
+function getMinerUParser(): MinerUParser | null {
+  if (!mineruParserInstance) {
+    const token = process.env.MINERU_API_TOKEN;
+    if (token) {
+      mineruParserInstance = new MinerUParser(token);
+    }
+  }
+  return mineruParserInstance;
+}
 
 const DEFAULT_TIMEOUT_MS = 60_000; // 60 seconds
 
@@ -60,6 +73,36 @@ export async function parseDocumentFile(
     maxPages: 0,
     timeout: opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   };
+
+  // PDF fallback strategy (per D-03): detect type → route accordingly
+  const ext = path.extname(fileName).toLowerCase();
+  if (ext === '.pdf') {
+    const pdfType = await detectPdfType(filePath);
+    log.info('[Parser] PDF type detected:', pdfType, 'for', fileName);
+
+    if (pdfType === 'scanned') {
+      // Scanned PDF → try MinerU directly (pdf-parse can't OCR)
+      const mineru = getMinerUParser();
+      if (mineru) {
+        return mineru.parse(input, options);
+      }
+      log.warn('[Parser] Scanned PDF but no MinerU parser available, falling back to pdf-parse');
+    }
+
+    // Digital PDF or no MinerU → use pdf-parse (priority=1)
+    const result = await parser.parse(input, options);
+
+    // Per D-03: pdf-parse fails → fallback to MinerU (but not for scanned, already tried)
+    if (!result.success && pdfType !== 'scanned') {
+      const mineru = getMinerUParser();
+      if (mineru) {
+        log.info('[Parser] pdf-parse failed, falling back to MinerU for:', fileName);
+        return mineru.parse(input, options);
+      }
+    }
+
+    return result;
+  }
 
   // If signal is already aborted, return immediately
   if (opts?.signal?.aborted) {

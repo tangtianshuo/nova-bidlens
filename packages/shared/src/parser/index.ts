@@ -20,6 +20,7 @@ export { NzbtfParser, nzbtfParser } from './nzbtf/index.js';
 // MinerU parser: not auto-registered (needs API token)
 // Consumer should: const p = new MinerUParser(token); globalRegistry.register(p);
 export { MinerUParser } from './mineru/index.js';
+export { detectPdfType, type PdfType } from './mineru/pdf-type-detector.js';
 
 // 导出便捷解析函数
 import { globalRegistry } from './registry.js';
