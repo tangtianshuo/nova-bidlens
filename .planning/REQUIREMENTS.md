@@ -27,7 +27,7 @@
 
 ### Category 3: 进度与错误处理
 
-- [ ] **UX-01**: MinerU 解析期间显示进度反馈 — 通过 risk:progress IPC 推送 "MinerU 解析中 (已等待 Xs)" 到 UI
+- [x] **UX-01**: MinerU 解析期间显示进度反馈 — 通过 risk:progress IPC 推送 "MinerU 解析中 (已等待 Xs)" 到 UI
 - [x] **UX-02**: 处理 token 401 错误 — 解析失败时清除缓存 parser 实例，提示用户重新输入 token
 - [x] **UX-03**: 添加离线检测 — MinerU 调用前检查网络状态，离线时显示明确提示 "此文件需要云端解析，请检查网络连接"
 - [x] **UX-04**: 将 API 错误映射为用户友好的中文消息 — 401→"Token 无效"，429→"请求频繁"，timeout→"解析超时"
@@ -61,8 +61,8 @@
 | FIX-03 | Phase 12 | TBD | Pending |
 | FIX-04 | Phase 12 | TBD | Pending |
 | FIX-05 | Phase 12 | TBD | Pending |
-| UX-01 | Phase 13 | TBD | Pending |
-| UX-02 | Phase 13 | TBD | Pending |
-| UX-03 | Phase 13 | TBD | Pending |
-| UX-04 | Phase 13 | TBD | Pending |
-| UX-05 | Phase 13 | TBD | Pending |
+| UX-01 | Phase 13 | 13-02 | Complete |
+| UX-02 | Phase 13 | 13-01 | Complete |
+| UX-03 | Phase 13 | 13-01 | Complete |
+| UX-04 | Phase 13 | 13-01 | Complete |
+| UX-05 | Phase 13 | 13-01 | Complete |
