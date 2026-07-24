@@ -13,6 +13,7 @@ interface PdfDrawerProps {
   projectId: string;
   submissionId: string;
   fileName: string;
+  initialPage?: number;
 }
 
 export function PdfDrawer({
@@ -21,6 +22,7 @@ export function PdfDrawer({
   projectId,
   submissionId,
   fileName,
+  initialPage,
 }: PdfDrawerProps) {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -66,7 +68,7 @@ export function PdfDrawer({
               加载中...
             </div>
           )}
-          {!loading && fileUrl && <PdfViewer fileUrl={fileUrl} fileName={fileName} />}
+          {!loading && fileUrl && <PdfViewer fileUrl={fileUrl} fileName={fileName} initialPage={initialPage} />}
           {!loading && !fileUrl && (
             <div className="flex items-center justify-center h-full text-sm text-[var(--color-text-muted)]">
               无法加载 PDF 文件

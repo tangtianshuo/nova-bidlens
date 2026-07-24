@@ -11,6 +11,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 interface PdfViewerProps {
   fileUrl: string;
   fileName: string;
+  initialPage?: number;
 }
 
 const ZOOM_STEP = 25;
@@ -19,7 +20,7 @@ const ZOOM_MAX = 200;
 const PAGE_DEFAULT_WIDTH = 816; // Letter size at 96dpi
 const DEBOUNCE_MS = 100;
 
-export function PdfViewer({ fileUrl }: PdfViewerProps) {
+export function PdfViewer({ fileUrl, initialPage }: PdfViewerProps) {
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(100);
@@ -28,6 +29,7 @@ export function PdfViewer({ fileUrl }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const pendingScrollRef = useRef<number | null>(null);
 
   // Measure container for fit-width
   useEffect(() => {
@@ -55,8 +57,11 @@ export function PdfViewer({ fileUrl }: PdfViewerProps) {
       setNumPages(n);
       setZoom(fitWidthZoom);
       setError(false);
+      if (initialPage && initialPage > 0) {
+        pendingScrollRef.current = initialPage;
+      }
     },
-    [fitWidthZoom],
+    [fitWidthZoom, initialPage],
   );
 
   const handleLoadError = useCallback(() => setError(true), []);
@@ -111,6 +116,21 @@ export function PdfViewer({ fileUrl }: PdfViewerProps) {
     el.addEventListener('scroll', handleScroll, { passive: true });
     return () => el.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
+
+  // Scroll to initial page after document loads
+  useEffect(() => {
+    if (!numPages || pendingScrollRef.current === null) return;
+    const page = pendingScrollRef.current;
+    pendingScrollRef.current = null;
+    // Use requestAnimationFrame to wait for pages to render
+    requestAnimationFrame(() => {
+      const el = scrollRef.current?.querySelector(`[data-pdf-page="${page}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'instant', block: 'start' });
+        setCurrentPage(page);
+      }
+    });
+  }, [numPages]);
 
   // Keyboard shortcuts
   useEffect(() => {
