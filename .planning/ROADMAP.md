@@ -54,8 +54,8 @@
 
 - [x] **Phase 14: 数据层扩展与 PDF 阅读器基础** - MinerU bbox 保留、模型扩展、IPC 端点、应用内 PDF 渲染与导航 (completed 2026-07-24)
 - [x] **Phase 15: Evidence → PDF 定位连线** - 点击 evidence 卡片打开对应 PDF 并滚动到原文页 (completed 2026-07-24)
-- [ ] **Phase 16: 高亮与交互增强** - bbox 高亮区域、zoom-to-fit、批量高亮、tooltip
-- [ ] **Phase 17: 双栏对比** - 左右并排源文件/目标文件 PDF，同步滚动
+- [x] **Phase 16: 高亮与交互增强** - bbox 高亮区域、zoom-to-fit、批量高亮、tooltip (completed 2026-07-24)
+- [x] **Phase 17: 双栏对比** - 左右并排源文件/目标文件 PDF，同步滚动 (completed 2026-07-24)
 
 ## Phase Details
 
@@ -99,7 +99,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 16-01-PLAN.md — 高亮 overlay + zoom-to-fit + tooltip
+- [x] 16-01-PLAN.md — 高亮 overlay + zoom-to-fit + tooltip
 
 ### Phase 17: 双栏对比
 **Goal**: 审查员可同时查看源文件和目标文件的 PDF，点击 evidence 同步定位两侧
@@ -111,7 +111,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 17-01: TBD
+- [x] 17-01-PLAN.md — 双栏 PDF 对比 Drawer
 
 ## Progress
 
@@ -135,5 +135,5 @@ Phases execute in numeric order: 14 → 15 → 16 → 17
 | 13. UX 打磨 | v0.3.4 | 2/2 | Complete | 2026-07-23 |
 | 14. 数据层扩展与 PDF 阅读器基础 | v0.3.6 | 2/2 | Complete    | 2026-07-24 |
 | 15. Evidence → PDF 定位连线 | v0.3.6 | 1/1 | Complete    | 2026-07-24 |
-| 16. 高亮与交互增强 | v0.3.6 | 0/1 | Not started | - |
-| 17. 双栏对比 | v0.3.6 | 0/1 | Not started | - |
+| 16. 高亮与交互增强 | v0.3.6 | 1/1 | Complete    | 2026-07-24 |
+| 17. 双栏对比 | v0.3.6 | 1/1 | Complete    | 2026-07-24 |

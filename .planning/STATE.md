@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.3.6
 milestone_name: PDF 原文定位与数据提取
-status: verifying
+status: executing
 stopped_at: Completed 15-01-PLAN.md
-last_updated: "2026-07-24T01:41:31.332Z"
+last_updated: "2026-07-24T14:19:26.783Z"
 last_activity: 2026-07-24
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
-  percent: 0
+  completed_phases: 4
+  total_plans: 5
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-23)
 
 **Core value:** Deliver explainable, traceable risk evidence for bid document similarity
-**Current focus:** Phase 15 — evidence-pdf-wiring
+**Current focus:** Phase 17 — dual-pane-compare
 
 ## Current Position
 
-Phase: 16
+Phase: 17
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Executing Phase 17
 Last activity: 2026-07-24
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -69,6 +69,13 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 14]: Integrated PdfDrawer into risk-result-page.tsx instead of review-workbench.tsx (compare flow)
 - [Phase 15]: Used requestAnimationFrame for post-load scroll instead of setTimeout
 - [Phase 15]: Removed standalone PDF button — replaced by per-evidence page badges
+- [Phase 16]: Canvas overlay approach for highlight rendering (DPR-aware)
+- [Phase 16]: Plain div tooltip instead of shadcn Tooltip (simpler positioning)
+- [Phase 16]: computeHighlightZoom makes first highlight fill 80% viewport width
+- [Phase 16]: Opacity cycling (0.2, 0.3, 0.4) for multi-evidence on same page
+- [Phase 17]: DualPdfDrawer with bottom Sheet (h-[90vh]) and CSS grid 2-col layout
+- [Phase 17]: PdfDrawerState union type for single/dual mode state management
+- [Phase 17]: Auto-detect dual mode when evidence has different source/target submissionIds
 
 ### Pending Todos
 
