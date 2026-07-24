@@ -8,32 +8,50 @@ import { log } from '../logger';
 let service: RiskReviewService | null = null;
 let engineManager: EngineManager | null = null;
 
+function wrapHandler<T extends (...args: any[]) => any>(name: string, handler: T): T {
+  return ((...args: any[]) => {
+    try {
+      const result = handler(...args);
+      if (result instanceof Promise) {
+        return result.catch((err: unknown) => {
+          log.error(`[Risk] ${name} failed —`, err instanceof Error ? err.message : err);
+          throw err;
+        });
+      }
+      return result;
+    } catch (err) {
+      log.error(`[Risk] ${name} failed —`, err instanceof Error ? err.message : err);
+      throw err;
+    }
+  }) as unknown as T;
+}
+
 export async function registerRiskReviewHandlers(window: BrowserWindow, db: Database.Database, encryptionKey: Buffer) {
   log.info('[Risk] Registering risk review IPC handlers');
   engineManager = new EngineManager();
   await engineManager.start();
   service = new RiskReviewService(window, db, encryptionKey, engineManager);
-  ipcMain.handle('risk:listProjects', () => service!.listProjects());
-  ipcMain.handle('risk:getProject', (_event, projectId: string) => service!.getProject(projectId));
-  ipcMain.handle('risk:createProject', (_event, request: CreateRiskProjectRequest) => {
+  ipcMain.handle('risk:listProjects', wrapHandler('listProjects', () => service!.listProjects()));
+  ipcMain.handle('risk:getProject', wrapHandler('getProject', (_event: unknown, projectId: string) => service!.getProject(projectId)));
+  ipcMain.handle('risk:createProject', wrapHandler('createProject', (_event: unknown, request: CreateRiskProjectRequest) => {
     log.info('[Risk] createProject — name:', request.name, 'files:', request.submissions.length);
     return service!.createProject(request);
-  });
-  ipcMain.handle('risk:cancelProject', (_event, projectId: string) => {
+  }));
+  ipcMain.handle('risk:cancelProject', wrapHandler('cancelProject', (_event: unknown, projectId: string) => {
     log.info('[Risk] cancelProject —', projectId);
     return service!.cancel(projectId);
-  });
-  ipcMain.handle('risk:resumeProject', (_event, projectId: string) => service!.resumeRiskProject(projectId));
-  ipcMain.handle('risk:reanalyzeProject', (_event, projectId: string) => {
+  }));
+  ipcMain.handle('risk:resumeProject', wrapHandler('resumeProject', (_event: unknown, projectId: string) => service!.resumeRiskProject(projectId)));
+  ipcMain.handle('risk:reanalyzeProject', wrapHandler('reanalyzeProject', (_event: unknown, projectId: string) => {
     log.info('[Risk] reanalyzeProject —', projectId);
     return service!.reanalyzeProject(projectId);
-  });
-  ipcMain.handle('risk:retrySubmission', (_event, projectId: string, submissionId: string) => service!.retryRiskSubmission(projectId, submissionId));
-  ipcMain.handle('risk:acceptPartial', (_event, projectId: string) => service!.acceptPartial(projectId));
-  ipcMain.handle('risk:deleteProject', (_event, projectId: string) => service!.deleteProject(projectId));
-  ipcMain.handle('risk:saveFindingReview', (_event, request) => service!.saveRiskFindingReview(request));
-  ipcMain.handle('risk:getAuditEvents', (_event, projectId: string) => service!.getAuditEvents(projectId));
-  ipcMain.handle('risk:exportReport', async (_event, request: ExportRiskReportRequest) => {
+  }));
+  ipcMain.handle('risk:retrySubmission', wrapHandler('retrySubmission', (_event: unknown, projectId: string, submissionId: string) => service!.retryRiskSubmission(projectId, submissionId)));
+  ipcMain.handle('risk:acceptPartial', wrapHandler('acceptPartial', (_event: unknown, projectId: string) => service!.acceptPartial(projectId)));
+  ipcMain.handle('risk:deleteProject', wrapHandler('deleteProject', (_event: unknown, projectId: string) => service!.deleteProject(projectId)));
+  ipcMain.handle('risk:saveFindingReview', wrapHandler('saveFindingReview', (_event: unknown, request: unknown) => service!.saveRiskFindingReview(request as any)));
+  ipcMain.handle('risk:getAuditEvents', wrapHandler('getAuditEvents', (_event: unknown, projectId: string) => service!.getAuditEvents(projectId)));
+  ipcMain.handle('risk:exportReport', wrapHandler('exportReport', async (_event: unknown, request: ExportRiskReportRequest) => {
     log.info('[Risk] exportReport — projectId:', request.projectId, 'format:', request.format);
     const ext = request.format === 'pdf' ? 'pdf' : request.format === 'html' ? 'html' : 'md';
     const filterName = request.format === 'pdf' ? 'PDF 文件' : request.format === 'html' ? 'HTML 文件' : 'Markdown 文件';
@@ -53,7 +71,11 @@ export async function registerRiskReviewHandlers(window: BrowserWindow, db: Data
     }
 
     return service!.exportRiskReport(request, result.filePath);
-  });
+  }));
+
+  ipcMain.handle('risk:getPdfFile', wrapHandler('getPdfFile', (_event: unknown, projectId: string, submissionId: string) => {
+    return service!.getPdfFile(projectId, submissionId);
+  }));
 
   ipcMain.handle('risk:openFile', async (_event, filePath: string) => {
     await shell.openPath(filePath);

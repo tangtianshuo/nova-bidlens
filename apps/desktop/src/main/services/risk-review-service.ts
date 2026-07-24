@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import type { BrowserWindow } from 'electron';
 import type Database from 'better-sqlite3';
@@ -143,7 +144,7 @@ export class RiskReviewService {
     ];
     this.projectRepo.updateStatus(projectId, 'draft');
     // store degradation via audit event
-    this.auditEventRepo.append({ projectId, eventType: 'project-created', payload: { warnings, degradationReason: 'embedding_unavailable', submissionCount: request.submissions.length, hasBaseline: Boolean(request.baseline) } });
+    this.auditEventRepo.append({ projectId, eventType: 'project-created', payload: { warnings, degradationReason: 'embedding_unavailable', submissions: request.submissions.map(s => ({ path: s.path })), submissionCount: request.submissions.length, hasBaseline: Boolean(request.baseline), baseline: request.baseline ? { path: request.baseline.path } : undefined } });
 
     const abort = new AbortController();
     this.activeRuns.set(projectId, { abort, startedAt: Date.now() });
@@ -312,6 +313,16 @@ export class RiskReviewService {
       payload: JSON.parse(r.payload_json),
       createdAt: r.created_at,
     }));
+  }
+
+  getPdfFile(projectId: string, submissionId: string): { filePath: string } | null {
+    const submissionRows = this.submissionRepo.getByProject(projectId);
+    const sub = submissionRows.find(s => s.id === submissionId);
+    if (!sub || !sub.file_path_encrypted) return null;
+    const filePath = decrypt(sub.file_path_encrypted, this.encryptionKey);
+    const resolvedPath = path.resolve(filePath);
+    if (!fs.existsSync(resolvedPath)) return null;
+    return { filePath: resolvedPath };
   }
 
   async exportRiskReport(request: ExportRiskReportRequest, savePath: string): Promise<ExportRiskReportResponse> {
@@ -591,20 +602,20 @@ export class RiskReviewService {
             tenderFiltered: ev.tenderFiltered, tenderFilterReason: ev.tenderFilterReason,
             ruleVersion: ev.ruleVersion,
           })),
-          symmetricSimilarity: f.symmetricSimilarity,
-          directionalCoverage: f.directionalCoverage,
-          confidenceScore: f.confidenceScore,
-          scoreBreakdown: f.scoreBreakdown as unknown as RiskFinding['scoreBreakdown'],
-          ruleVersion: f.ruleVersion,
+          symmetricSimilarity: f.symmetricSimilarity ?? 0,
+          directionalCoverage: f.directionalCoverage ?? [],
+          confidenceScore: f.confidenceScore ?? 0,
+          scoreBreakdown: (f.scoreBreakdown ?? {}) as unknown as RiskFinding['scoreBreakdown'],
+          ruleVersion: f.ruleVersion ?? '1.0',
           reviewStatus: 'pending', important: false, reviewNote: '', reviewedAt: null,
         }));
 
         filePairResults = typedResult.filePairAssessments.map(fp => ({
           submissionAId: fp.submissionAId, submissionBId: fp.submissionBId,
           directionalCoverageAB: fp.directionalCoverageAB ?? 0, directionalCoverageBA: fp.directionalCoverageBA ?? 0,
-          symmetricSimilarity: fp.symmetricSimilarity, riskLevel: fp.riskLevel as RiskLevel,
-          topFindingIds: fp.topFindingIds, findingCount: fp.findingCount,
-          ruleVersion: fp.ruleVersion, analysisStatus: fp.analysisStatus,
+          symmetricSimilarity: fp.symmetricSimilarity ?? 0, riskLevel: (fp.riskLevel ?? 'low') as RiskLevel,
+          topFindingIds: fp.topFindingIds ?? [], findingCount: fp.findingCount ?? { high: 0, medium: 0, low: 0 },
+          ruleVersion: fp.ruleVersion ?? '1.0', analysisStatus: fp.analysisStatus ?? 'complete',
         }));
 
         const pr = typedResult.projectRisk;

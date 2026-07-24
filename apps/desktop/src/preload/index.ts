@@ -39,6 +39,7 @@ const api: BidLensApi = {
   saveRiskFindingReview: (request) => ipcRenderer.invoke('risk:saveFindingReview', request),
   getAuditEvents: (projectId: string) => ipcRenderer.invoke('risk:getAuditEvents', projectId),
   exportRiskReport: (request: unknown) => ipcRenderer.invoke('risk:exportReport', request),
+  getPdfFile: (projectId: string, submissionId: string) => ipcRenderer.invoke('risk:getPdfFile', projectId, submissionId),
   // File
   selectFile: () => ipcRenderer.invoke('file:select'),
   getFilePath: (file: File) => webUtils.getPathForFile(file),

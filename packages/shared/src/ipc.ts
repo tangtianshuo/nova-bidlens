@@ -150,6 +150,7 @@ export interface BidLensApi {
   saveRiskFindingReview(request: { projectId: string; findingId: string; status?: FindingReviewStatus; important?: boolean; note?: string }): Promise<RiskFinding>;
   getAuditEvents(projectId: string): Promise<AuditEvent[]>;
   exportRiskReport(request: ExportRiskReportRequest): Promise<ExportRiskReportResponse>;
+  getPdfFile(projectId: string, submissionId: string): Promise<{ filePath: string } | null>;
   // File
   selectFile(): Promise<SelectFileResponse | null>;
   /** Get absolute filesystem path from a File object (Electron 28+ replacement for deprecated File.path) */
