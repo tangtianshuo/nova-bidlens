@@ -52,7 +52,7 @@
 
 **Milestone Goal:** 实现点击关键审查点的提取文本后，弹出 PDF 阅读器并定位到对应原文位置
 
-- [ ] **Phase 14: 数据层扩展与 PDF 阅读器基础** - MinerU bbox 保留、模型扩展、IPC 端点、应用内 PDF 渲染与导航
+- [x] **Phase 14: 数据层扩展与 PDF 阅读器基础** - MinerU bbox 保留、模型扩展、IPC 端点、应用内 PDF 渲染与导航 (completed 2026-07-24)
 - [ ] **Phase 15: Evidence → PDF 定位连线** - 点击 evidence 卡片打开对应 PDF 并滚动到原文页
 - [ ] **Phase 16: 高亮与交互增强** - bbox 高亮区域、zoom-to-fit、批量高亮、tooltip
 - [ ] **Phase 17: 双栏对比** - 左右并排源文件/目标文件 PDF，同步滚动
@@ -72,7 +72,7 @@
 
 Plans:
 - [x] 14-01-PLAN.md — Data layer: types, mapper bbox, IPC endpoint
-- [ ] 14-02-PLAN.md — PDF viewer: react-pdf, Drawer, nav, zoom
+- [x] 14-02-PLAN.md — PDF viewer: react-pdf, Drawer, nav, zoom
 
 ### Phase 15: Evidence → PDF 定位连线
 **Goal**: 审查员点击 evidence 卡片即可打开对应 PDF 文件并定位到原文页面
@@ -134,7 +134,7 @@ Phases execute in numeric order: 14 → 15 → 16 → 17
 | 11. E2E 验证 | v0.3.4 | 4/4 | Complete | 2026-07-23 |
 | 12. 集成 Bug 修复 | v0.3.4 | 2/2 | Complete | 2026-07-23 |
 | 13. UX 打磨 | v0.3.4 | 2/2 | Complete | 2026-07-23 |
-| 14. 数据层扩展与 PDF 阅读器基础 | v0.3.6 | 1/2 | In Progress|  |
+| 14. 数据层扩展与 PDF 阅读器基础 | v0.3.6 | 2/2 | Complete   | 2026-07-24 |
 | 15. Evidence → PDF 定位连线 | v0.3.6 | 0/1 | Not started | - |
 | 16. 高亮与交互增强 | v0.3.6 | 0/2 | Not started | - |
 | 17. 双栏对比 | v0.3.6 | 0/1 | Not started | - |

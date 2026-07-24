@@ -13,10 +13,10 @@
 
 ## 2. PDF 阅读器
 
-- [ ] **PDF-05**: 基于 pdfjs-dist 的应用内 PDF 渲染组件，支持 canvas 渲染
-- [ ] **PDF-06**: PDF 阅读器以弹出 Drawer 形式显示，点击外部区域自动关闭
-- [ ] **PDF-07**: PDF 阅读器支持翻页（上/下页按钮 + 滚动）
-- [ ] **PDF-08**: PDF 阅读器支持缩放（放大/缩小/适应宽度）
+- [x] **PDF-05**: 基于 pdfjs-dist 的应用内 PDF 渲染组件，支持 canvas 渲染
+- [x] **PDF-06**: PDF 阅读器以弹出 Drawer 形式显示，点击外部区域自动关闭
+- [x] **PDF-07**: PDF 阅读器支持翻页（上/下页按钮 + 滚动）
+- [x] **PDF-08**: PDF 阅读器支持缩放（放大/缩小/适应宽度）
 
 ## 3. Evidence → PDF 定位
 
@@ -59,10 +59,10 @@
 | PDF-02 | Phase 14 | Complete |
 | PDF-03 | Phase 14 | Complete |
 | PDF-04 | Phase 14 | Complete |
-| PDF-05 | Phase 14 | Pending |
-| PDF-06 | Phase 14 | Pending |
-| PDF-07 | Phase 14 | Pending |
-| PDF-08 | Phase 14 | Pending |
+| PDF-05 | Phase 14 | Complete |
+| PDF-06 | Phase 14 | Complete |
+| PDF-07 | Phase 14 | Complete |
+| PDF-08 | Phase 14 | Complete |
 | PDF-09 | Phase 15 | Pending |
 | PDF-10 | Phase 15 | Pending |
 | PDF-11 | Phase 15 | Pending |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.3.6
 milestone_name: PDF 原文定位与数据提取
-status: executing
-stopped_at: Completed 14-01-PLAN.md
-last_updated: "2026-07-24T01:05:02.192Z"
+status: verifying
+stopped_at: Completed 14-02-PLAN.md
+last_updated: "2026-07-24T01:12:07.100Z"
 last_activity: 2026-07-24
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-23)
 
 Phase: 14 (pdf-viewer) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-24
 
 Progress: [░░░░░░░░░░] 0%
@@ -48,6 +48,7 @@ Progress: [░░░░░░░░░░] 0%
 | 12. 集成 Bug 修复 | 2 | 8min | 4min |
 | 13. UX 打磨 | 2 | 7min | 3.5min |
 | Phase 14 P01 | 2min | 2 tasks | 7 files |
+| Phase 14 P02 | 3min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Progress: [░░░░░░░░░░] 0%
 - [v0.3.6]: 仅需 1 个新依赖 pdfjs-dist（react-pdf 已是间接依赖）
 - [Phase 14]: SectionNode also gets bbox/pageIdx fields for mapper consistency
 - [Phase 14]: pageIdx uses 1-based indexing (MinerU 0-based +1)
+- [Phase 14]: Used plain overflow-auto div instead of ScrollArea for direct scroll event access
+- [Phase 14]: Integrated PdfDrawer into risk-result-page.tsx instead of review-workbench.tsx (compare flow)
 
 ### Pending Todos
 
@@ -74,5 +77,5 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-24T01:05:02.183Z
-Stopped at: Completed 14-01-PLAN.md
+Last session: 2026-07-24T01:12:07.092Z
+Stopped at: Completed 14-02-PLAN.md
