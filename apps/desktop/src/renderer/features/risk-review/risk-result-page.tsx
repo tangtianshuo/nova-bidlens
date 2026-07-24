@@ -3,6 +3,8 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PersistentBanner } from '@/components/feedback/persistent-banner';
 import { StatusBadge } from '@/components/feedback/status-badge';
 import { useRiskResultDetail, useFindingCounts } from './risk-result-queries';
@@ -17,6 +19,7 @@ import { ReportExportPanel } from './report-export-panel';
 import { RiskResultToolbar } from './risk-result-toolbar';
 import { useSaveRiskFindingReview, useDebouncedNoteSave } from './risk-review-mutations';
 import { PdfDrawer } from '../review/pdf-drawer';
+import { DualPdfDrawer } from '../review/dual-pdf-drawer';
 import type { HighlightRect } from '../review/highlight-overlay';
 import type { FindingReviewStatus } from '@bidlens/shared/types-only';
 
@@ -25,6 +28,11 @@ interface RiskResultPageProps {
 }
 
 const EMPTY_FINDINGS: never[] = [];
+
+type PdfDrawerState =
+  | { open: false }
+  | { open: true; mode: 'single'; submissionId: string; fileName: string; initialPage: number }
+  | { open: true; mode: 'dual'; source: { submissionId: string; fileName: string; initialPage: number }; target: { submissionId: string; fileName: string; initialPage: number } };
 
 export function RiskResultPage({ onBack }: RiskResultPageProps) {
   const { projectId, selectedFindingId, selectFinding, setFilePair, filters } = useRiskReviewStore();
@@ -71,45 +79,75 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
   }, [filteredFindings, project, selectFinding, selectedFindingId]);
 
   // PDF drawer state
-  const [pdfDrawer, setPdfDrawer] = useState<{ open: boolean; submissionId: string; fileName: string; initialPage: number }>({
-    open: false, submissionId: '', fileName: '', initialPage: 1,
-  });
+  const [pdfDrawer, setPdfDrawer] = useState<PdfDrawerState>({ open: false });
+
+  // Stable submission IDs derived from drawer state (avoids object identity churn)
+  const sourceSid = pdfDrawer.open ? (pdfDrawer.mode === 'single' ? pdfDrawer.submissionId : pdfDrawer.source.submissionId) : null;
+  const targetSid = pdfDrawer.open && pdfDrawer.mode === 'dual' ? pdfDrawer.target.submissionId : null;
 
   // Compute highlight rects from selected finding's evidence
-  const pdfHighlights = useMemo<HighlightRect[]>(() => {
-    if (!selectedFinding || !pdfDrawer.open) return [];
+  const pdfSourceHighlights = useMemo<HighlightRect[]>(() => {
+    if (!selectedFinding || !sourceSid) return [];
     return selectedFinding.evidence
-      .filter((e) => {
-        const bbox = e.sourceSubmissionId === pdfDrawer.submissionId ? e.sourceBbox : e.targetBbox;
-        return bbox && bbox.page > 0;
-      })
-      .map((e) => {
-        const bbox = e.sourceSubmissionId === pdfDrawer.submissionId ? e.sourceBbox! : e.targetBbox!;
-        return {
-          x1: bbox.x1, y1: bbox.y1, x2: bbox.x2, y2: bbox.y2,
-          page: bbox.page,
-          matchBasis: e.matchBasis,
-          similarityScore: e.similarityScore,
-          sectionPath: e.sourceSubmissionId === pdfDrawer.submissionId ? e.sourceSectionPath : e.targetSectionPath,
-        };
-      });
-  }, [selectedFinding, pdfDrawer.open, pdfDrawer.submissionId]);
+      .filter((e) => e.sourceSubmissionId === sourceSid && e.sourceBbox && e.sourceBbox.page > 0)
+      .map((e) => ({
+        x1: e.sourceBbox!.x1, y1: e.sourceBbox!.y1, x2: e.sourceBbox!.x2, y2: e.sourceBbox!.y2,
+        page: e.sourceBbox!.page,
+        matchBasis: e.matchBasis,
+        similarityScore: e.similarityScore,
+        sectionPath: e.sourceSectionPath,
+      }));
+  }, [selectedFinding, sourceSid]);
+
+  const pdfTargetHighlights = useMemo<HighlightRect[]>(() => {
+    if (!selectedFinding || !targetSid) return [];
+    return selectedFinding.evidence
+      .filter((e) => e.targetSubmissionId === targetSid && e.targetBbox && e.targetBbox.page > 0)
+      .map((e) => ({
+        x1: e.targetBbox!.x1, y1: e.targetBbox!.y1, x2: e.targetBbox!.x2, y2: e.targetBbox!.y2,
+        page: e.targetBbox!.page,
+        matchBasis: e.matchBasis,
+        similarityScore: e.similarityScore,
+        sectionPath: e.targetSectionPath,
+      }));
+  }, [selectedFinding, targetSid]);
 
   const handleEvidencePageClick = useCallback(
     (submissionId: string, page: number) => {
       if (!project) return;
       const submission = project.submissions.find((s) => s.id === submissionId);
       if (!submission) return;
+
+      // Find the first evidence involving this submission for dual-pane detection
+      const ev = selectedFinding?.evidence.find(
+        (e) => e.sourceSubmissionId === submissionId || e.targetSubmissionId === submissionId,
+      );
+
+      // Open dual pane if evidence links two different files
+      if (ev && ev.sourceSubmissionId !== ev.targetSubmissionId) {
+        const srcSub = project.submissions.find((s) => s.id === ev.sourceSubmissionId);
+        const tgtSub = project.submissions.find((s) => s.id === ev.targetSubmissionId);
+        if (srcSub && tgtSub) {
+          const sourcePage = ev.sourceSubmissionId === submissionId ? page : (ev.sourcePageRange?.[0] ?? 1);
+          const targetPage = ev.targetSubmissionId === submissionId ? page : (ev.targetPageRange?.[0] ?? 1);
+          setPdfDrawer({
+            open: true, mode: 'dual',
+            source: { submissionId: srcSub.id, fileName: srcSub.fileName, initialPage: sourcePage },
+            target: { submissionId: tgtSub.id, fileName: tgtSub.fileName, initialPage: targetPage },
+          });
+          return;
+        }
+      }
+
+      // Single mode fallback
       setPdfDrawer((prev) => {
-        if (prev.open && prev.submissionId === submissionId) {
-          // Same file — just update page
+        if (prev.open && prev.mode === 'single' && prev.submissionId === submissionId) {
           return { ...prev, initialPage: page };
         }
-        // Different file or drawer closed — switch everything
-        return { open: true, submissionId, fileName: submission.fileName, initialPage: page };
+        return { open: true, mode: 'single', submissionId, fileName: submission.fileName, initialPage: page };
       });
     },
-    [project],
+    [project, selectedFinding],
   );
 
   // Mutations
@@ -150,9 +188,9 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
   if (isLoading || !projectId) {
     return (
       <div className="h-full overflow-auto p-6">
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-12 animate-pulse rounded-[var(--radius)] bg-[var(--color-bg-subtle)]" />
+            <Skeleton key={i} className="h-12" />
           ))}
         </div>
       </div>
@@ -186,7 +224,7 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
           onClick={handleBack}
           className="-ml-2 min-h-8 px-2 font-medium shadow-none"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft data-icon="inline-start" />
           返回项目列表
         </Button>
 
@@ -230,7 +268,8 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
           </div>
         )}
 
-        <div className="mt-3 border-t border-[var(--color-border)] pt-3">
+        <div className="mt-3 pt-3">
+          <Separator className="mb-3" />
           <RiskResultToolbar counts={counts} />
           {project.assessment?.tenderDiscountApplied && (
             <p className="mt-2 text-xs text-[var(--color-accent)]">已应用招标内容折扣</p>
@@ -262,13 +301,13 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
             <div className="mx-auto flex min-h-0 w-full max-w-[960px] flex-1 flex-col overflow-auto border-x border-[var(--color-border)] bg-[var(--color-bg)]">
               {/* Finding summary + evidence */}
               <EvidenceDetailTabs finding={selectedFinding} submissionNames={submissionNames} />
-              <div className="border-t border-[var(--color-border)]" />
+              <Separator />
               <EvidenceViewport
                 evidence={selectedFinding.evidence}
                 submissionNames={submissionNames}
                 onOpenPdf={handleEvidencePageClick}
               />
-              <div className="border-t border-[var(--color-border)]" />
+              <Separator />
               <EvidenceReviewControls
                 findingId={selectedFinding.id}
                 currentStatus={selectedFinding.reviewStatus}
@@ -312,15 +351,26 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
           </Tabs>
         </div>
       </div>
-      <PdfDrawer
-        open={pdfDrawer.open}
-        onOpenChange={(open) => setPdfDrawer((prev) => ({ ...prev, open }))}
-        projectId={project.id}
-        submissionId={pdfDrawer.submissionId}
-        fileName={pdfDrawer.fileName}
-        initialPage={pdfDrawer.initialPage}
-        highlights={pdfHighlights}
-      />
+      {pdfDrawer.open && pdfDrawer.mode === 'single' && (
+        <PdfDrawer
+          open={true}
+          onOpenChange={(open) => { if (!open) setPdfDrawer({ open: false }); }}
+          projectId={project.id}
+          submissionId={pdfDrawer.submissionId}
+          fileName={pdfDrawer.fileName}
+          initialPage={pdfDrawer.initialPage}
+          highlights={pdfSourceHighlights}
+        />
+      )}
+      {pdfDrawer.open && pdfDrawer.mode === 'dual' && (
+        <DualPdfDrawer
+          open={true}
+          onOpenChange={(open) => { if (!open) setPdfDrawer({ open: false }); }}
+          projectId={project.id}
+          source={{ ...pdfDrawer.source, highlights: pdfSourceHighlights }}
+          target={{ ...pdfDrawer.target, highlights: pdfTargetHighlights }}
+        />
+      )}
     </div>
   );
 }
