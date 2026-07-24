@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.3.6
 milestone_name: PDF 原文定位与数据提取
 status: verifying
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-07-24T01:16:02.069Z"
+stopped_at: Completed 15-01-PLAN.md
+last_updated: "2026-07-24T01:38:06.821Z"
 last_activity: 2026-07-24
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
   percent: 0
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-23)
 
 **Core value:** Deliver explainable, traceable risk evidence for bid document similarity
-**Current focus:** Phase 14 — pdf-viewer
+**Current focus:** Phase 15 — evidence-pdf-wiring
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
+Phase: 15 (evidence-pdf-wiring) — EXECUTING
+Plan: 1 of 1
 Status: Phase complete — ready for verification
 Last activity: 2026-07-24
 
@@ -49,6 +49,7 @@ Progress: [░░░░░░░░░░] 0%
 | 13. UX 打磨 | 2 | 7min | 3.5min |
 | Phase 14 P01 | 2min | 2 tasks | 7 files |
 | Phase 14 P02 | 3min | 2 tasks | 7 files |
+| Phase 15 P01 | 3min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 14]: pageIdx uses 1-based indexing (MinerU 0-based +1)
 - [Phase 14]: Used plain overflow-auto div instead of ScrollArea for direct scroll event access
 - [Phase 14]: Integrated PdfDrawer into risk-result-page.tsx instead of review-workbench.tsx (compare flow)
+- [Phase 15]: Used requestAnimationFrame for post-load scroll instead of setTimeout
+- [Phase 15]: Removed standalone PDF button — replaced by per-evidence page badges
 
 ### Pending Todos
 
@@ -77,5 +80,5 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-24T01:12:07.092Z
-Stopped at: Completed 14-02-PLAN.md
+Last session: 2026-07-24T01:38:06.813Z
+Stopped at: Completed 15-01-PLAN.md

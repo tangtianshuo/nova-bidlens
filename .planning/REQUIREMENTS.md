@@ -20,9 +20,9 @@
 
 ## 3. Evidence → PDF 定位
 
-- [ ] **PDF-09**: Evidence 卡片显示页码标签（如 "P1-2"），点击后打开 PDF Drawer 并滚动到对应页
-- [ ] **PDF-10**: 多文件项目时，根据 Evidence.submissionId 打开正确的 PDF 文件
-- [ ] **PDF-11**: 打开 PDF 后自动滚动到 evidence 所在页面
+- [x] **PDF-09**: Evidence 卡片显示页码标签（如 "P1-2"），点击后打开 PDF Drawer 并滚动到对应页
+- [x] **PDF-10**: 多文件项目时，根据 Evidence.submissionId 打开正确的 PDF 文件
+- [x] **PDF-11**: 打开 PDF 后自动滚动到 evidence 所在页面
 
 ## 4. 高亮与交互
 
@@ -63,9 +63,9 @@
 | PDF-06 | Phase 14 | Complete |
 | PDF-07 | Phase 14 | Complete |
 | PDF-08 | Phase 14 | Complete |
-| PDF-09 | Phase 15 | Pending |
-| PDF-10 | Phase 15 | Pending |
-| PDF-11 | Phase 15 | Pending |
+| PDF-09 | Phase 15 | Complete |
+| PDF-10 | Phase 15 | Complete |
+| PDF-11 | Phase 15 | Complete |
 | PDF-12 | Phase 16 | Pending |
 | PDF-13 | Phase 16 | Pending |
 | PDF-14 | Phase 16 | Pending |

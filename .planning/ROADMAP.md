@@ -53,7 +53,7 @@
 **Milestone Goal:** 实现点击关键审查点的提取文本后，弹出 PDF 阅读器并定位到对应原文位置
 
 - [x] **Phase 14: 数据层扩展与 PDF 阅读器基础** - MinerU bbox 保留、模型扩展、IPC 端点、应用内 PDF 渲染与导航 (completed 2026-07-24)
-- [ ] **Phase 15: Evidence → PDF 定位连线** - 点击 evidence 卡片打开对应 PDF 并滚动到原文页
+- [x] **Phase 15: Evidence → PDF 定位连线** - 点击 evidence 卡片打开对应 PDF 并滚动到原文页 (completed 2026-07-24)
 - [ ] **Phase 16: 高亮与交互增强** - bbox 高亮区域、zoom-to-fit、批量高亮、tooltip
 - [ ] **Phase 17: 双栏对比** - 左右并排源文件/目标文件 PDF，同步滚动
 
@@ -68,7 +68,7 @@
   2. Evidence 模型包含可选 sourceBbox/targetBbox 字段，旧数据仍可正常读取
   3. risk:getPdfFile IPC 端点返回项目内指定 submission 的 PDF 文件路径
   4. PDF 阅读器以 Drawer 形式从右侧弹出，支持翻页（按钮 + 滚动）和缩放（放大/缩小/适应宽度）
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [x] 14-01-PLAN.md — Data layer: types, mapper bbox, IPC endpoint
@@ -82,10 +82,10 @@ Plans:
   1. Evidence 卡片显示页码标签（如 "P1-2"），点击后打开 PDF Drawer
   2. 多文件项目中，根据 Evidence.submissionId 自动打开正确的 PDF 文件
   3. PDF Drawer 打开后自动滚动到 evidence 所在页面
-**Plans**: TBD
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 15-01: TBD
+- [x] 15-01-PLAN.md — Evidence page labels + PDF Drawer wiring
 
 ### Phase 16: 高亮与交互增强
 **Goal**: PDF 页面上高亮显示 evidence 匹配区域，支持交互查看详细信息
@@ -135,6 +135,6 @@ Phases execute in numeric order: 14 → 15 → 16 → 17
 | 12. 集成 Bug 修复 | v0.3.4 | 2/2 | Complete | 2026-07-23 |
 | 13. UX 打磨 | v0.3.4 | 2/2 | Complete | 2026-07-23 |
 | 14. 数据层扩展与 PDF 阅读器基础 | v0.3.6 | 2/2 | Complete    | 2026-07-24 |
-| 15. Evidence → PDF 定位连线 | v0.3.6 | 0/1 | Not started | - |
+| 15. Evidence → PDF 定位连线 | v0.3.6 | 1/1 | Complete   | 2026-07-24 |
 | 16. 高亮与交互增强 | v0.3.6 | 0/2 | Not started | - |
 | 17. 双栏对比 | v0.3.6 | 0/1 | Not started | - |
