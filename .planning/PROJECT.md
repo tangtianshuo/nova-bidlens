@@ -18,10 +18,15 @@ Deliver explainable, traceable risk evidence for bid document similarity — eve
 - V0.2.2 Review and report UI foundations
 - VNext project, matrix, finding and evidence UI components
 - Initial Shared risk types and `risk:*` IPC contracts
+- ✓ MinerU risk pipeline integration — v0.3.4
+- ✓ PDF 原文定位与数据提取 (17/17 requirements) — v0.3.6
 
 ### Active
 
-- [x] **MinerU risk pipeline integration** — wire MinerU parser into document import and risk detection flow (v0.3.4 shipped 2026-07-23)
+- [ ] **设备特征比对** — 文件元数据 + 硬件指纹提取与比对 (v0.3.7)
+- [ ] **图片查重** — 文档内图片提取 + 指纹比对 (v0.3.7)
+- [ ] **经济标比对** — 清单报价/定额子目/人材机汇总解析与比对 (v0.3.7)
+- [ ] **资信标矩阵展示** — N×N 特征矩阵表格 (v0.3.7)
 
 ### Deferred (from v0.3.0)
 
@@ -57,25 +62,26 @@ Deliver explainable, traceable risk evidence for bid document similarity — eve
 
 ## Current State
 
-**Shipped:** v0.3.4 MinerU 接入风险检测流程 (2026-07-23)
-- MinerU 云端 API 解析扫描版 PDF，mapper 产出 DocumentAst
-- DocumentAst 流入 Rust 引擎风险检测 pipeline，产出 RiskFinding + filePairAssessment
-- parserVersion/fileFormat 动态获取，AbortSignal 全链路传播，pollBatch 5 分钟硬超时
-- 401 自动清除缓存、离线检测、友好中文错误、并发控制（max 2）、实时进度反馈
-- 13/13 requirements complete, 137/137 integration tests pass
+**Shipped:** v0.3.6 PDF 原文定位与数据提取 (2026-07-24)
+- 应内 PDF 阅读器 (react-pdf)，支持翻页、缩放、键盘快捷键
+- Evidence 页码标签 → 点击打开 PDF 并定位到原文页
+- bbox 高亮渲染 (canvas overlay) + zoom-to-fit + hover tooltip
+- 双栏对比 Drawer (CSS grid) + PdfDrawerState union type
+- 17/17 requirements complete, 33 commits, 62 files changed
 
 **封存说明:** v0.3.1 (BGE-M3 semantic enhancement) 和 v0.3.2 (gold-set calibration) 计划封存
 
-## Current Milestone: v0.3.5 功能验证与 Bug 修复
+## Next Milestone: v0.3.7 全面追赶竞品 — 审查维度扩展
 
-**Goal:** 通过功能性测试闭环验证，发现并修复 bug，打磨 UI，达到可发布质量
+**Goal:** 补全设备特征比对、图片查重、经济标比对、资信标矩阵展示，全面追赶 bqpoint 竞品审查能力
 
 **Target features:**
-- 功能性测试闭环验证（端到端手动/自动测试）
-- Bug 修复（基于 .planning/V0.3.5-BUG-TRACKER.md 登记的问题）
-- UI 重构（基于测试中发现的 UX 问题）
+- **设备特征比对** — 文件元数据提取（作者/修改人/创建时间等 9 项）+ 硬件指纹（MAC/CPU/硬盘等 8 项）
+- **图片查重** — 文档内图片提取 + 指纹比对 + 相似度展示
+- **经济标比对** — 清单报价/定额子目/人材机汇总解析与比对
+- **资信标矩阵展示** — N×N 特征矩阵表格，直观展示多文件交叉关系
 
-**工作方式:** 人机协同，边验证边开发。用户登记 bug → Claude 读取并修复 → 再验证
+**工作方式:** 基于竞品分析文档 (docs/competitor-bqpoint/) 定义需求，分阶段实现各检测维度
 
 ## Key Decisions
 
@@ -104,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-23 after milestone v0.3.5 initialization*
+*Last updated: 2026-07-24 after v0.3.6 milestone completion*

@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.3.6
-milestone_name: PDF 原文定位与数据提取
-status: executing
-stopped_at: Completed 15-01-PLAN.md
-last_updated: "2026-07-24T14:19:26.783Z"
-last_activity: 2026-07-24
+milestone: v0.3.7
+milestone_name: 全面追赶竞品 — 审查维度扩展
+status: defining-requirements
+stopped_at: —
+last_updated: "2026-07-24T15:00:00.000Z"
+last_activity: 2026-07-24 — Milestone v0.3.7 started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-23)
+See: .planning/PROJECT.md (updated 2026-07-24)
 
 **Core value:** Deliver explainable, traceable risk evidence for bid document similarity
-**Current focus:** Phase 17 — dual-pane-compare
+**Current focus:** Defining requirements for v0.3.7
 
 ## Current Position
 
-Phase: 17
-Plan: Not started
-Status: Executing Phase 17
-Last activity: 2026-07-24
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-24 — Milestone v0.3.7 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
