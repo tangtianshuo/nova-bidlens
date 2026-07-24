@@ -4,10 +4,22 @@
 
 import { describe, expect, it } from 'vitest';
 import { computeHighlightZoom } from './highlight-overlay';
+import type { HighlightRect } from './highlight-overlay';
 
 const PAGE_DEFAULT_WIDTH = 816;
 const ZOOM_MIN = 50;
 const ZOOM_MAX = 200;
+
+/** Helper to build a HighlightRect with test defaults. */
+function makeHighlight(overrides: Partial<HighlightRect> & Pick<HighlightRect, 'x1' | 'y1' | 'x2' | 'y2'>): HighlightRect {
+  return {
+    page: 1,
+    matchBasis: 'test',
+    similarityScore: 0.9,
+    sectionPath: ['测试段落'],
+    ...overrides,
+  };
+}
 
 describe('computeHighlightZoom', () => {
   it('returns fitWidthZoom when no highlights', () => {
@@ -21,13 +33,10 @@ describe('computeHighlightZoom', () => {
   });
 
   it('zooms so first highlight fills 80% viewport', () => {
-    // Highlight is 200px wide out of 816 page → ~24.5% of page
-    // To fill 80% of viewport: zoom = (80 / 24.5) * fitWidthZoom / 100
-    const highlights = [{ x1: 100, y1: 100, x2: 300, y2: 200, page: 1 }];
-    const fitWidthZoom = 100;
+    const highlights = [makeHighlight({ x1: 100, y1: 100, x2: 300, y2: 200 })];
     const result = computeHighlightZoom({
       highlights,
-      fitWidthZoom,
+      fitWidthZoom: 100,
       pageWidth: PAGE_DEFAULT_WIDTH,
       containerWidth: 800,
     });
@@ -36,10 +45,8 @@ describe('computeHighlightZoom', () => {
     expect(result).toBe(ZOOM_MAX);
   });
 
-  it('clamps to ZOOM_MIN for very wide highlights', () => {
-    // Highlight is 700px wide out of 816 → ~85.8% of page
-    // zoom = (80 / 0.858) * 100 / 100 ≈ 93.2
-    const highlights = [{ x1: 50, y1: 100, x2: 750, y2: 200, page: 1 }];
+  it('returns fitWidthZoom for very wide highlights', () => {
+    const highlights = [makeHighlight({ x1: 50, y1: 100, x2: 750, y2: 200 })];
     const result = computeHighlightZoom({
       highlights,
       fitWidthZoom: 100,
@@ -52,11 +59,10 @@ describe('computeHighlightZoom', () => {
   });
 
   it('uses fitWidthZoom as base', () => {
-    const highlights = [{ x1: 300, y1: 100, x2: 500, y2: 200, page: 1 }];
-    const fitWidthZoom = 75;
+    const highlights = [makeHighlight({ x1: 300, y1: 100, x2: 500, y2: 200 })];
     const result = computeHighlightZoom({
       highlights,
-      fitWidthZoom,
+      fitWidthZoom: 75,
       pageWidth: PAGE_DEFAULT_WIDTH,
       containerWidth: 600,
     });

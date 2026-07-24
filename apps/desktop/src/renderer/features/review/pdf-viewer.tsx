@@ -4,6 +4,8 @@ import { FileWarning } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { PdfToolbar } from './pdf-toolbar';
 import { PdfPage } from './pdf-page';
+import { computeHighlightZoom } from './highlight-overlay';
+import type { HighlightRect } from './highlight-overlay';
 
 // CDN worker -- avoids bundling the worker file
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -12,6 +14,7 @@ interface PdfViewerProps {
   fileUrl: string;
   fileName: string;
   initialPage?: number;
+  highlights?: HighlightRect[];
 }
 
 const ZOOM_STEP = 25;
@@ -20,7 +23,7 @@ const ZOOM_MAX = 200;
 const PAGE_DEFAULT_WIDTH = 816; // Letter size at 96dpi
 const DEBOUNCE_MS = 100;
 
-export function PdfViewer({ fileUrl, initialPage }: PdfViewerProps) {
+export function PdfViewer({ fileUrl, initialPage, highlights }: PdfViewerProps) {
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [zoom, setZoom] = useState(100);
@@ -52,16 +55,28 @@ export function PdfViewer({ fileUrl, initialPage }: PdfViewerProps) {
 
   const pageWidth = useMemo(() => (PAGE_DEFAULT_WIDTH * zoom) / 100, [zoom]);
 
+  // Compute highlight zoom — applied once on document load
+  const highlightZoom = useMemo(() => {
+    if (!highlights || highlights.length === 0 || containerWidth <= 0) return null;
+    return computeHighlightZoom({
+      highlights,
+      fitWidthZoom,
+      pageWidth: PAGE_DEFAULT_WIDTH,
+      containerWidth,
+    });
+  }, [highlights, fitWidthZoom, containerWidth]);
+
   const handleLoadSuccess = useCallback(
     ({ numPages: n }: { numPages: number }) => {
       setNumPages(n);
-      setZoom(fitWidthZoom);
+      // Use highlight zoom if available, otherwise fit-width
+      setZoom(highlightZoom ?? fitWidthZoom);
       setError(false);
       if (initialPage && initialPage > 0) {
         pendingScrollRef.current = initialPage;
       }
     },
-    [fitWidthZoom, initialPage],
+    [fitWidthZoom, initialPage, highlightZoom],
   );
 
   const handleLoadError = useCallback(() => setError(true), []);
@@ -183,7 +198,7 @@ export function PdfViewer({ fileUrl, initialPage }: PdfViewerProps) {
           >
             {Array.from({ length: numPages }, (_, i) => (
               <div key={i + 1} data-pdf-page={i + 1}>
-                <PdfPage pageNumber={i + 1} width={pageWidth} />
+                <PdfPage pageNumber={i + 1} width={pageWidth} highlights={highlights} />
               </div>
             ))}
           </Document>

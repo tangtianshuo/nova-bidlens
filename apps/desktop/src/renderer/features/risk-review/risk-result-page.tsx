@@ -17,6 +17,7 @@ import { ReportExportPanel } from './report-export-panel';
 import { RiskResultToolbar } from './risk-result-toolbar';
 import { useSaveRiskFindingReview, useDebouncedNoteSave } from './risk-review-mutations';
 import { PdfDrawer } from '../review/pdf-drawer';
+import type { HighlightRect } from '../review/highlight-overlay';
 import type { FindingReviewStatus } from '@bidlens/shared/types-only';
 
 interface RiskResultPageProps {
@@ -73,6 +74,26 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
   const [pdfDrawer, setPdfDrawer] = useState<{ open: boolean; submissionId: string; fileName: string; initialPage: number }>({
     open: false, submissionId: '', fileName: '', initialPage: 1,
   });
+
+  // Compute highlight rects from selected finding's evidence
+  const pdfHighlights = useMemo<HighlightRect[]>(() => {
+    if (!selectedFinding || !pdfDrawer.open) return [];
+    return selectedFinding.evidence
+      .filter((e) => {
+        const bbox = e.sourceSubmissionId === pdfDrawer.submissionId ? e.sourceBbox : e.targetBbox;
+        return bbox && bbox.page > 0;
+      })
+      .map((e) => {
+        const bbox = e.sourceSubmissionId === pdfDrawer.submissionId ? e.sourceBbox! : e.targetBbox!;
+        return {
+          x1: bbox.x1, y1: bbox.y1, x2: bbox.x2, y2: bbox.y2,
+          page: bbox.page,
+          matchBasis: e.matchBasis,
+          similarityScore: e.similarityScore,
+          sectionPath: e.sourceSubmissionId === pdfDrawer.submissionId ? e.sourceSectionPath : e.targetSectionPath,
+        };
+      });
+  }, [selectedFinding, pdfDrawer.open, pdfDrawer.submissionId]);
 
   const handleEvidencePageClick = useCallback(
     (submissionId: string, page: number) => {
@@ -298,6 +319,7 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
         submissionId={pdfDrawer.submissionId}
         fileName={pdfDrawer.fileName}
         initialPage={pdfDrawer.initialPage}
+        highlights={pdfHighlights}
       />
     </div>
   );
