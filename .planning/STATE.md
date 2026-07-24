@@ -4,7 +4,7 @@ milestone: v0.3.6
 milestone_name: PDF 原文定位与数据提取
 status: verifying
 stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-07-24T01:12:07.100Z"
+last_updated: "2026-07-24T01:16:02.069Z"
 last_activity: 2026-07-24
 progress:
   total_phases: 4
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-07-23)
 
 ## Current Position
 
-Phase: 14 (pdf-viewer) — EXECUTING
-Plan: 2 of 2
+Phase: 15
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-07-24
 
