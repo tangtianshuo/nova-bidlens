@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -70,17 +70,26 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
   }, [filteredFindings, project, selectFinding, selectedFindingId]);
 
   // PDF drawer state
-  const [pdfDrawer, setPdfDrawer] = useState<{ open: boolean; submissionId: string; fileName: string }>({
-    open: false, submissionId: '', fileName: '',
+  const [pdfDrawer, setPdfDrawer] = useState<{ open: boolean; submissionId: string; fileName: string; initialPage: number }>({
+    open: false, submissionId: '', fileName: '', initialPage: 1,
   });
 
-  const handleOpenPdf = useCallback(() => {
-    if (!selectedFinding || !project) return;
-    const submissionId = selectedFinding.involvedSubmissionIds[0];
-    const submission = project.submissions.find((s) => s.id === submissionId);
-    if (!submission) return;
-    setPdfDrawer({ open: true, submissionId, fileName: submission.fileName });
-  }, [selectedFinding, project]);
+  const handleEvidencePageClick = useCallback(
+    (submissionId: string, page: number) => {
+      if (!project) return;
+      const submission = project.submissions.find((s) => s.id === submissionId);
+      if (!submission) return;
+      setPdfDrawer((prev) => {
+        if (prev.open && prev.submissionId === submissionId) {
+          // Same file — just update page
+          return { ...prev, initialPage: page };
+        }
+        // Different file or drawer closed — switch everything
+        return { open: true, submissionId, fileName: submission.fileName, initialPage: page };
+      });
+    },
+    [project],
+  );
 
   // Mutations
   const saveReview = useSaveRiskFindingReview();
@@ -236,14 +245,8 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
               <EvidenceViewport
                 evidence={selectedFinding.evidence}
                 submissionNames={submissionNames}
+                onOpenPdf={handleEvidencePageClick}
               />
-              <div className="border-t border-[var(--color-border)]" />
-              <div className="flex items-center gap-2 px-5 py-2">
-                <Button variant="secondary" size="sm" onClick={handleOpenPdf}>
-                  <FileText className="h-3.5 w-3.5" />
-                  查看原文 PDF
-                </Button>
-              </div>
               <div className="border-t border-[var(--color-border)]" />
               <EvidenceReviewControls
                 findingId={selectedFinding.id}
@@ -294,6 +297,7 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
         projectId={project.id}
         submissionId={pdfDrawer.submissionId}
         fileName={pdfDrawer.fileName}
+        initialPage={pdfDrawer.initialPage}
       />
     </div>
   );
