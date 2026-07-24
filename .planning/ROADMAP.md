@@ -96,11 +96,10 @@ Plans:
   2. 打开 PDF 后自动缩放使高亮区域填满视口（zoom-to-fit）
   3. 同一页面存在多个 evidence 时，全部高亮显示
   4. 悬浮高亮区域显示 tooltip（匹配依据、相似度分数、段落路径）
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 16-01: TBD
-- [ ] 16-02: TBD
+- [ ] 16-01-PLAN.md — 高亮 overlay + zoom-to-fit + tooltip
 
 ### Phase 17: 双栏对比
 **Goal**: 审查员可同时查看源文件和目标文件的 PDF，点击 evidence 同步定位两侧
@@ -136,5 +135,5 @@ Phases execute in numeric order: 14 → 15 → 16 → 17
 | 13. UX 打磨 | v0.3.4 | 2/2 | Complete | 2026-07-23 |
 | 14. 数据层扩展与 PDF 阅读器基础 | v0.3.6 | 2/2 | Complete    | 2026-07-24 |
 | 15. Evidence → PDF 定位连线 | v0.3.6 | 1/1 | Complete    | 2026-07-24 |
-| 16. 高亮与交互增强 | v0.3.6 | 0/2 | Not started | - |
+| 16. 高亮与交互增强 | v0.3.6 | 0/1 | Not started | - |
 | 17. 双栏对比 | v0.3.6 | 0/1 | Not started | - |
