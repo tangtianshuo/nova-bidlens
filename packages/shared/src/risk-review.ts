@@ -145,6 +145,14 @@ export interface DetectorCandidate {
 
 // ─── Evidence (PRD §4.1, §10.1) ───
 
+export interface BboxRegion {
+  page: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
 export interface Evidence {
   id: string;
   detectorType: DetectorType;
@@ -164,6 +172,8 @@ export interface Evidence {
   targetSectionPath: string[];
   targetPageRange: [number, number] | null;
   targetTableLocation: TableLocation | null;
+  sourceBbox?: BboxRegion;
+  targetBbox?: BboxRegion;
   contextBefore: string;
   contextAfter: string;
   tenderFiltered: boolean;

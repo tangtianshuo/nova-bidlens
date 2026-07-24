@@ -84,6 +84,8 @@ export function mapContentListToAst(items: ContentListItem[]): BlockNode[] {
             children: [],
             pageStart: pageIdx,
             pageEnd: pageIdx,
+            bbox: item.bbox ?? undefined,
+            pageIdx: item.page_idx != null ? item.page_idx + 1 : undefined,
           };
 
           while (
@@ -106,6 +108,8 @@ export function mapContentListToAst(items: ContentListItem[]): BlockNode[] {
             text,
             pageStart: pageIdx,
             pageEnd: pageIdx,
+            bbox: item.bbox ?? undefined,
+            pageIdx: item.page_idx != null ? item.page_idx + 1 : undefined,
           };
 
           if (sectionStack.length > 0) {
@@ -128,6 +132,8 @@ export function mapContentListToAst(items: ContentListItem[]): BlockNode[] {
           rows,
           pageStart: pageIdx,
           pageEnd: pageIdx,
+          bbox: item.bbox ?? undefined,
+          pageIdx: item.page_idx != null ? item.page_idx + 1 : undefined,
         };
 
         if (sectionStack.length > 0) {

@@ -20,6 +20,8 @@ export interface ParagraphNode {
   text: string;
   pageStart: number | null;
   pageEnd: number | null;
+  bbox?: [number, number, number, number];
+  pageIdx?: number;
 }
 
 export interface SectionNode {
@@ -30,6 +32,8 @@ export interface SectionNode {
   children: BlockNode[];
   pageStart: number | null;
   pageEnd: number | null;
+  bbox?: [number, number, number, number];
+  pageIdx?: number;
 }
 
 export interface ListNode {
@@ -47,6 +51,8 @@ export interface TableNode {
   rows: string[][];
   pageStart: number | null;
   pageEnd: number | null;
+  bbox?: [number, number, number, number];
+  pageIdx?: number;
 }
 
 export interface Comment {
