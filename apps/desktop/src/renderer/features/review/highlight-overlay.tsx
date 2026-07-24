@@ -18,6 +18,27 @@ interface HighlightOverlayProps {
 
 const BASE_FILL = [37, 99, 235]; // #2563EB
 const OPACITIES = [0.2, 0.3, 0.4];
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 200;
+
+/**
+ * Compute zoom level so the first highlight fills ~80% of viewport width.
+ * Returns fitWidthZoom when no highlights.
+ */
+export function computeHighlightZoom(opts: {
+  highlights: HighlightRect[];
+  fitWidthZoom: number;
+  pageWidth: number;
+  containerWidth: number;
+}): number {
+  const { highlights, fitWidthZoom, pageWidth } = opts;
+  if (highlights.length === 0) return fitWidthZoom;
+  const h = highlights[0];
+  const highlightWidthFraction = (h.x2 - h.x1) / pageWidth;
+  if (highlightWidthFraction <= 0) return fitWidthZoom;
+  const zoom = (80 / highlightWidthFraction) * (fitWidthZoom / 100);
+  return Math.round(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom)));
+}
 
 export function HighlightOverlay({
   width,
