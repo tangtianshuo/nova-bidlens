@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.3.6
 milestone_name: PDF 原文定位与数据提取
-status: roadmap-ready
-stopped_at: Roadmap created, ready for plan-phase
-last_updated: "2026-07-24T00:00:00Z"
+status: executing
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-07-24T01:05:02.192Z"
 last_activity: 2026-07-24
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-23)
 
 **Core value:** Deliver explainable, traceable risk evidence for bid document similarity
-**Current focus:** v0.3.6 PDF 原文定位与数据提取
+**Current focus:** Phase 14 — pdf-viewer
 
 ## Current Position
 
-Phase: 14 of 17 (数据层扩展与 PDF 阅读器基础)
-Plan: — (not yet planned)
-Status: Roadmap ready, awaiting /gsd:plan-phase 14
-Last activity: 2026-07-24 — Roadmap created (4 phases, 17 requirements mapped)
+Phase: 14 (pdf-viewer) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-07-24
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -47,6 +47,7 @@ Progress: [░░░░░░░░░░] 0%
 | 11. E2E 验证 | 4 | 15min | 4min |
 | 12. 集成 Bug 修复 | 2 | 8min | 4min |
 | 13. UX 打磨 | 2 | 7min | 3.5min |
+| Phase 14 P01 | 2min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -60,6 +61,8 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 13]: Max 2 concurrent MinerU requests, DNS offline check, error codes with Chinese messages
 - [v0.3.6]: Digital PDF bbox 提取（pdf-parse 路径）延后到未来 milestone
 - [v0.3.6]: 仅需 1 个新依赖 pdfjs-dist（react-pdf 已是间接依赖）
+- [Phase 14]: SectionNode also gets bbox/pageIdx fields for mapper consistency
+- [Phase 14]: pageIdx uses 1-based indexing (MinerU 0-based +1)
 
 ### Pending Todos
 
@@ -71,5 +74,5 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-24
-Stopped at: Roadmap created for v0.3.6, ready to plan Phase 14
+Last session: 2026-07-24T01:05:02.183Z
+Stopped at: Completed 14-01-PLAN.md

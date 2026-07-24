@@ -6,10 +6,10 @@
 
 ## 1. 数据层扩展
 
-- [ ] **PDF-01**: Mapper 保留 MinerU bbox 数据（`[x1, y1, x2, y2]`）到 DocumentAst 节点，不再丢弃
-- [ ] **PDF-02**: DocumentAst 的 ParagraphNode、TableNode 增加可选 `bbox` 和 `pageIdx` 字段，向后兼容
-- [ ] **PDF-03**: Evidence 模型增加可选 `sourceBbox`/`targetBbox` 字段（`{page, x1, y1, x2, y2}`），向后兼容
-- [ ] **PDF-04**: 新增 `risk:getPdfFile` IPC 端点，返回项目内指定 submission 的 PDF 文件路径
+- [x] **PDF-01**: Mapper 保留 MinerU bbox 数据（`[x1, y1, x2, y2]`）到 DocumentAst 节点，不再丢弃
+- [x] **PDF-02**: DocumentAst 的 ParagraphNode、TableNode 增加可选 `bbox` 和 `pageIdx` 字段，向后兼容
+- [x] **PDF-03**: Evidence 模型增加可选 `sourceBbox`/`targetBbox` 字段（`{page, x1, y1, x2, y2}`），向后兼容
+- [x] **PDF-04**: 新增 `risk:getPdfFile` IPC 端点，返回项目内指定 submission 的 PDF 文件路径
 
 ## 2. PDF 阅读器
 
@@ -55,10 +55,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PDF-01 | Phase 14 | Pending |
-| PDF-02 | Phase 14 | Pending |
-| PDF-03 | Phase 14 | Pending |
-| PDF-04 | Phase 14 | Pending |
+| PDF-01 | Phase 14 | Complete |
+| PDF-02 | Phase 14 | Complete |
+| PDF-03 | Phase 14 | Complete |
+| PDF-04 | Phase 14 | Complete |
 | PDF-05 | Phase 14 | Pending |
 | PDF-06 | Phase 14 | Pending |
 | PDF-07 | Phase 14 | Pending |
