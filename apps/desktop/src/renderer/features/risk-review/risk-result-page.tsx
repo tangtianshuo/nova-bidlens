@@ -1,7 +1,8 @@
-import { useCallback, useMemo } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PersistentBanner } from '@/components/feedback/persistent-banner';
 import { StatusBadge } from '@/components/feedback/status-badge';
 import { useRiskResultDetail, useFindingCounts } from './risk-result-queries';
@@ -15,6 +16,7 @@ import { RelationshipMatrix } from './relationship-matrix';
 import { ReportExportPanel } from './report-export-panel';
 import { RiskResultToolbar } from './risk-result-toolbar';
 import { useSaveRiskFindingReview, useDebouncedNoteSave } from './risk-review-mutations';
+import { PdfDrawer } from '../review/pdf-drawer';
 import type { FindingReviewStatus } from '@bidlens/shared/types-only';
 
 interface RiskResultPageProps {
@@ -54,6 +56,31 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
     () => project ? project.findings.filter((f) => matchesFilter(f, filters)) : [],
     [project, filters],
   );
+
+  useEffect(() => {
+    if (!project) return;
+
+    if (filteredFindings.length === 0) {
+      if (selectedFindingId !== null) selectFinding(null);
+      return;
+    }
+
+    const selectionIsVisible = filteredFindings.some((finding) => finding.id === selectedFindingId);
+    if (!selectionIsVisible) selectFinding(filteredFindings[0].id);
+  }, [filteredFindings, project, selectFinding, selectedFindingId]);
+
+  // PDF drawer state
+  const [pdfDrawer, setPdfDrawer] = useState<{ open: boolean; submissionId: string; fileName: string }>({
+    open: false, submissionId: '', fileName: '',
+  });
+
+  const handleOpenPdf = useCallback(() => {
+    if (!selectedFinding || !project) return;
+    const submissionId = selectedFinding.involvedSubmissionIds[0];
+    const submission = project.submissions.find((s) => s.id === submissionId);
+    if (!submission) return;
+    setPdfDrawer({ open: true, submissionId, fileName: submission.fileName });
+  }, [selectedFinding, project]);
 
   // Mutations
   const saveReview = useSaveRiskFindingReview();
@@ -120,22 +147,41 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
   const isDegraded = project.degradationReason !== null;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden bg-[var(--color-bg-muted)]">
       {/* Header row */}
-      <div className="shrink-0 border-b border-[var(--color-border)] px-5 py-3">
-        <button
+      <div className="shrink-0 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3">
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleBack}
-          className="mb-2 flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+          className="-ml-2 min-h-8 px-2 font-medium shadow-none"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           返回项目列表
-        </button>
+        </Button>
 
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-[var(--color-text)] truncate">
-            {project.name}
-          </h1>
-          <StatusBadge status={project.status} />
+        <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <h1 className="truncate text-[18px] font-semibold leading-7 text-[var(--color-text)]">
+              {project.name}
+            </h1>
+            <StatusBadge status={project.status} />
+          </div>
+
+          {project.assessment && (
+            <div className="flex shrink-0 items-center gap-4 text-[13px]" aria-label="项目风险评估">
+              <div className="flex items-center gap-2">
+                <span className="text-[var(--color-text-muted)]">项目风险</span>
+                <Badge variant={`risk-${project.assessment.level === 'incomplete' ? 'low' : project.assessment.level}`}>
+                  {project.assessment.level === 'high' ? '高风险' : project.assessment.level === 'medium' ? '中风险' : project.assessment.level === 'low' ? '低风险' : '结果不完整'}
+                </Badge>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[var(--color-text-muted)]">规则评分</span>
+                <strong className="text-base font-semibold text-[var(--color-text)]">{project.assessment.rawRuleScore}</strong>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Status banners */}
@@ -154,52 +200,36 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
           </div>
         )}
 
-        <div className="mt-2">
+        <div className="mt-3 border-t border-[var(--color-border)] pt-3">
           <RiskResultToolbar counts={counts} />
+          {project.assessment?.tenderDiscountApplied && (
+            <p className="mt-2 text-xs text-[var(--color-accent)]">已应用招标内容折扣</p>
+          )}
         </div>
-
-        {/* Risk assessment summary */}
-        {project.assessment && (
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[var(--color-text-muted)]">项目风险</span>
-              <Badge variant={`risk-${project.assessment.level === 'incomplete' ? 'low' : project.assessment.level}`} className="text-[10px]">
-                {project.assessment.level === 'high' ? '高' : project.assessment.level === 'medium' ? '中' : project.assessment.level === 'low' ? '低' : '不完整'}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[var(--color-text-muted)]">规则评分</span>
-              <span className="font-medium text-[var(--color-text)]">{project.assessment.rawRuleScore}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[var(--color-text-muted)]">实体命中</span>
-              <span className="font-medium text-[var(--color-text)]">{project.assessment.strongEntityHitCount}</span>
-            </div>
-            {project.assessment.tenderDiscountApplied && (
-              <span className="text-[var(--color-accent)]">已应用招标内容折扣</span>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Filter toolbar */}
-      <div className="shrink-0 border-b border-[var(--color-border)] px-5 py-2">
+      <div className="shrink-0 overflow-x-auto border-b border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-2.5">
         <FindingFilterToolbar />
       </div>
 
       {/* Three-column workbench */}
-      <div className="flex min-h-0 flex-1">
+      <div className="risk-result-grid grid min-h-0 flex-1">
         {/* Left: Finding list */}
-        <div className="flex w-[280px] shrink-0 flex-col border-r border-[var(--color-border)] overflow-hidden">
-          <div className="flex-1 overflow-auto p-3">
+        <div className="flex min-w-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-bg)]">
+          <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4">
+            <span className="text-[13px] font-semibold text-[var(--color-text)]">发现项</span>
+            <span className="text-xs text-[var(--color-text-muted)]">显示 {filteredFindings.length} / {project.findings.length}</span>
+          </div>
+          <div className="flex-1 overflow-auto p-2">
             <FindingVirtualList findings={project.findings} />
           </div>
         </div>
 
         {/* Middle: Evidence detail */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-w-0 flex-col overflow-hidden bg-[var(--color-bg-muted)]">
           {selectedFinding ? (
-            <div className="flex min-h-0 flex-1 flex-col overflow-auto">
+            <div className="mx-auto flex min-h-0 w-full max-w-[960px] flex-1 flex-col overflow-auto border-x border-[var(--color-border)] bg-[var(--color-bg)]">
               {/* Finding summary + evidence */}
               <EvidenceDetailTabs finding={selectedFinding} submissionNames={submissionNames} />
               <div className="border-t border-[var(--color-border)]" />
@@ -207,6 +237,13 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
                 evidence={selectedFinding.evidence}
                 submissionNames={submissionNames}
               />
+              <div className="border-t border-[var(--color-border)]" />
+              <div className="flex items-center gap-2 px-5 py-2">
+                <Button variant="secondary" size="sm" onClick={handleOpenPdf}>
+                  <FileText className="h-3.5 w-3.5" />
+                  查看原文 PDF
+                </Button>
+              </div>
               <div className="border-t border-[var(--color-border)]" />
               <EvidenceReviewControls
                 findingId={selectedFinding.id}
@@ -219,37 +256,45 @@ export function RiskResultPage({ onBack }: RiskResultPageProps) {
               />
             </div>
           ) : (
-            <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-text-muted)]">
-              选择一个发现项查看证据详情
+            <div className="flex flex-1 items-center justify-center p-8 text-sm text-[var(--color-text-muted)]">
+              当前筛选条件下没有可复核的发现项
             </div>
           )}
         </div>
 
         {/* Right sidebar: Matrix + Export */}
-        <div className="flex w-[260px] shrink-0 flex-col border-l border-[var(--color-border)] overflow-hidden">
-          <div className="flex-1 overflow-auto">
-            {/* File pair matrix */}
-            <div className="border-b border-[var(--color-border)] p-3">
-              <h3 className="text-xs font-medium text-[var(--color-text-muted)] mb-2">文件关系矩阵</h3>
+        <div className="min-w-0 overflow-hidden border-l border-[var(--color-border)] bg-[var(--color-bg)]">
+          <Tabs defaultValue="matrix" className="flex h-full min-h-0 flex-col">
+            <TabsList className="h-12 w-full shrink-0 px-2">
+              <TabsTrigger value="matrix" className="h-12 flex-1 text-[13px]">关系矩阵</TabsTrigger>
+              <TabsTrigger value="export" className="h-12 flex-1 text-[13px]">导出报告</TabsTrigger>
+            </TabsList>
+            <TabsContent value="matrix" className="min-h-0 flex-1 overflow-auto p-4 pt-4">
+              <h3 className="mb-3 text-[13px] font-semibold text-[var(--color-text)]">文件关系矩阵</h3>
               <RelationshipMatrix
                 submissions={project.submissions}
                 findings={project.findings}
                 onCellClick={handleMatrixCellClick}
               />
-            </div>
-
-            {/* Export panel */}
-            <div>
-              <h3 className="text-xs font-medium text-[var(--color-text-muted)] px-3 pt-3 mb-1">导出报告</h3>
+              <p className="mt-3 text-xs leading-5 text-[var(--color-text-muted)]">选择单元格可按文件对筛选发现项。悬停可查看完整文件名。</p>
+            </TabsContent>
+            <TabsContent value="export" className="min-h-0 flex-1 overflow-auto pt-0">
               <ReportExportPanel
                 projectId={project.id}
                 counts={counts}
                 filteredCount={filteredFindings.length}
               />
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
+      <PdfDrawer
+        open={pdfDrawer.open}
+        onOpenChange={(open) => setPdfDrawer((prev) => ({ ...prev, open }))}
+        projectId={project.id}
+        submissionId={pdfDrawer.submissionId}
+        fileName={pdfDrawer.fileName}
+      />
     </div>
   );
 }
